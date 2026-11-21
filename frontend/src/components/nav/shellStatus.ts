@@ -1,7 +1,7 @@
 /**
  * Quiet shell status shared by the sidebar footer, the phone "More" page and Settings:
- *  - the business's Tallyko access ("Development access", "Free demo · 5 days left") for owners and managers;
- *  - the owner's badge for answers from Tallyko to their requests (archive / delete bills), shown on Owner's watch.
+ *  - the business's Storant access ("Development access", "Free demo · 5 days left") for owners and managers;
+ *  - the owner's badge for answers from Storant to their requests (archive / delete bills), shown on Owner's watch.
  */
 import { useEffect } from 'react';
 import { create } from 'zustand';
@@ -11,18 +11,19 @@ import { daysText, liveDaysLeft } from '@/features/subscription/format';
 import { useAuth } from '@/store/auth';
 import { useSubscription } from '@/store/subscription';
 import { useNavPrefs } from './navPrefs';
+import { t } from '@/i18n';
 
 export interface AccessLine { status: SubscriptionState['state']; label: string }
 
 /** One short line about the subscription, or null when there is nothing worth saying (staff never see it). */
 export function accessLine(sub: SubscriptionState | null | undefined, now = Date.now()): AccessLine | null {
   if (!sub) return null;
-  if (sub.state === 'development') return { status: 'development', label: 'Development access' };
+  if (sub.state === 'development') return { status: 'development', label: t('common.development_access') };
   const left = liveDaysLeft(sub, now);
-  if (sub.state === 'trial') return { status: 'trial', label: left === null ? 'Free demo' : `Free demo · ${daysText(left)}` };
-  if (sub.state === 'grace') return { status: 'grace', label: 'Payment due' };
-  if (sub.state === 'lapsed') return { status: 'lapsed', label: 'Subscription ended' };
-  if (left !== null && left <= 14) return { status: 'active', label: `Plan · ${daysText(left)}` };
+  if (sub.state === 'trial') return { status: 'trial', label: left === null ? t('common.free_demo') : t('nav.shellStatus.free_demo_daystext', { daysText: daysText(left) }) };
+  if (sub.state === 'grace') return { status: 'grace', label: t('common.payment_due') };
+  if (sub.state === 'lapsed') return { status: 'lapsed', label: t('nav.shellStatus.subscription_ended') };
+  if (left !== null && left <= 14) return { status: 'active', label: t('nav.shellStatus.plan_daystext', { daysText: daysText(left) }) };
   return null;
 }
 
@@ -33,7 +34,7 @@ export function useAccessLine(): AccessLine | null {
   return accessLine(current);
 }
 
-// --- Owner requests answered by Tallyko --------------------------------------------------------------------------
+// --- Owner requests answered by Storant --------------------------------------------------------------------------
 
 export const useOwnerAnswers = create<{ count: number }>(() => ({ count: 0 }));
 

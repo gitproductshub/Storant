@@ -1,5 +1,6 @@
 /** Pure helpers for the offers list: filter chips with counts, search and the StatusPill mapping (unit-tested). */
 import type { Offer, OfferState } from '@/api/offers';
+import { t as tr } from '@/i18n';
 
 export type OfferFilter = 'all' | 'live' | 'scheduled' | 'off' | 'ended' | 'loyalty';
 
@@ -37,11 +38,11 @@ export function sortOffers(list: readonly Offer[]): Offer[] {
  */
 export function offerPill(state: OfferState): { status: string; label: string } {
   switch (state) {
-    case 'live': return { status: 'active', label: 'Live' };
-    case 'scheduled': return { status: 'pending', label: 'Scheduled' };
-    case 'used_up': return { status: 'lapsed', label: 'Used up' };
-    case 'expired': return { status: 'served', label: 'Expired' };
-    default: return { status: 'off', label: 'Off' }; // neutral pill
+    case 'live': return { status: 'active', label: tr('common.live') };
+    case 'scheduled': return { status: 'pending', label: tr('common.scheduled') };
+    case 'used_up': return { status: 'lapsed', label: tr('offers.offerList.used_up') };
+    case 'expired': return { status: 'served', label: tr('common.expired') };
+    default: return { status: 'off', label: tr('common.off') }; // neutral pill
   }
 }
 

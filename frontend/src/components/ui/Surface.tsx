@@ -5,6 +5,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { palette } from '@/theme/tokens';
 import { Text, type TextTone } from './Text';
 import { Button } from './Button';
+import { t } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -135,8 +136,8 @@ export function EmptyState({ icon = 'file-tray-outline', title, message, action 
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <EmptyState icon="cloud-offline-outline" title="Couldn't load this" message={message}
-      action={onRetry ? { label: 'Try again', onPress: onRetry, icon: 'refresh' } : undefined} />
+    <EmptyState icon="cloud-offline-outline" title={t('ui.Surface.couldn_t_load_this')} message={message}
+      action={onRetry ? { label: t('common.try_again'), onPress: onRetry, icon: 'refresh' } : undefined} />
   );
 }
 
@@ -220,7 +221,7 @@ export function VegMark({ veg, size = 14 }: { veg: boolean | null | undefined; s
   if (veg === null || veg === undefined) return null;
   const color = veg ? colors.veg : colors.nonVeg;
   return (
-    <View accessibilityLabel={veg ? 'Vegetarian' : 'Non-vegetarian'}
+    <View accessibilityLabel={veg ? t('ui.Surface.vegetarian') : t('ui.Surface.non_vegetarian')}
       style={{ width: size, height: size, borderWidth: 1.5, borderColor: color, borderRadius: 3, alignItems: 'center', justifyContent: 'center' }}>
       <View style={{ width: size * 0.45, height: size * 0.45, borderRadius: size, backgroundColor: color }} />
     </View>

@@ -6,6 +6,8 @@ import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { localKey } from '../utils';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 export const MAX_PHOTOS = 5;
 export const MAX_BYTES = 10 * 1024 * 1024;
@@ -39,7 +41,7 @@ export async function pickPhotos(source: PickSource, remaining: number): Promise
   if (source === 'camera') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      throw new PickError(perm.canAskAgain ? 'Camera permission is needed to photograph the menu.' : 'Camera access is turned off for Tallyko. Turn it on in your phone settings, or choose photos from the gallery.');
+      throw new PickError(perm.canAskAgain ? t('catalog.scan_photos.camera_permission_is_needed_to_photograph') : t('catalog.scan_photos.camera_access_is_turned_off_for_brand', { brand: brand.name }));
     }
     const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: false });
     return r.canceled ? [] : r.assets;

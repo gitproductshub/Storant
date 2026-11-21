@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     SMTP_STARTTLS: bool = True
     SMTP_SSL: bool = False
     SMTP_FROM_EMAIL: str = "no-reply@tallyko.local"
-    SMTP_FROM_NAME: str = "Tallyko"
+    SMTP_FROM_NAME: str = "Storant"
     EMAIL_WORKER_ENABLED: bool = True
     # Daily 01:00 IST subscription check (signs out businesses whose subscription ended). One replica runs it per day.
     JOB_SCHEDULER_ENABLED: bool = True

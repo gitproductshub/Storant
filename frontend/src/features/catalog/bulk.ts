@@ -8,6 +8,7 @@ import { round2 } from '@/lib/format';
 import { MAX_PRICE, normName } from './utils';
 import type { ChannelPrices } from '@/api/channels';
 import { cleanChannelPrices, entryOf, isOnChannel } from './channelPricing';
+import { t as tr } from '@/i18n';
 
 /** Hide an item from (or show it on) one channel; its own price there is kept. Null when nothing changes. */
 export function withChannelAvailability(prices: ChannelPrices | null | undefined, code: string, available: boolean): ChannelPrices | null {
@@ -157,21 +158,21 @@ export function planPrice(p: Pick<Product, 'base_price' | 'variants'>, op: Price
 /** Validates the price form; returns the op or an error message. */
 export function parsePriceOp(mode: PriceOp['mode'], text: string, roundToRupee: boolean): { op: PriceOp } | { error: string } {
   const t = text.trim().replace(/,/g, '');
-  if (!t || t === '-' || t === '.') return { error: mode === 'set' ? 'Enter the new price.' : 'Enter how much to change.' };
+  if (!t || t === '-' || t === '.') return { error: mode === 'set' ? tr('catalog.bulk.enter_the_new_price') : tr('catalog.bulk.enter_how_much_to_change') };
   const n = Number(t);
-  if (!Number.isFinite(n)) return { error: 'Enter a number.' };
+  if (!Number.isFinite(n)) return { error: tr('catalog.bulk.enter_a_number') };
   if (mode === 'set') {
-    if (n < 0) return { error: 'Price can’t be negative.' };
-    if (n > MAX_PRICE) return { error: 'Price is too high.' };
+    if (n < 0) return { error: tr('catalog.bulk.price_can_t_be_negative') };
+    if (n > MAX_PRICE) return { error: tr('common.price_is_too_high') };
     return { op: { mode, value: round2(n) } };
   }
   if (mode === 'percent') {
-    if (n === 0) return { error: 'Use a number other than 0.' };
-    if (n < -90 || n > 300) return { error: 'Use -90 to 300.' };
+    if (n === 0) return { error: tr('catalog.bulk.use_a_number_other_than_0') };
+    if (n < -90 || n > 300) return { error: tr('catalog.bulk.use_90_to_300') };
     return { op: { mode, value: n, roundToRupee } };
   }
-  if (n === 0) return { error: 'Use a number other than 0.' };
-  if (Math.abs(n) > MAX_PRICE) return { error: 'That is too much.' };
+  if (n === 0) return { error: tr('catalog.bulk.use_a_number_other_than_0') };
+  if (Math.abs(n) > MAX_PRICE) return { error: tr('catalog.bulk.that_is_too_much') };
   return { op: { mode, value: round2(n) } };
 }
 
@@ -227,7 +228,7 @@ export async function runPool<T, R>(
   const run = async () => {
     for (let item = queue.shift(); item !== undefined; item = queue.shift()) {
       if (signal?.cancelled) {
-        result.failed.push({ item, error: 'Stopped' });
+        result.failed.push({ item, error: tr('catalog.bulk.stopped') });
       } else {
         try {
           result.ok.push({ item, result: await worker(item) });

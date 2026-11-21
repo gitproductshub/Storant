@@ -27,6 +27,7 @@ import { money } from '@/lib/format';
 import {
   KITCHEN_FLOW, KITCHEN_META, billName, describeSelection, isSent, itemsLocked, nextKitchenStatus, selectableItems, toItemQty, type Selection,
 } from './runningBill';
+import { t } from '@/i18n';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -63,13 +64,13 @@ export function RunningItems({ items, selected, onToggle, onToggleAll, currency,
     <View style={{ gap: 2 }}>
       <View style={styles.head}>
         <Ionicons name="checkmark-done" size={14} color={colors.textSubtle} />
-        <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase', flex: 1 }}>Already on the bill</Text>
+        <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase', flex: 1 }}>{t('pos.RunningBill.already_on_the_bill')}</Text>
         {selectable && live.length ? (
           <Pressable onPress={() => onToggleAll(!all)} accessibilityRole="checkbox" accessibilityState={{ checked: all ? true : some ? 'mixed' : false }}
-            accessibilityLabel="Select all items" hitSlop={6}
+            accessibilityLabel={t('pos.RunningBill.select_all_items')} hitSlop={6}
             style={({ hovered }: any) => [styles.selectAll, hovered && { backgroundColor: colors.surfaceSunken }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
-            <Text variant="smallStrong" tone="muted">{all ? 'Clear' : 'Select all'}</Text>
-            <View pointerEvents="none"><Checkbox checked={all} indeterminate={some} accessibilityLabel="Select all items" /></View>
+            <Text variant="smallStrong" tone="muted">{all ? t('common.clear') : t('pos.RunningBill.select_all')}</Text>
+            <View pointerEvents="none"><Checkbox checked={all} indeterminate={some} accessibilityLabel={t('pos.RunningBill.select_all_items')} /></View>
           </Pressable>
         ) : null}
       </View>
@@ -91,7 +92,7 @@ function ItemRow({ item, currency, checked, selectable, onToggle }: {
   const status = item.kitchen_status && !voided ? KITCHEN_META[item.kitchen_status] : null;
   const canTick = selectable && !voided;
   const name = `${item.name}${item.variant_name ? ` (${item.variant_name})` : ''}`;
-  const label = `${item.quantity} × ${name}${voided ? ', cancelled' : ''}${comp ? ', on the house' : ''}${status ? `, ${status.label}` : ''}`;
+  const label = `${item.quantity} × ${name}${voided ? t('pos.RunningBill.cancelled') : ''}${comp ? t('pos.RunningBill.on_the_house') : ''}${status ? `, ${status.label}` : ''}`;
 
   const body = (
     <>
@@ -104,10 +105,10 @@ function ItemRow({ item, currency, checked, selectable, onToggle }: {
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
         <Text variant="small" tone={voided ? 'danger' : 'default'} numberOfLines={2} style={voided ? styles.strike : undefined}>{name}</Text>
         <View style={styles.meta}>
-          {voided ? <StatusPill status="void" label="Cancelled" /> : null}
+          {voided ? <StatusPill status="void" label={t('common.cancelled')} /> : null}
           {status && item.kitchen_status ? <StatusPill status={item.kitchen_status} /> : null}
-          {comp ? <Badge label="On the house" tone="success" icon="heart-outline" /> : null}
-          {free && !comp ? <Badge label="Free" tone="success" icon="gift-outline" /> : null}
+          {comp ? <Badge label={t('common.on_the_house')} tone="success" icon="heart-outline" /> : null}
+          {free && !comp ? <Badge label={t('common.free')} tone="success" icon="gift-outline" /> : null}
         </View>
         {voided && item.void_reason ? <Text variant="caption" tone="subtle" numberOfLines={1}>{item.void_reason}</Text> : null}
         {comp && item.comp_reason ? <Text variant="caption" tone="success" numberOfLines={2}>{item.comp_reason}</Text> : null}
@@ -169,8 +170,8 @@ export function selectionActions(input: {
       const done = sel.kitchen.every((i) => i.kitchen_status === st);
       const action: BarAction = {
         key: st, label: KITCHEN_META[st].label, icon: KITCHEN_META[st].icon as IconName,
-        disabled: !!offReason || done, disabledReason: offReason ?? (done ? `Already ${KITCHEN_META[st].label.toLowerCase()}` : undefined),
-        description: `Mark ${KITCHEN_META[st].label.toLowerCase()}`,
+        disabled: !!offReason || done, disabledReason: offReason ?? (done ? t('pos.RunningBill.already_tolowercase_x', { toLowerCase: KITCHEN_META[st].label.toLowerCase() }) : undefined),
+        description: t('pos.RunningBill.mark_tolowercase', { toLowerCase: KITCHEN_META[st].label.toLowerCase() }),
       };
       if (st === next) main.push({ ...action, variant: 'primary' });
       else more.push(action);
@@ -179,26 +180,26 @@ export function selectionActions(input: {
   if (perms.create) {
     const sentBlocked = sel.anySent && !perms.voidSent;
     main.push({
-      key: 'void', label: 'Cancel', icon: 'close-circle-outline', variant: 'dangerOutline',
+      key: 'void', label: t('common.cancel'), icon: 'close-circle-outline', variant: 'dangerOutline',
       disabled: !!offReason || locked || !sel.voidable.length || sentBlocked,
-      disabledReason: offReason ?? lockReason ?? (!sel.voidable.length ? 'Free items follow their offer' : sentBlocked ? 'Items in the kitchen: a manager must cancel them' : undefined),
+      disabledReason: offReason ?? lockReason ?? (!sel.voidable.length ? t('pos.RunningBill.free_items_follow_their_offer_x') : sentBlocked ? t('pos.RunningBill.items_in_the_kitchen_a_manager_must_x') : undefined),
     });
     main.push({
-      key: 'repeat', label: 'Repeat', icon: 'repeat', variant: 'outline',
-      disabled: !!offReason || !sel.repeatable.length, disabledReason: offReason ?? (!sel.repeatable.length ? 'Free items can\'t be repeated' : undefined),
-      description: 'Order again as a new KOT',
+      key: 'repeat', label: t('pos.RunningBill.repeat'), icon: 'repeat', variant: 'outline',
+      disabled: !!offReason || !sel.repeatable.length, disabledReason: offReason ?? (!sel.repeatable.length ? t('pos.RunningBill.free_items_can_t_be_repeated_x') : undefined),
+      description: t('pos.RunningBill.order_again_as_a_new_kot'),
     });
   }
   if (perms.comp) {
     more.push({
-      key: 'comp', label: 'On the house', icon: 'heart-outline', description: 'Free on this bill, value kept for reports',
-      disabled: !!offReason || locked || !sel.compable.length, disabledReason: offReason ?? lockReason ?? (!sel.compable.length ? 'Already free' : undefined),
+      key: 'comp', label: t('common.on_the_house'), icon: 'heart-outline', description: t('pos.RunningBill.free_on_this_bill_value_kept_for_reports'),
+      disabled: !!offReason || locked || !sel.compable.length, disabledReason: offReason ?? lockReason ?? (!sel.compable.length ? t('pos.RunningBill.already_free_x') : undefined),
     });
   }
   if (perms.create) {
     more.push({
-      key: 'move', label: 'Move to another bill', icon: 'git-branch-outline', description: 'Split: to another or a new bill',
-      disabled: !!offReason || locked || !sel.movable.length, disabledReason: offReason ?? lockReason ?? (!sel.movable.length ? 'Free items follow their offer' : undefined),
+      key: 'move', label: t('pos.RunningBill.move_to_another_bill'), icon: 'git-branch-outline', description: t('pos.RunningBill.split_to_another_or_a_new_bill'),
+      disabled: !!offReason || locked || !sel.movable.length, disabledReason: offReason ?? lockReason ?? (!sel.movable.length ? t('pos.RunningBill.free_items_follow_their_offer_x') : undefined),
     });
   }
   return { main, more };
@@ -254,9 +255,9 @@ export function ItemSelectionBar({ order, selected, online, currency, bills, onC
     if ((KITCHEN_FLOW as string[]).includes(key)) void setStatus(key as ItemStatus);
     else { setSheetSel(sel); setSheet(key as SheetMode); }
   };
-  const hint = !online ? 'Needs internet — these actions work again when you are back online.'
-    : locked ? 'A payment was taken on this bill, so items can\'t be cancelled, given free or moved.'
-    : !sel.kitchen.length && perms.status ? 'These items don\'t go through the kitchen.'
+  const hint = !online ? t('pos.RunningBill.needs_internet_these_actions_work_again')
+    : locked ? t('pos.RunningBill.a_payment_was_taken_on_this_bill_so_items')
+    : !sel.kitchen.length && perms.status ? t('pos.RunningBill.these_items_don_t_go_through_the_kitchen')
     : null;
   // `main` (next kitchen step, Cancel, Repeat) are always buttons; `more` goes under the bar's "More"
   const actions: SelectionAction[] = [...main, ...more].map((a) => ({
@@ -354,13 +355,13 @@ function ItemsSheet({ mode, order, sel, bills, currency, online, canVoidSent, on
   };
 
   const meta: Record<SheetMode, { title: string; subtitle: string; action: string; icon: IconName; variant: 'danger' | 'primary' | 'success' }> = {
-    void: { title: 'Cancel items', subtitle: 'Unsent items are simply removed. Items the kitchen has stay on the bill as cancelled and are never charged.',
+    void: { title: t('pos.RunningBill.cancel_items'), subtitle: t('pos.RunningBill.unsent_items_are_simply_removed_items_the'),
       action: `Cancel ${count} item${count === 1 ? '' : 's'}`, icon: 'close-circle-outline', variant: 'danger' },
-    comp: { title: 'On the house', subtitle: 'These items cost nothing on this bill. Their value is kept for reports.',
+    comp: { title: t('common.on_the_house'), subtitle: t('pos.RunningBill.these_items_cost_nothing_on_this_bill'),
       action: `Make ${count} item${count === 1 ? '' : 's'} free`, icon: 'heart-outline', variant: 'success' },
-    move: { title: 'Move to another bill', subtitle: 'Split the bill: the items and their kitchen status move together.',
+    move: { title: t('pos.RunningBill.move_to_another_bill'), subtitle: t('pos.RunningBill.split_the_bill_the_items_and_their'),
       action: `Move ${count} item${count === 1 ? '' : 's'}`, icon: 'git-branch-outline', variant: 'primary' },
-    repeat: { title: 'Repeat items', subtitle: 'Orders the same items again as a new kitchen ticket (KOT).',
+    repeat: { title: t('pos.RunningBill.repeat_items'), subtitle: t('pos.RunningBill.orders_the_same_items_again_as_a_new'),
       action: `Send ${count} to kitchen`, icon: 'restaurant-outline', variant: 'primary' },
   };
   const m = mode ? meta[mode] : null;
@@ -369,8 +370,8 @@ function ItemsSheet({ mode, order, sel, bills, currency, online, canVoidSent, on
     <Sheet visible={!!mode} onClose={onClose} title={m?.title} subtitle={m?.subtitle} width={540}
       footer={m ? (
         <View style={styles.footer}>
-          <Button title="Back" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title={online ? m.action : 'Needs internet'} icon={online ? m.icon : 'cloud-offline-outline'} variant={m.variant} onPress={() => void submit()}
+          <Button title={t('common.back')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={online ? m.action : t('common.needs_internet')} icon={online ? m.icon : 'cloud-offline-outline'} variant={m.variant} onPress={() => void submit()}
             loading={saving} disabled={!online || saving || !chosen.length || !reasonOk || blocked} />
         </View>
       ) : undefined}>
@@ -390,13 +391,13 @@ function ItemsSheet({ mode, order, sel, bills, currency, online, canVoidSent, on
       </View>
 
       {mode === 'void' && blocked ? (
-        <Badge label="Some items are already in the kitchen — ask a manager to cancel them" tone="warning" icon="lock-closed-outline" />
+        <Badge label={t('pos.RunningBill.some_items_are_already_in_the_kitchen_ask')} tone="warning" icon="lock-closed-outline" />
       ) : null}
 
       {needReason ? (
         <View style={{ gap: 8 }}>
-          <Input label="Reason" required value={reason} onChangeText={setReason} maxLength={200}
-            placeholder={mode === 'comp' ? 'e.g. Regular customer' : 'e.g. Customer changed mind'} />
+          <Input label={t('common.reason')} required value={reason} onChangeText={setReason} maxLength={200}
+            placeholder={mode === 'comp' ? t('pos.RunningBill.e_g_regular_customer') : t('pos.RunningBill.e_g_customer_changed_mind')} />
           <View style={styles.chips}>
             {(mode === 'comp' ? COMP_REASONS : VOID_REASONS).map((r) => <Chip key={r} label={r} selected={reason === r} onPress={() => setReason(r)} />)}
           </View>
@@ -404,20 +405,20 @@ function ItemsSheet({ mode, order, sel, bills, currency, online, canVoidSent, on
       ) : null}
 
       {mode === 'void' && sentChosen ? (
-        <SwitchRow title="Already made — count as wastage" subtitle="Takes it out of stock (for items whose stock you track)." value={waste} onValueChange={setWaste} />
+        <SwitchRow title={t('pos.RunningBill.already_made_count_as_wastage')} subtitle={t('pos.RunningBill.takes_it_out_of_stock_for_items_whose')} value={waste} onValueChange={setWaste} />
       ) : null}
 
       {mode === 'move' ? (
         <View style={{ gap: 6 }}>
-          <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>Move to</Text>
-          <TargetRow selected={target === 'new'} onPress={() => setTarget('new')} icon="add-circle-outline" title="A new bill"
-            subtitle={order.table_label ? `Separate bill on table ${order.table_label}` : 'Separate bill'} />
+          <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>{t('pos.RunningBill.move_to')}</Text>
+          <TargetRow selected={target === 'new'} onPress={() => setTarget('new')} icon="add-circle-outline" title={t('pos.RunningBill.a_new_bill')}
+            subtitle={order.table_label ? t('pos.RunningBill.separate_bill_on_table_table_label', { table_label: order.table_label }) : t('common.separate_bill')} />
           {target === 'new' ? (
-            <Input value={label} onChangeText={setLabel} maxLength={40} placeholder="Name for the new bill (optional), e.g. Rahul" icon="person-outline" />
+            <Input value={label} onChangeText={setLabel} maxLength={40} placeholder={t('pos.RunningBill.name_for_the_new_bill_optional_e_g_rahul')} icon="person-outline" />
           ) : null}
           {others.map((b) => (
             <TargetRow key={b.id} selected={target === b.id} onPress={() => setTarget(b.id)} icon="receipt-outline"
-              title={billName(b, bills.indexOf(b))} subtitle={`${money(b.total_amount, currency)} · ${b.items.filter((i) => !isVoidItem(i)).reduce((s, i) => s + i.quantity, 0)} items`} />
+              title={billName(b, bills.indexOf(b))} subtitle={t('pos.RunningBill.money_reduce_items', { money: money(b.total_amount, currency), reduce: b.items.filter((i) => !isVoidItem(i)).reduce((s, i) => s + i.quantity, 0) })} />
           ))}
         </View>
       ) : null}

@@ -3,15 +3,17 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
-import { palette } from '@/theme/tokens';
 import { Text } from './ui';
+import { ThemeToggle } from '@/theme/ThemeToggle';
+import { LanguageMenu } from '@/i18n/LanguageSwitcher';
 import { Logo } from './Logo';
+import { t } from '@/i18n';
 
 const POINTS: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
-  { icon: 'flash-outline', title: 'Bill in seconds', body: 'Tap, pay, print. GST, UPI and split payments built in.' },
-  { icon: 'cloud-offline-outline', title: 'Works offline', body: 'Internet down? Keep billing — everything syncs later.' },
-  { icon: 'restaurant-outline', title: 'Tables, kitchen & online orders', body: 'KOTs, Swiggy/Zomato orders and QR menus in one place.' },
-  { icon: 'camera-outline', title: 'Menu from a photo', body: 'Snap any printed menu and import items with prices.' },
+  { icon: 'flash-outline', get title() { return t('shell.AuthLayout.bill_in_seconds'); }, get body() { return t('shell.AuthLayout.tap_pay_print_gst_upi_and_split_payments'); } },
+  { icon: 'cloud-offline-outline', get title() { return t('shell.AuthLayout.works_offline'); }, get body() { return t('shell.AuthLayout.internet_down_keep_billing_everything'); } },
+  { icon: 'restaurant-outline', get title() { return t('shell.AuthLayout.tables_kitchen_online_orders'); }, get body() { return t('shell.AuthLayout.kots_swiggy_zomato_orders_and_qr_menus_in'); } },
+  { icon: 'camera-outline', get title() { return t('shell.AuthLayout.menu_from_a_photo'); }, get body() { return t('shell.AuthLayout.snap_any_printed_menu_and_import_items'); } },
 ];
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -22,27 +24,28 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <View style={[styles.root, { backgroundColor: colors.background, flexDirection: isWide ? 'row' : 'column' }]}>
       {isWide ? (
-        <View style={[styles.brand, { backgroundColor: palette.slate900 }]}>
+        <View style={[styles.brand, { backgroundColor: colors.sidebar, borderRightWidth: 1, borderRightColor: colors.sidebarBorder }]}>
           <Logo inverse size={34} />
           <View style={{ gap: 10, marginTop: 56 }}>
-            <Text variant="display" color="#FFFFFF" style={{ maxWidth: 440 }}>The point of sale that keeps your shop running.</Text>
-            <Text color="#A9B6C9" style={{ maxWidth: 420 }}>For restaurants, cafés, cloud kitchens and retail stores — on your laptop, tablet or phone.</Text>
+            <Text variant="display" color={colors.sidebarText} style={{ maxWidth: 440 }}>{t('shell.AuthLayout.the_point_of_sale_that_keeps_your_shop')}</Text>
+            <Text color={colors.sidebarMuted} style={{ maxWidth: 420 }}>{t('shell.AuthLayout.for_restaurants_caf_s_cloud_kitchens_and')}</Text>
           </View>
           <View style={{ gap: 22, marginTop: 44 }}>
             {POINTS.map((p) => (
               <View key={p.title} style={{ flexDirection: 'row', gap: 14, maxWidth: 440 }}>
-                <View style={[styles.pointIcon, { backgroundColor: 'rgba(20,184,166,0.14)' }]}>
-                  <Ionicons name={p.icon} size={20} color="#5EEAD4" />
+                <View style={[styles.pointIcon, { backgroundColor: colors.sidebarActive }]}>
+                  <Ionicons name={p.icon} size={20} color={colors.sidebarActiveText} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong" color="#F1F5F9">{p.title}</Text>
-                  <Text variant="small" color="#94A3B8">{p.body}</Text>
+                  <Text variant="bodyStrong" color={colors.sidebarText}>{p.title}</Text>
+                  <Text variant="small" color={colors.sidebarMuted}>{p.body}</Text>
                 </View>
               </View>
             ))}
           </View>
         </View>
       ) : null}
+      <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: 4 }}><LanguageMenu /><ThemeToggle /></View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[styles.formWrap, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
           <View style={styles.form}>

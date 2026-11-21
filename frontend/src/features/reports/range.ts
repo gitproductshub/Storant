@@ -1,4 +1,5 @@
 import { toOffsetIso } from '@/lib/format';
+import { t } from '@/i18n';
 
 export type PresetId = 'today' | 'yesterday' | '7d' | '30d' | 'month' | 'custom';
 
@@ -11,11 +12,11 @@ export interface ReportRange {
 }
 
 export const PRESETS: { id: Exclude<PresetId, 'custom'>; label: string }[] = [
-  { id: 'today', label: 'Today' },
-  { id: 'yesterday', label: 'Yesterday' },
-  { id: '7d', label: 'Last 7 days' },
-  { id: '30d', label: 'Last 30 days' },
-  { id: 'month', label: 'This month' },
+  { id: 'today', get label() { return t('common.today'); } },
+  { id: 'yesterday', get label() { return t('reports.range.yesterday'); } },
+  { id: '7d', get label() { return t('reports.range.last_7_days'); } },
+  { id: '30d', get label() { return t('reports.range.last_30_days'); } },
+  { id: 'month', get label() { return t('reports.range.this_month'); } },
 ];
 
 const MAX_DAYS = 366;
@@ -89,15 +90,15 @@ export function validateCustom(fromText: string, toText: string, now = new Date(
   const from = parseYmd(fromText);
   const to = parseYmd(toText);
   const today = midnight(now);
-  if (!fromText.trim()) errors.from = 'Enter a start date';
-  else if (!from) errors.from = 'Use YYYY-MM-DD, e.g. 2026-10-01';
-  if (!toText.trim()) errors.to = 'Enter an end date';
-  else if (!to) errors.to = 'Use YYYY-MM-DD, e.g. 2026-10-23';
-  if (from && from > today) errors.from = 'Start date is in the future';
-  if (to && to > today) errors.to = 'End date is in the future';
+  if (!fromText.trim()) errors.from = t('reports.range.enter_a_start_date');
+  else if (!from) errors.from = t('reports.range.use_yyyy_mm_dd_e_g_2026_10_01');
+  if (!toText.trim()) errors.to = t('reports.range.enter_an_end_date');
+  else if (!to) errors.to = t('reports.range.use_yyyy_mm_dd_e_g_2026_10_23');
+  if (from && from > today) errors.from = t('reports.range.start_date_is_in_the_future');
+  if (to && to > today) errors.to = t('reports.range.end_date_is_in_the_future');
   if (from && to && !errors.from && !errors.to) {
-    if (to < from) errors.to = 'End date is before the start date';
-    else if ((to.getTime() - from.getTime()) / 86_400_000 + 1 > MAX_DAYS) errors.to = `Pick at most ${MAX_DAYS} days`;
+    if (to < from) errors.to = t('reports.range.end_date_is_before_the_start_date');
+    else if ((to.getTime() - from.getTime()) / 86_400_000 + 1 > MAX_DAYS) errors.to = t('reports.range.pick_at_most_max_days_days', { MAX_DAYS });
   }
   if (errors.from || errors.to || !from || !to) return { errors };
   return { range: { preset: 'custom', start: from, end: addDays(to, 1) } };

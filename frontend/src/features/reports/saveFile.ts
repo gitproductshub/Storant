@@ -1,6 +1,7 @@
+import { t } from '@/i18n';
 /** Web: download a text file through a temporary object URL. (Native implementation: saveFile.native.ts.) */
 export async function saveTextFile(filename: string, content: string, mimeType = 'text/csv'): Promise<void> {
-  if (typeof document === 'undefined') throw new Error('Downloads are not available here.');
+  if (typeof document === 'undefined') throw new Error(t('reports.saveFile.downloads_are_not_available_here'));
   const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

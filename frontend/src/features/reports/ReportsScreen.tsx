@@ -6,7 +6,8 @@ import { ItemSalesView } from './ItemSalesView';
 import { useAuth, useRole, can } from '@/store/auth';
 import { useData } from '@/store/data';
 import type { SalesSummary } from '@/api/types';
-import { CHANNEL_LABEL, ORDER_TYPE_LABEL, PAYMENT_LABEL, money } from '@/lib/format';
+import { money } from '@/lib/format';
+import { CHANNEL_UI, ORDER_TYPE_UI, PAYMENT_UI } from '@/lib/uiLabels';
 import { printHtml, PrinterError } from '@/lib/print/printers';
 import { PRESETS, isSingleDay, presetRange, rangeDays, rangeLabel, rangeSlug, validateCustom, ymd, type ReportRange } from './range';
 import { useReports, type ItemRow, type StaffRow, type WastageRow } from './useReports';
@@ -14,14 +15,15 @@ import { BarList, HourlyChart } from './charts';
 import { Cell, DataTable, KpiGrid, Panel, PanelError, Skeleton, type Kpi } from './ui';
 import { dayEndHtml, itemsCsv, summaryCsv } from './exportData';
 import { saveTextFile } from './saveFile';
+import { t as tr, currentLocale } from '@/i18n';
 
 export default function ReportsScreen() {
   const role = useRole();
   if (!can(role, 'manage')) {
     return (
-      <Screen title="Reports">
-        <EmptyState icon="lock-closed-outline" title="Reports are for owners and managers"
-          message="Sales reports show the whole business's takings, so they're limited to owners and managers. Ask your manager if you need today's numbers." />
+      <Screen title={tr('common.reports')}>
+        <EmptyState icon="lock-closed-outline" title={tr('reports.ReportsScreen.reports_are_for_owners_and_managers')}
+          message={tr('reports.ReportsScreen.sales_reports_show_the_whole_business_s')} />
       </Screen>
     );
   }
@@ -83,11 +85,11 @@ function ReportsBody() {
     if (!summary) return;
     setBusy('summary');
     try {
-      await saveTextFile(`tallyko-summary-${rangeSlug(range)}.csv`,
+      await saveTextFile(`storant-summary-${rangeSlug(range)}.csv`,
         summaryCsv(summary, label, { staff: report.staff.data, wastage: report.wastage.data }));
-      toast.success('Summary exported');
+      toast.success(tr('reports.ReportsScreen.summary_exported'));
     } catch (e: any) {
-      toast.error(e?.message || 'Could not export the summary.');
+      toast.error(e?.message || tr('reports.ReportsScreen.could_not_export_the_summary'));
     } finally {
       setBusy(null);
     }
@@ -97,10 +99,10 @@ function ReportsBody() {
     if (!report.items.data?.length) return;
     setBusy('items');
     try {
-      await saveTextFile(`tallyko-items-${rangeSlug(range)}.csv`, itemsCsv(report.items.data, label));
-      toast.success('Item-wise sales exported');
+      await saveTextFile(`storant-items-${rangeSlug(range)}.csv`, itemsCsv(report.items.data, label));
+      toast.success(tr('reports.ReportsScreen.item_wise_sales_exported'));
     } catch (e: any) {
-      toast.error(e?.message || 'Could not export item-wise sales.');
+      toast.error(e?.message || tr('reports.ReportsScreen.could_not_export_item_wise_sales'));
     } finally {
       setBusy(null);
     }
@@ -114,7 +116,7 @@ function ReportsBody() {
         businessName, periodLabel: label, singleDay: isSingleDay(range), symbol, printedBy: session?.fullName || session?.email,
       }));
     } catch (e) {
-      if (!(e instanceof PrinterError && e.code === 'CANCELLED')) toast.error(e instanceof Error && e.message ? e.message : 'Could not print the summary.');
+      if (!(e instanceof PrinterError && e.code === 'CANCELLED')) toast.error(e instanceof Error && e.message ? e.message : tr('reports.ReportsScreen.could_not_print_the_summary'));
     } finally {
       setBusy(null);
     }
@@ -123,23 +125,23 @@ function ReportsBody() {
   const printLabel = isSingleDay(range) ? 'Day-end summary' : 'Print summary';
   const actions = isPhone ? (
     <>
-      <IconButton icon="download-outline" accessibilityLabel="Export summary as CSV" variant="secondary" onPress={exportSummary} disabled={!summary || busy !== null} />
+      <IconButton icon="download-outline" accessibilityLabel={tr('reports.ReportsScreen.export_summary_as_csv')} variant="secondary" onPress={exportSummary} disabled={!summary || busy !== null} />
       <IconButton icon="print-outline" accessibilityLabel={printLabel} variant="secondary" onPress={printDayEnd} disabled={!summary || busy !== null} />
-      <IconButton icon="refresh" accessibilityLabel="Refresh reports" variant="secondary" onPress={() => void report.reload()} disabled={report.refreshing || report.loading} />
+      <IconButton icon="refresh" accessibilityLabel={tr('reports.ReportsScreen.refresh_reports')} variant="secondary" onPress={() => void report.reload()} disabled={report.refreshing || report.loading} />
     </>
   ) : (
     <>
-      <Button title="Export CSV" icon="download-outline" variant="secondary" onPress={exportSummary} loading={busy === 'summary'} disabled={!summary || (busy !== null && busy !== 'summary')} />
+      <Button title={tr('reports.ReportsScreen.export_csv')} icon="download-outline" variant="secondary" onPress={exportSummary} loading={busy === 'summary'} disabled={!summary || (busy !== null && busy !== 'summary')} />
       <Button title={printLabel} icon="print-outline" variant="secondary" onPress={printDayEnd} loading={busy === 'print'} disabled={!summary || (busy !== null && busy !== 'print')} />
-      <IconButton icon="refresh" accessibilityLabel="Refresh reports" variant="secondary" onPress={() => void report.reload()} disabled={report.refreshing || report.loading} />
+      <IconButton icon="refresh" accessibilityLabel={tr('reports.ReportsScreen.refresh_reports')} variant="secondary" onPress={() => void report.reload()} disabled={report.refreshing || report.loading} />
     </>
   );
 
   const viewSwitch = (
     <View style={{ width: isPhone ? '100%' : 260 }}>
       <Segmented<'overview' | 'items'> value={view} onChange={setView} options={[
-        { value: 'overview', label: 'Overview', icon: 'stats-chart-outline' },
-        { value: 'items', label: report.items.data ? `Items ${report.items.data.length}` : 'Items', icon: 'list-outline' },
+        { value: 'overview', label: tr('common.overview'), icon: 'stats-chart-outline' },
+        { value: 'items', label: report.items.data ? tr('reports.ReportsScreen.items_length', { length: report.items.data.length }) : tr('common.items'), icon: 'list-outline' },
       ]} />
     </View>
   );
@@ -151,21 +153,21 @@ function ReportsBody() {
         {PRESETS.map((p) => (
           <Chip key={p.id} label={p.label} selected={range.preset === p.id && !customOpen} onPress={() => pickPreset(p.id)} />
         ))}
-        <Chip label={range.preset === 'custom' && !customOpen ? label : 'Custom'} icon="calendar-outline" selected={range.preset === 'custom' || customOpen}
+        <Chip label={range.preset === 'custom' && !customOpen ? label : tr('common.custom')} icon="calendar-outline" selected={range.preset === 'custom' || customOpen}
           onPress={() => (customOpen ? setCustomOpen(false) : openCustom())} />
       </ScrollView>
       </View>
       {customOpen ? (
         <View style={[styles.custom, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Input label="From" value={fromText} onChangeText={(v) => { setFromText(v); setCustomErrors((e) => ({ ...e, from: undefined })); }}
-            placeholder="YYYY-MM-DD" error={customErrors.from} containerStyle={styles.dateInput} maxLength={10} autoCorrect={false}
+          <Input label={tr('common.from')} value={fromText} onChangeText={(v) => { setFromText(v); setCustomErrors((e) => ({ ...e, from: undefined })); }}
+            placeholder={tr('common.yyyy_mm_dd')} error={customErrors.from} containerStyle={styles.dateInput} maxLength={10} autoCorrect={false}
             keyboardType="numbers-and-punctuation" icon="calendar-outline" returnKeyType="next" />
-          <Input label="To" value={toText} onChangeText={(v) => { setToText(v); setCustomErrors((e) => ({ ...e, to: undefined })); }}
-            placeholder="YYYY-MM-DD" error={customErrors.to} containerStyle={styles.dateInput} maxLength={10} autoCorrect={false}
+          <Input label={tr('common.to')} value={toText} onChangeText={(v) => { setToText(v); setCustomErrors((e) => ({ ...e, to: undefined })); }}
+            placeholder={tr('common.yyyy_mm_dd')} error={customErrors.to} containerStyle={styles.dateInput} maxLength={10} autoCorrect={false}
             keyboardType="numbers-and-punctuation" icon="calendar-outline" returnKeyType="go" onSubmitEditing={applyCustom} />
           <View style={styles.customActions}>
-            <Button title="Cancel" variant="ghost" onPress={() => setCustomOpen(false)} />
-            <Button title="Apply" icon="checkmark" onPress={applyCustom} />
+            <Button title={tr('common.cancel')} variant="ghost" onPress={() => setCustomOpen(false)} />
+            <Button title={tr('common.apply')} icon="checkmark" onPress={applyCustom} />
           </View>
         </View>
       ) : null}
@@ -182,11 +184,11 @@ function ReportsBody() {
       <View style={{ gap: 16, opacity: report.loading ? 0.55 : 1 }}>
         <KpiGrid items={kpis(summary, symbol)} />
         {summary.orders === 0 ? (
-          <Panel title="Sales" icon="bar-chart-outline">
-            <EmptyState icon="receipt-outline" title={`No sales ${isSingleDay(range) && range.preset === 'today' ? 'yet today' : 'in this period'}`}
+          <Panel title={tr('reports.ReportsScreen.sales')} icon="bar-chart-outline">
+            <EmptyState icon="receipt-outline" title={tr('reports.ReportsScreen.no_sales_v', { v: isSingleDay(range) && range.preset === 'today' ? tr('reports.ReportsScreen.yet_today') : tr('reports.ReportsScreen.in_this_period') })}
               message={summary.open_orders && range.end.getTime() > Date.now()
-                ? `${summary.open_orders} order${summary.open_orders > 1 ? 's are' : ' is'} still open. Sales appear here once bills are settled.`
-                : 'Completed bills will show up here with hourly sales, payment methods and top items.'} />
+                ? tr('reports.ReportsScreen.open_orders_order_v_still_open_sales', { open_orders: summary.open_orders, v: summary.open_orders > 1 ? tr('common.s_are') : tr('common.is') })
+                : tr('reports.ReportsScreen.completed_bills_will_show_up_here_with')} />
           </Panel>
         ) : (
           <SalesPanels summary={summary} symbol={symbol} twoCol={twoCol} narrow={contentWidth > 0 && contentWidth < 560} range={range} />
@@ -207,7 +209,7 @@ function ReportsBody() {
 
   if (view === 'items') {
     return (
-      <Screen title="Reports" subtitle={`${label} · item-wise sales`} actions={actions} toolbar={toolbar} scroll={false}
+      <Screen title={tr('common.reports')} subtitle={tr('reports.ReportsScreen.label_item_wise_sales', { label })} actions={actions} toolbar={toolbar} scroll={false}
         contentStyle={{ flex: 1, paddingBottom: 16 }}>
         <ItemSalesView rows={report.items.data} loading={report.loading || (!report.items.data && !report.items.error)} error={report.items.error}
           onRetry={() => void report.retry()} symbol={symbol} onExport={exportItems} exporting={busy === 'items'}
@@ -217,7 +219,7 @@ function ReportsBody() {
   }
 
   return (
-    <Screen title="Reports" subtitle={label} actions={actions} toolbar={toolbar} refreshing={report.refreshing} onRefresh={() => void report.reload()}>
+    <Screen title={tr('common.reports')} subtitle={label} actions={actions} toolbar={toolbar} refreshing={report.refreshing} onRefresh={() => void report.reload()}>
       <View onLayout={(e) => setContentWidth(e.nativeEvent.layout.width)} style={{ gap: 16 }}>
         {body}
       </View>
@@ -229,14 +231,14 @@ function kpis(s: SalesSummary, symbol: string): Kpi[] {
   const m = (v: number) => money(v, symbol, true);
   const discountPct = s.gross_sales + s.discounts > 0 ? (s.discounts / (s.gross_sales + s.discounts)) * 100 : 0;
   return [
-    { key: 'gross', label: 'Gross sales', value: m(s.gross_sales), hint: `${m(s.net_sales)} before GST`, icon: 'trending-up-outline', tone: 'primary' },
-    { key: 'orders', label: 'Orders', value: s.orders.toLocaleString('en-IN'), hint: 'completed bills', icon: 'receipt-outline', tone: 'info' },
-    { key: 'aov', label: 'Avg order', value: m(s.average_order_value), hint: 'per completed bill', icon: 'calculator-outline', tone: 'accent' },
-    { key: 'gst', label: 'GST collected', value: m(s.tax), hint: 'CGST + SGST', icon: 'document-text-outline', tone: 'neutral' },
-    { key: 'disc', label: 'Discounts', value: m(s.discounts), hint: discountPct ? `${discountPct.toFixed(1)}% of sales` : 'none given', icon: 'pricetag-outline', tone: 'warning' },
-    { key: 'net', label: 'Net payout', value: m(s.gross_sales - s.commission), hint: s.commission ? `after ${m(s.commission)} commission` : 'no commission', icon: 'wallet-outline', tone: 'success' },
-    { key: 'cancel', label: 'Cancelled', value: s.cancelled_orders.toLocaleString('en-IN'), hint: s.cancelled_orders ? `${m(s.cancelled_value)} cancelled` : 'none', icon: 'close-circle-outline', tone: 'danger' },
-    { key: 'open', label: 'Open orders', value: s.open_orders.toLocaleString('en-IN'), hint: s.open_orders ? `${m(s.open_value)} unbilled now` : 'none right now', icon: 'hourglass-outline', tone: 'neutral' },
+    { key: 'gross', label: tr('reports.ReportsScreen.gross_sales'), value: m(s.gross_sales), hint: tr('reports.ReportsScreen.m_before_gst', { m: m(s.net_sales) }), icon: 'trending-up-outline', tone: 'primary' },
+    { key: 'orders', label: tr('common.orders'), value: s.orders.toLocaleString(currentLocale()), hint: tr('reports.ReportsScreen.completed_bills'), icon: 'receipt-outline', tone: 'info' },
+    { key: 'aov', label: tr('reports.ReportsScreen.avg_order'), value: m(s.average_order_value), hint: tr('reports.ReportsScreen.per_completed_bill'), icon: 'calculator-outline', tone: 'accent' },
+    { key: 'gst', label: tr('reports.ReportsScreen.gst_collected'), value: m(s.tax), hint: tr('reports.ReportsScreen.cgst_sgst'), icon: 'document-text-outline', tone: 'neutral' },
+    { key: 'disc', label: tr('reports.ReportsScreen.discounts'), value: m(s.discounts), hint: discountPct ? tr('reports.ReportsScreen.tofixed_of_sales', { toFixed: discountPct.toFixed(1) }) : tr('reports.ReportsScreen.none_given'), icon: 'pricetag-outline', tone: 'warning' },
+    { key: 'net', label: tr('reports.ReportsScreen.net_payout'), value: m(s.gross_sales - s.commission), hint: s.commission ? tr('reports.ReportsScreen.after_m_commission', { m: m(s.commission) }) : tr('reports.ReportsScreen.no_commission'), icon: 'wallet-outline', tone: 'success' },
+    { key: 'cancel', label: tr('common.cancelled'), value: s.cancelled_orders.toLocaleString(currentLocale()), hint: s.cancelled_orders ? tr('reports.ReportsScreen.m_cancelled', { m: m(s.cancelled_value) }) : 'none', icon: 'close-circle-outline', tone: 'danger' },
+    { key: 'open', label: tr('reports.ReportsScreen.open_orders'), value: s.open_orders.toLocaleString(currentLocale()), hint: s.open_orders ? tr('reports.ReportsScreen.m_unbilled_now', { m: m(s.open_value) }) : tr('reports.ReportsScreen.none_right_now'), icon: 'hourglass-outline', tone: 'neutral' },
   ];
 }
 
@@ -263,52 +265,52 @@ function SalesPanels({ summary: s, symbol, twoCol, narrow, range }: { summary: S
 
   return (
     <>
-      <Panel title="Sales by hour" subtitle={days > 1 ? `Combined across ${days} days` : 'Completed bills, by the hour they were opened'} icon="time-outline">
+      <Panel title={tr('reports.ReportsScreen.sales_by_hour')} subtitle={days > 1 ? tr('reports.ReportsScreen.combined_across_days_days', { days }) : tr('reports.ReportsScreen.completed_bills_by_the_hour_they_were')} icon="time-outline">
         <HourlyChart hourly={s.hourly} symbol={symbol} />
       </Panel>
 
       <Row twoCol={twoCol}>
-        <Panel title="Payment methods" subtitle={`${money(totalPayments, symbol, true)} received`} icon="card-outline" style={{ flex: 1 }}>
-          <BarList symbol={symbol} emptyLabel="No payments recorded"
-            data={payments.map((p) => ({ key: p.method, label: PAYMENT_LABEL[p.method] ?? p.method, value: p.amount, detail: `${p.count} payment${p.count === 1 ? '' : 's'}` }))} />
+        <Panel title={tr('reports.ReportsScreen.payment_methods')} subtitle={tr('reports.ReportsScreen.money_received', { money: money(totalPayments, symbol, true) })} icon="card-outline" style={{ flex: 1 }}>
+          <BarList symbol={symbol} emptyLabel={tr('reports.ReportsScreen.no_payments_recorded_x')}
+            data={payments.map((p) => ({ key: p.method, label: PAYMENT_UI[p.method] ?? p.method, value: p.amount, detail: tr('reports.ReportsScreen.count_payment_v', { count: p.count, v: p.count === 1 ? '' : 's' }) }))} />
         </Panel>
-        <Panel title="Order types" icon="restaurant-outline" style={{ flex: 1 }}>
+        <Panel title={tr('reports.ReportsScreen.order_types')} icon="restaurant-outline" style={{ flex: 1 }}>
           <BarList symbol={symbol}
-            data={types.map((t) => ({ key: t.type, label: ORDER_TYPE_LABEL[t.type] ?? t.type, value: t.amount, detail: `${t.orders} order${t.orders === 1 ? '' : 's'}` }))} />
+            data={types.map((t) => ({ key: t.type, label: ORDER_TYPE_UI[t.type] ?? t.type, value: t.amount, detail: tr('reports.ReportsScreen.orders_order_v', { orders: t.orders, v: t.orders === 1 ? '' : 's' }) }))} />
         </Panel>
       </Row>
 
-      <Panel title="Channels" subtitle="Aggregator commission is deducted from the net payout" icon="git-branch-outline">
+      <Panel title={tr('reports.ReportsScreen.channels')} subtitle={tr('reports.ReportsScreen.aggregator_commission_is_deducted_from')} icon="git-branch-outline">
         {narrow ? (
           <View style={{ gap: 0 }}>
             {[...s.by_channel].sort((a, b) => b.amount - a.amount).map((c) => (
               <View key={c.channel} style={[styles.channelRow, { borderBottomColor: colors.divider }]}
-                accessible accessibilityLabel={`${CHANNEL_LABEL[c.channel] ?? c.channel}: ${c.orders} orders, gross ${money(c.amount, symbol)}, commission ${money(c.commission, symbol)}, net ${money(c.net, symbol)}`}>
+                accessible accessibilityLabel={tr('reports.ReportsScreen.v_orders_orders_gross_money_commission', { v: CHANNEL_UI[c.channel] ?? c.channel, orders: c.orders, money: money(c.amount, symbol), money2: money(c.commission, symbol), money3: money(c.net, symbol) })}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text variant="smallStrong" numberOfLines={1}>{CHANNEL_LABEL[c.channel] ?? c.channel}</Text>
+                  <Text variant="smallStrong" numberOfLines={1}>{CHANNEL_UI[c.channel] ?? c.channel}</Text>
                   <Text variant="caption" tone="subtle" numberOfLines={1}>
-                    {c.orders} order{c.orders === 1 ? '' : 's'} · gross {money(c.amount, symbol, true)}{c.commission ? ` · −${money(c.commission, symbol, true)} fee` : ''}
+                    {tr('reports.ReportsScreen.orders_order', { orders: c.orders })}{c.orders === 1 ? '' : 's'} {tr('reports.ReportsScreen.gross')} {money(c.amount, symbol, true)}{c.commission ? tr('reports.ReportsScreen.money_fee', { money: money(c.commission, symbol, true) }) : ''}
                   </Text>
                 </View>
                 <Text variant="smallStrong" style={{ fontVariant: ['tabular-nums'] }}>{money(c.net, symbol, true)}</Text>
               </View>
             ))}
             <View style={[styles.channelRow, { borderBottomWidth: 0 }]}>
-              <Text variant="smallStrong" style={{ flex: 1 }}>Net total · {channelTotals.orders} orders</Text>
+              <Text variant="smallStrong" style={{ flex: 1 }}>{tr('reports.ReportsScreen.net_total_orders_orders', { orders: channelTotals.orders })}</Text>
               <Text variant="smallStrong" style={{ fontVariant: ['tabular-nums'] }}>{money(channelTotals.net, symbol, true)}</Text>
             </View>
           </View>
         ) : (
           <DataTable minWidth={520} rows={[...s.by_channel].sort((a, b) => b.amount - a.amount)} rowKey={(r) => r.channel}
             columns={[
-              { key: 'ch', label: 'Channel', flex: 1.6, render: (r) => <Cell strong>{CHANNEL_LABEL[r.channel] ?? r.channel}</Cell> },
-              { key: 'o', label: 'Orders', align: 'right', render: (r) => <Cell align="right">{r.orders}</Cell> },
-              { key: 'g', label: 'Gross', align: 'right', flex: 1.2, render: (r) => <Cell align="right">{money(r.amount, symbol, true)}</Cell> },
-              { key: 'c', label: 'Commission', align: 'right', flex: 1.2, render: (r) => <Cell align="right" muted={!r.commission}>{r.commission ? `−${money(r.commission, symbol, true)}` : '—'}</Cell> },
-              { key: 'n', label: 'Net', align: 'right', flex: 1.2, render: (r) => <Cell align="right" strong>{money(r.net, symbol, true)}</Cell> },
+              { key: 'ch', label: tr('common.channel'), flex: 1.6, render: (r) => <Cell strong>{CHANNEL_UI[r.channel] ?? r.channel}</Cell> },
+              { key: 'o', label: tr('common.orders'), align: 'right', render: (r) => <Cell align="right">{r.orders}</Cell> },
+              { key: 'g', label: tr('reports.ReportsScreen.gross_2'), align: 'right', flex: 1.2, render: (r) => <Cell align="right">{money(r.amount, symbol, true)}</Cell> },
+              { key: 'c', label: tr('reports.ReportsScreen.commission'), align: 'right', flex: 1.2, render: (r) => <Cell align="right" muted={!r.commission}>{r.commission ? `−${money(r.commission, symbol, true)}` : '—'}</Cell> },
+              { key: 'n', label: tr('reports.ReportsScreen.net'), align: 'right', flex: 1.2, render: (r) => <Cell align="right" strong>{money(r.net, symbol, true)}</Cell> },
             ]}
             footer={[
-              <Cell key="t" strong>Total</Cell>, <Cell key="o" align="right" strong>{channelTotals.orders}</Cell>,
+              <Cell key="t" strong>{tr('common.total')}</Cell>, <Cell key="o" align="right" strong>{channelTotals.orders}</Cell>,
               <Cell key="g" align="right" strong>{money(channelTotals.amount, symbol, true)}</Cell>,
               <Cell key="c" align="right" strong>{channelTotals.commission ? `−${money(channelTotals.commission, symbol, true)}` : '—'}</Cell>,
               <Cell key="n" align="right" strong>{money(channelTotals.net, symbol, true)}</Cell>,
@@ -317,11 +319,11 @@ function SalesPanels({ summary: s, symbol, twoCol, narrow, range }: { summary: S
       </Panel>
 
       <Row twoCol={twoCol}>
-        <Panel title="Top items" subtitle="By revenue (before GST)" icon="trophy-outline" style={{ flex: 1 }}>
+        <Panel title={tr('reports.ReportsScreen.top_items')} subtitle={tr('reports.ReportsScreen.by_revenue_before_gst')} icon="trophy-outline" style={{ flex: 1 }}>
           {s.top_items.length ? (
             <View style={{ gap: 12 }}>
               {s.top_items.map((t, i) => (
-                <View key={t.name} style={styles.topRow} accessible accessibilityLabel={`Rank ${i + 1}: ${t.name}, ${t.quantity} sold, ${money(t.revenue, symbol)}`}>
+                <View key={t.name} style={styles.topRow} accessible accessibilityLabel={tr('reports.ReportsScreen.rank_v_name_quantity_sold_money', { v: i + 1, name: t.name, quantity: t.quantity, money: money(t.revenue, symbol) })}>
                   <View style={[styles.rank, { backgroundColor: i < 3 ? colors.primarySoft : colors.surfaceSunken }]}>
                     <Text variant="smallStrong" color={i < 3 ? colors.primary : colors.textMuted}>{i + 1}</Text>
                   </View>
@@ -334,17 +336,17 @@ function SalesPanels({ summary: s, symbol, twoCol, narrow, range }: { summary: S
                       <View style={[styles.miniTrack, { backgroundColor: colors.surfaceSunken }]}>
                         <View style={{ width: `${(t.revenue / maxTop) * 100}%`, height: '100%', borderRadius: 3, backgroundColor: colors.primary, opacity: 0.75 }} />
                       </View>
-                      <Text variant="caption" tone="subtle" style={{ minWidth: 52, textAlign: 'right' }}>{t.quantity} sold</Text>
+                      <Text variant="caption" tone="subtle" style={{ minWidth: 52, textAlign: 'right' }}>{t.quantity} {tr('reports.ReportsScreen.sold')}</Text>
                     </View>
                   </View>
                 </View>
               ))}
             </View>
-          ) : <Text tone="subtle" variant="small">No items sold</Text>}
+          ) : <Text tone="subtle" variant="small">{tr('reports.ReportsScreen.no_items_sold')}</Text>}
         </Panel>
-        <Panel title="Category sales" subtitle="Revenue before GST" icon="albums-outline" style={{ flex: 1 }}>
+        <Panel title={tr('reports.ReportsScreen.category_sales')} subtitle={tr('reports.ReportsScreen.revenue_before_gst')} icon="albums-outline" style={{ flex: 1 }}>
           <BarList symbol={symbol}
-            data={s.by_category.map((c) => ({ key: c.category, label: c.category, value: c.revenue, detail: `${c.quantity} sold` }))} />
+            data={s.by_category.map((c) => ({ key: c.category, label: c.category, value: c.revenue, detail: tr('reports.ReportsScreen.quantity_sold', { quantity: c.quantity }) }))} />
         </Panel>
       </Row>
     </>
@@ -363,29 +365,29 @@ function ItemsPanel({ rows, error, symbol, onRetry, onExport, exporting, disable
   const totals = filtered.reduce((t, r) => ({ qty: t.qty + r.quantity, revenue: t.revenue + r.revenue, tax: t.tax + r.tax }), { qty: 0, revenue: 0, tax: 0 });
 
   return (
-    <Panel title="Item-wise sales" subtitle={rows ? `Top ${Math.min(ITEMS_PREVIEW, rows.length)} of ${rows.length} item${rows.length === 1 ? '' : 's'} sold` : undefined} icon="list-outline"
-      actions={<Button title="Export CSV" size="sm" variant="secondary" icon="download-outline" onPress={onExport} loading={exporting} disabled={disabled || !rows?.length} />}>
+    <Panel title={tr('reports.ReportsScreen.item_wise_sales')} subtitle={rows ? tr('reports.ReportsScreen.top_min_of_length_item_v_sold', { min: Math.min(ITEMS_PREVIEW, rows.length), length: rows.length, v: rows.length === 1 ? '' : 's' }) : undefined} icon="list-outline"
+      actions={<Button title={tr('reports.ReportsScreen.export_csv')} size="sm" variant="secondary" icon="download-outline" onPress={onExport} loading={exporting} disabled={disabled || !rows?.length} />}>
       {error && !rows ? <PanelError message={error} onRetry={onRetry} /> : !rows ? <Skeleton height={120} /> : rows.length === 0 ? (
-        <Text tone="subtle" variant="small">No items sold</Text>
+        <Text tone="subtle" variant="small">{tr('reports.ReportsScreen.no_items_sold')}</Text>
       ) : (
         <View style={{ gap: 10 }}>
           <DataTable minWidth={460} rows={visible} rowKey={(r) => `${r.name}|${r.variant ?? ''}`}
             columns={[
-              { key: 'name', label: 'Item', flex: 2.4, render: (r) => (
+              { key: 'name', label: tr('common.item'), flex: 2.4, render: (r) => (
                 <Text variant="small" numberOfLines={2}>
                   <Text variant="smallStrong">{r.name}</Text>{r.variant ? <Text variant="small" tone="muted"> · {r.variant}</Text> : null}
                 </Text>
               ) },
-              { key: 'qty', label: 'Qty', align: 'right', flex: 0.7, render: (r) => <Cell align="right">{r.quantity}</Cell> },
-              { key: 'rev', label: 'Revenue', align: 'right', flex: 1.2, render: (r) => <Cell align="right" strong>{money(r.revenue, symbol)}</Cell> },
-              { key: 'tax', label: 'Tax', align: 'right', render: (r) => <Cell align="right" muted>{money(r.tax, symbol)}</Cell> },
+              { key: 'qty', label: tr('reports.ReportsScreen.qty'), align: 'right', flex: 0.7, render: (r) => <Cell align="right">{r.quantity}</Cell> },
+              { key: 'rev', label: tr('reports.ReportsScreen.revenue'), align: 'right', flex: 1.2, render: (r) => <Cell align="right" strong>{money(r.revenue, symbol)}</Cell> },
+              { key: 'tax', label: tr('reports.ReportsScreen.tax'), align: 'right', render: (r) => <Cell align="right" muted>{money(r.tax, symbol)}</Cell> },
             ]}
             footer={[
-              <Cell key="t" strong>{filtered.length > ITEMS_PREVIEW ? `All ${filtered.length} items` : 'Total'}</Cell>, <Cell key="q" align="right" strong>{totals.qty}</Cell>,
+              <Cell key="t" strong>{filtered.length > ITEMS_PREVIEW ? tr('reports.ReportsScreen.all_length_items', { length: filtered.length }) : tr('common.total')}</Cell>, <Cell key="q" align="right" strong>{totals.qty}</Cell>,
               <Cell key="r" align="right" strong>{money(totals.revenue, symbol)}</Cell>, <Cell key="x" align="right" strong>{money(totals.tax, symbol)}</Cell>,
             ]} />
           {filtered.length > ITEMS_PREVIEW ? (
-            <Button title={`See all ${filtered.length} items`} variant="tonal" iconRight="arrow-forward" onPress={onSeeAll} style={{ alignSelf: 'center' }} />
+            <Button title={tr('reports.ReportsScreen.see_all_length_items', { length: filtered.length })} variant="tonal" iconRight="arrow-forward" onPress={onSeeAll} style={{ alignSelf: 'center' }} />
           ) : null}
         </View>
       )}
@@ -396,16 +398,16 @@ function ItemsPanel({ rows, error, symbol, onRetry, onExport, exporting, disable
 function StaffPanel({ rows, error, symbol, onRetry }: { rows: StaffRow[] | null; error: string | null; symbol: string; onRetry: () => void }) {
   const sorted = [...(rows ?? [])].sort((a, b) => b.amount - a.amount);
   return (
-    <Panel title="Staff performance" subtitle="Completed bills by the person who created them" icon="people-outline" style={{ flex: 1 }}>
+    <Panel title={tr('reports.ReportsScreen.staff_performance')} subtitle={tr('reports.ReportsScreen.completed_bills_by_the_person_who_created')} icon="people-outline" style={{ flex: 1 }}>
       {error && !rows ? <PanelError message={error} onRetry={onRetry} /> : !rows ? <Skeleton height={80} /> : sorted.length === 0 ? (
-        <Text tone="subtle" variant="small">No bills in this period</Text>
+        <Text tone="subtle" variant="small">{tr('reports.ReportsScreen.no_bills_in_this_period')}</Text>
       ) : (
         <DataTable rows={sorted} rowKey={(r, i) => r.user_id ?? `sys${i}`}
           columns={[
-            { key: 'n', label: 'Staff', flex: 1.6, render: (r) => <Cell strong>{r.name}</Cell> },
-            { key: 'o', label: 'Bills', align: 'right', flex: 0.7, render: (r) => <Cell align="right">{r.orders}</Cell> },
-            { key: 'a', label: 'Sales', align: 'right', flex: 1.1, render: (r) => <Cell align="right" strong>{money(r.amount, symbol, true)}</Cell> },
-            { key: 'v', label: 'Avg', align: 'right', render: (r) => <Cell align="right" muted>{money(r.orders ? r.amount / r.orders : 0, symbol, true)}</Cell> },
+            { key: 'n', label: tr('common.staff'), flex: 1.6, render: (r) => <Cell strong>{r.name}</Cell> },
+            { key: 'o', label: tr('common.bills'), align: 'right', flex: 0.7, render: (r) => <Cell align="right">{r.orders}</Cell> },
+            { key: 'a', label: tr('reports.ReportsScreen.sales'), align: 'right', flex: 1.1, render: (r) => <Cell align="right" strong>{money(r.amount, symbol, true)}</Cell> },
+            { key: 'v', label: tr('reports.ReportsScreen.avg'), align: 'right', render: (r) => <Cell align="right" muted>{money(r.orders ? r.amount / r.orders : 0, symbol, true)}</Cell> },
           ]} />
       )}
     </Panel>
@@ -416,17 +418,17 @@ function WastagePanel({ rows, error, symbol, onRetry }: { rows: WastageRow[] | n
   const sorted = [...(rows ?? [])].sort((a, b) => b.cost - a.cost);
   const total = sorted.reduce((n, r) => n + r.cost, 0);
   return (
-    <Panel title="Wastage" subtitle="Stock written off as wasted, at cost price" icon="trash-bin-outline" style={{ flex: 1 }}>
+    <Panel title={tr('reports.ReportsScreen.wastage')} subtitle={tr('reports.ReportsScreen.stock_written_off_as_wasted_at_cost_price')} icon="trash-bin-outline" style={{ flex: 1 }}>
       {error && !rows ? <PanelError message={error} onRetry={onRetry} /> : !rows ? <Skeleton height={80} /> : sorted.length === 0 ? (
-        <Text tone="subtle" variant="small">No wastage recorded in this period</Text>
+        <Text tone="subtle" variant="small">{tr('reports.ReportsScreen.no_wastage_recorded_in_this_period')}</Text>
       ) : (
         <DataTable rows={sorted} rowKey={(r) => r.product}
           columns={[
-            { key: 'p', label: 'Item', flex: 1.8, render: (r) => <Cell strong>{r.product}</Cell> },
-            { key: 'q', label: 'Qty', align: 'right', flex: 0.7, render: (r) => <Cell align="right">{r.quantity}</Cell> },
-            { key: 'c', label: 'Cost', align: 'right', render: (r) => <Cell align="right">{money(r.cost, symbol)}</Cell> },
+            { key: 'p', label: tr('common.item'), flex: 1.8, render: (r) => <Cell strong>{r.product}</Cell> },
+            { key: 'q', label: tr('reports.ReportsScreen.qty'), align: 'right', flex: 0.7, render: (r) => <Cell align="right">{r.quantity}</Cell> },
+            { key: 'c', label: tr('reports.ReportsScreen.cost'), align: 'right', render: (r) => <Cell align="right">{money(r.cost, symbol)}</Cell> },
           ]}
-          footer={[<Cell key="t" strong>Total</Cell>, <Cell key="q" align="right"> </Cell>, <Cell key="c" align="right" strong>{money(total, symbol)}</Cell>]} />
+          footer={[<Cell key="t" strong>{tr('common.total')}</Cell>, <Cell key="q" align="right"> </Cell>, <Cell key="c" align="right" strong>{money(total, symbol)}</Cell>]} />
       )}
     </Panel>
   );
@@ -441,7 +443,7 @@ function ReportsSkeleton({ twoCol }: { twoCol: boolean }) {
     </View>
   );
   return (
-    <View style={{ gap: 16 }} accessibilityLabel="Loading reports">
+    <View style={{ gap: 16 }} accessibilityLabel={tr('reports.ReportsScreen.loading_reports')}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
         {Array.from({ length: twoCol ? 8 : 4 }).map((_, i) => (
           <View key={i} style={{ width: twoCol ? '23.5%' : '48%', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.surface, padding: 16, gap: 10 }}>

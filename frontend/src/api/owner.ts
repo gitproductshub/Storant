@@ -1,6 +1,6 @@
 /**
  * Owner's watch (backend/app/api/owner.py): everything that took money off the table and who did it, plus requests to
- * Tallyko for archiving / deleting records. Owner only — the server answers 403 for anyone else.
+ * Storant for archiving / deleting records. Owner only — the server answers 403 for anyone else.
  */
 import { api } from './client';
 import type { Order } from './types';
@@ -118,7 +118,7 @@ export interface OwnerRequest {
   status: 'pending' | 'done' | 'rejected' | string;
   /** archived | deleted | none */
   action_taken: string | null;
-  /** Tallyko's reply */
+  /** Storant's reply */
   response: string | null;
   created_at: string;
   handled_at: string | null;
@@ -129,7 +129,7 @@ export const ownerApi = {
     api.get<OwnerWatch>('/owner/watch', { query: q }),
   requests: () => api.get<OwnerRequest[]>('/owner/requests'),
   ask: (body: { kind: OwnerRequestKind; order_ids: string[]; message: string }) => api.post<OwnerRequest>('/owner/requests', body),
-  /** Bills for the request picker, including ones Tallyko already archived */
+  /** Bills for the request picker, including ones Storant already archived */
   bills: (q: { q?: string; status?: string; date_from?: string; date_to?: string; limit?: number }) =>
     api.get<{ items: Order[]; total: number }>('/orders', { query: { ...q, include_archived: true } }),
 };

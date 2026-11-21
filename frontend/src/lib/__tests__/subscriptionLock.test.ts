@@ -21,7 +21,7 @@ import { useSubscription } from '@/store/subscription';
 import { syncNow } from '@/lib/sync';
 import type { SubscriptionState } from '@/api/types';
 
-const LAPSED = 'Your Tallyko subscription has ended. Renew to continue — your data and any offline bills are safe.';
+const LAPSED = 'Your Storant subscription has ended. Renew to continue — your data and any offline bills are safe.';
 const ACTIVE: SubscriptionState = { state: 'active', kind: 'paid', paid_until: '2099-01-01T00:00:00Z', days_left: 30, locked: false };
 
 type Reply = { status: number; body: unknown };
@@ -87,7 +87,7 @@ test('after renewal the queued bills of this business sync', async () => {
   await syncNow();
   expect(useSubscription.getState().locked).toBe(true);
 
-  // Tallyko approves the payment: GET /subscription says unlocked
+  // Storant approves the payment: GET /subscription says unlocked
   routes['/subscription'] = { status: 200, body: { ...ACTIVE, plans: [], offers: [], requests: [], history: [], payment: {}, can_pay: false, plan_key: 'pro', plan_name: 'Pro', grace_days: 0 } };
   await useSubscription.getState().refresh();
   expect(useSubscription.getState().locked).toBe(false);
@@ -121,7 +121,7 @@ test('forced sign-out (401, refresh refused) keeps the outbox and tells the user
   await syncNow();
 
   expect(useAuth.getState().status).toBe('signedOut');
-  expect(useAuth.getState().signOutReason?.title).toBe('You were signed out by Tallyko');
+  expect(useAuth.getState().signOutReason?.title).toBe('You were signed out by Storant');
   expect(useOutbox.getState().queue).toHaveLength(3);
   expect(useOutbox.getState().queue.every((q) => !q.failed)).toBe(true);
 });

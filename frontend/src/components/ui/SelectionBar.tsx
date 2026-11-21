@@ -13,6 +13,7 @@ import { Text } from './Text';
 import { Button, IconButton, type ButtonVariant } from './Button';
 import { ActionMenu, type ActionMenuItem } from './ActionMenu';
 import { visibleActionCount } from './listLogic';
+import { t } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -60,7 +61,7 @@ export function SelectionBar({ count, onClear, actions = [], maxVisible = 4, min
   const stacked = compact && n > 1 && n > visibleActionCount(width, actions.length, maxVisible, 1);
   const shown = actions.slice(0, n);
   const overflow = actions.slice(n);
-  const text = label ? label(count) : compact ? `${count}` : `${count} selected`;
+  const text = label ? label(count) : compact ? `${count}` : t('ui.SelectionBar.count_selected', { count });
   const canSelectAll = !!onSelectAll && total !== undefined && count < total && !compact;
 
   const menuItems: ActionMenuItem[] = overflow.map((a) => ({
@@ -71,11 +72,11 @@ export function SelectionBar({ count, onClear, actions = [], maxVisible = 4, min
   const moreMenu = overflow.length ? (
     <ActionMenu
       items={menuItems}
-      title="More actions"
+      title={t('ui.SelectionBar.more_actions')}
       align="end"
       placement="top"
       trigger={(open) => (
-        <Button icon="ellipsis-horizontal" variant="outline" size={compact && !stacked ? 'sm' : 'md'} accessibilityLabel="More actions" onPress={open} />
+        <Button icon="ellipsis-horizontal" variant="outline" size={compact && !stacked ? 'sm' : 'md'} accessibilityLabel={t('ui.SelectionBar.more_actions')} onPress={open} />
       )}
     />
   ) : null;
@@ -100,11 +101,11 @@ export function SelectionBar({ count, onClear, actions = [], maxVisible = 4, min
       <View
         onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
         accessibilityRole="toolbar"
-        accessibilityLabel={`${count} selected`}
+        accessibilityLabel={t('ui.SelectionBar.count_selected', { count })}
         style={[styles.stack, { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderRadius: radius.md }, style]}
       >
         <View style={styles.stackRow}>
-          <IconButton icon="close" accessibilityLabel="Clear selection" onPress={onClear} size="sm" />
+          <IconButton icon="close" accessibilityLabel={t('ui.SelectionBar.clear_selection')} onPress={onClear} size="sm" />
           <View style={styles.count}>
             <Text variant="bodyStrong" color={colors.primarySoftText} numberOfLines={1} style={styles.tabular}>{text}</Text>
           </View>
@@ -119,7 +120,7 @@ export function SelectionBar({ count, onClear, actions = [], maxVisible = 4, min
     <View
       onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
       accessibilityRole="toolbar"
-      accessibilityLabel={`${count} selected`}
+      accessibilityLabel={t('ui.SelectionBar.count_selected', { count })}
       style={[
         styles.bar,
         {
@@ -133,13 +134,13 @@ export function SelectionBar({ count, onClear, actions = [], maxVisible = 4, min
         style,
       ]}
     >
-      <IconButton icon="close" accessibilityLabel="Clear selection" onPress={onClear} size={compact ? 'sm' : 'md'} />
+      <IconButton icon="close" accessibilityLabel={t('ui.SelectionBar.clear_selection')} onPress={onClear} size={compact ? 'sm' : 'md'} />
       <View style={styles.count}>
         <Text variant={compact ? 'bodyStrong' : 'bodyStrong'} color={colors.primarySoftText} numberOfLines={1} style={styles.tabular}>
           {text}
         </Text>
         {canSelectAll ? (
-          <Button title={`Select all ${total}`} variant="ghost" size="sm" onPress={onSelectAll} />
+          <Button title={t('ui.SelectionBar.select_all_total', { total })} variant="ghost" size="sm" onPress={onSelectAll} />
         ) : null}
       </View>
       <View style={styles.actions}>

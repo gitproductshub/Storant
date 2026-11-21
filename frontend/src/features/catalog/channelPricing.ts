@@ -6,6 +6,7 @@
 import type { ChannelPrices, ChannelPriceEntry, ChannelPriceSource, ChannelMenu } from '@/api/channels';
 import type { ChannelCode, Product, SalesChannel } from '@/api/types';
 import { money, round2 } from '@/lib/format';
+import { t as tr } from '@/i18n';
 
 /** Channels that have a menu of their own. The counter (POS) and phone orders (OTHER) sell the counter menu. */
 const MENU_ORDER: ChannelCode[] = ['SWIGGY', 'ZOMATO', 'ONDC', 'MAGICPIN', 'ONLINE', 'QR'];
@@ -223,22 +224,22 @@ export interface ChannelBadge { key: string; label: string; tone: 'info' | 'warn
 /** Small hints for a menu row: "Swiggy ₹289", "Not on Zomato", "Swiggy only", "Not at counter". */
 export function channelBadges(p: Pick<Product, 'channel_prices'>, channels: Pick<SalesChannel, 'code' | 'name'>[], symbol = '₹'): ChannelBadge[] {
   const out: ChannelBadge[] = [];
-  if (entryOf(p.channel_prices, 'POS').available === false) out.push({ key: 'pos', label: 'Not at counter', tone: 'neutral' });
+  if (entryOf(p.channel_prices, 'POS').available === false) out.push({ key: 'pos', label: tr('catalog.channelPricing.not_at_counter'), tone: 'neutral' });
   if (!channels.length) return out;
   const on = channels.filter((c) => isOnChannel(p, c.code));
   const off = channels.filter((c) => !isOnChannel(p, c.code));
   if (!on.length) {
-    out.push({ key: 'none', label: channels.length === 1 ? `Not on ${channelShortName(channels[0])}` : 'Not on any app', tone: 'warning' });
+    out.push({ key: 'none', label: channels.length === 1 ? tr('catalog.channelPricing.not_on_channelshortname', { channelShortName: channelShortName(channels[0]) }) : tr('catalog.channelPricing.not_on_any_app'), tone: 'warning' });
   } else if (on.length === 1 && channels.length > 1) {
-    out.push({ key: 'only', label: `${channelShortName(on[0])} only`, tone: 'accent' });
+    out.push({ key: 'only', label: tr('catalog.channelPricing.channelshortname_only', { channelShortName: channelShortName(on[0]) }), tone: 'accent' });
   } else if (off.length > 2) {
-    out.push({ key: 'off', label: `Hidden on ${off.length} apps`, tone: 'warning' });
+    out.push({ key: 'off', label: tr('catalog.channelPricing.hidden_on_length_apps', { length: off.length }), tone: 'warning' });
   } else {
-    for (const c of off) out.push({ key: `off-${c.code}`, label: `Not on ${channelShortName(c)}`, tone: 'warning' });
+    for (const c of off) out.push({ key: `off-${c.code}`, label: tr('catalog.channelPricing.not_on_channelshortname', { channelShortName: channelShortName(c) }), tone: 'warning' });
   }
   const priced = on.filter((c) => typeof entryOf(p.channel_prices, c.code).price === 'number');
   if (priced.length > 2) {
-    out.push({ key: 'priced', label: `Own price on ${priced.length} apps`, tone: 'info' });
+    out.push({ key: 'priced', label: tr('catalog.channelPricing.own_price_on_length_apps', { length: priced.length }), tone: 'info' });
   } else {
     for (const c of priced) {
       out.push({ key: `price-${c.code}`, label: `${channelShortName(c)} ${fmt(entryOf(p.channel_prices, c.code).price as number, symbol)}`, tone: 'info' });
@@ -261,7 +262,7 @@ function csvCell(v: Cell): string {
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
-const SOURCE_TEXT: Record<ChannelPriceSource, string> = { item: 'Own price', markup: 'Mark-up', counter: 'Same as counter' };
+const SOURCE_TEXT: Record<ChannelPriceSource, string> = { get item() { return tr('catalog.channelPricing.own_price'); }, get markup() { return tr('catalog.channelPricing.mark_up'); }, get counter() { return tr('common.same_as_counter'); } };
 
 /** CSV of the whole channel menu (items on the menu first). BOM so Excel shows ₹ and Indian scripts correctly. */
 export function channelMenuCsv(menu: ChannelMenu): string {

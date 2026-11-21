@@ -1,6 +1,6 @@
 /**
  * Per-device shell preferences: the collapsed desktop sidebar, subscription notices hidden for the day and when the owner
- * last looked at Tallyko's answers to their requests. Kept apart from `usePrefs` so the shell owns its own small state.
+ * last looked at Storant's answers to their requests. Kept apart from `usePrefs` so the shell owns its own small state.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';

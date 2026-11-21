@@ -5,15 +5,47 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>%WEB_TITLE%</title>
-    <meta name="description" content="Tallyko — point of sale for restaurants, cafés, cloud kitchens and retail stores. Works offline." />
-    <meta name="theme-color" content="#0F766E" />
+    <meta name="description" content="Storant — point of sale for restaurants, cafés, cloud kitchens and retail stores. Works offline." />
+    <meta property="og:title" content="Storant" />
+    <meta property="og:site_name" content="Storant" />
+    <meta property="og:description" content="Point of sale for restaurants, cafés, cloud kitchens and retail stores. Works offline." />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#FBF9FF" />
+    <script>
+      // Apply the saved theme before first paint so there is no light/dark flash.
+      // Storage key and shape match the app's prefs store ("tallyko.prefs" is kept so existing choices survive the rebrand).
+      (function () {
+        var pref = 'system';
+        try {
+          var raw = window.localStorage.getItem('tallyko.prefs');
+          var t = raw && JSON.parse(raw).state && JSON.parse(raw).state.theme;
+          if (t === 'light' || t === 'dark' || t === 'system') pref = t;
+        } catch (e) {}
+        var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var bg = dark ? '#130D26' : '#FBF9FF';
+        var root = document.documentElement;
+        root.setAttribute('data-theme', dark ? 'dark' : 'light');
+        root.style.colorScheme = dark ? 'dark' : 'light';
+        root.style.backgroundColor = bg;
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', bg);
+      })();
+    </script>
     <meta name="color-scheme" content="light dark" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" href="/logo192.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-light.svg" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/x-icon" href="/favicon-light.ico" sizes="any" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/x-icon" href="/favicon-dark.ico" sizes="any" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-light-16.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-dark-16.png" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-light-32.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-dark-32.png" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-light-48.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-dark-48.png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Tallyko" />
+    <meta name="apple-mobile-web-app-title" content="Storant" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
@@ -21,13 +53,11 @@
       body {
         height: 100%;
         margin: 0;
-        background-color: #f6f8fa;
+        background-color: #FBF9FF;
       }
-      @media (prefers-color-scheme: dark) {
-        html,
-        body {
-          background-color: #0a101c;
-        }
+      html[data-theme='dark'],
+      html[data-theme='dark'] body {
+        background-color: #130D26;
       }
       body {
         overflow: hidden;
@@ -43,7 +73,7 @@
   </head>
 
   <body>
-    <noscript>You need to enable JavaScript to run Tallyko.</noscript>
+    <noscript>You need to enable JavaScript to run Storant.</noscript>
     <div id="root"></div>
     <script>
       // Offline app shell. Only registered on production builds served over HTTPS/localhost by Caddy,

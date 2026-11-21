@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, SwitchRow, Text, toast, useHotkeys } from '@/components/ui';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { getServerUrl } from '@/store/prefs';
+import { t as tr } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -19,7 +20,7 @@ export async function copyText(text: string, what = 'Copied'): Promise<void> {
   if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(`${what} copied`);
+      toast.success(tr('settings.components.what_copied', { what }));
       return;
     } catch {
       // Clipboard can be blocked (http, iframe): fall through to share / manual copy.
@@ -39,17 +40,17 @@ export async function shareText(text: string, title?: string): Promise<void> {
         return; // user closed the share sheet
       }
     }
-    toast.info('Select the text and copy it manually.');
+    toast.info(tr('settings.components.select_the_text_and_copy_it_manually'));
     return;
   }
   try {
     await Share.share({ message: text, title });
   } catch {
-    toast.error('Could not open the share sheet.');
+    toast.error(tr('settings.components.could_not_open_the_share_sheet'));
   }
 }
 
-/** Origin of the Tallyko API server (the configured server URL minus /api/v1). */
+/** Origin of the Storant API server (the configured server URL minus /api/v1). */
 export function serverOrigin(): string {
   return getServerUrl().replace(/\/api\/v\d+\/?$/, '');
 }
@@ -165,8 +166,8 @@ export function SaveBar({ visible, saving, onSave, onDiscard, message = 'You hav
         <Text variant="smallStrong" numberOfLines={isPhone ? 2 : 1} style={{ flexShrink: 1 }}>{message}</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Button title="Discard" variant="outline" onPress={onDiscard} disabled={saving} />
-        <Button title={isPhone ? 'Save' : saveLabel} icon="checkmark" onPress={onSave} loading={saving} disabled={disabled} shortcut="Ctrl+S" />
+        <Button title={tr('common.discard')} variant="outline" onPress={onDiscard} disabled={saving} />
+        <Button title={isPhone ? tr('common.save') : saveLabel} icon="checkmark" onPress={onSave} loading={saving} disabled={disabled} shortcut="Ctrl+S" />
       </View>
     </View>
   );
@@ -220,8 +221,8 @@ export function KeyValue({ label, value, mono, right }: { label: string; value: 
 /** Small round status icon: green tick or grey/amber circle. */
 export function StatusDot({ ok, warn }: { ok: boolean; warn?: boolean }) {
   const { colors } = useTheme();
-  if (ok) return <Ionicons name="checkmark-circle" size={20} color={colors.success} accessibilityLabel="Done" />;
-  return <Ionicons name={warn ? 'alert-circle' : 'ellipse-outline'} size={20} color={warn ? colors.warning : colors.textSubtle} accessibilityLabel="Not done" />;
+  if (ok) return <Ionicons name="checkmark-circle" size={20} color={colors.success} accessibilityLabel={tr('common.done')} />;
+  return <Ionicons name={warn ? 'alert-circle' : 'ellipse-outline'} size={20} color={warn ? colors.warning : colors.textSubtle} accessibilityLabel={tr('settings.components.not_done')} />;
 }
 
 /** SwitchRow aligned with the inputs of a padded Card (SwitchRow carries its own 12px row padding). */

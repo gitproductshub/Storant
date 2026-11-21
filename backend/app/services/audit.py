@@ -7,7 +7,7 @@ ACTION_LABELS = {
     "order.cancel": "Cancelled a bill",
     "order.void_item": "Cancelled items",
     "order.remove_item": "Removed items",
-    "order.archive": "Archived bills (by Tallyko)",
+    "order.archive": "Archived bills (by Storant)",
     "menu.change": "Changed a menu item",
     "order.comp": "Gave items on the house",
     "order.claim_rejected": "Rejected a customer's UPI payment",

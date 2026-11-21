@@ -4,7 +4,9 @@
  */
 import type { Offer, OfferBenefit, OfferInput, OfferKind, OfferState } from '@/api/offers';
 import type { OrderType } from '@/api/types';
-import { CHANNEL_LABEL, ORDER_TYPE_LABEL, money, toOffsetIso } from '@/lib/format';
+import { money, toOffsetIso } from '@/lib/format';
+import { CHANNEL_UI, ORDER_TYPE_UI } from '@/lib/uiLabels';
+import { t as tr, currentLocale } from '@/i18n';
 
 export interface OfferForm {
   name: string;
@@ -103,59 +105,59 @@ const isInt = (n: number | null) => n !== null && Number.isInteger(n);
 export function validateForm(f: OfferForm): FormErrors {
   const e: FormErrors = {};
   const name = f.name.trim();
-  if (name.length < 2) e.name = 'Give the offer a name (at least 2 letters)';
-  else if (name.length > 80) e.name = 'Keep the name under 80 characters';
-  if (f.description.length > 300) e.description = 'Keep the description under 300 characters';
+  if (name.length < 2) e.name = tr('offers.form.give_the_offer_a_name_at_least_2_letters');
+  else if (name.length > 80) e.name = tr('offers.form.keep_the_name_under_80_characters');
+  if (f.description.length > 300) e.description = tr('offers.form.keep_the_description_under_300_characters');
 
   const value = num(f.value);
   if (f.benefit_type === 'percent') {
-    if (value === null || Number.isNaN(value) || value <= 0 || value > 100) e.value = 'Enter a percent between 1 and 100';
+    if (value === null || Number.isNaN(value) || value <= 0 || value > 100) e.value = tr('offers.form.enter_a_percent_between_1_and_100');
   } else if (f.benefit_type === 'flat') {
-    if (value === null || Number.isNaN(value) || value <= 0) e.value = 'Enter the amount to take off';
-    else if (value > 1_000_000) e.value = 'That amount is too large';
+    if (value === null || Number.isNaN(value) || value <= 0) e.value = tr('offers.form.enter_the_amount_to_take_off');
+    else if (value > 1_000_000) e.value = tr('offers.form.that_amount_is_too_large');
   } else {
-    if (!f.free_product_id) e.free_product_id = 'Choose the free item';
+    if (!f.free_product_id) e.free_product_id = tr('offers.form.choose_the_free_item');
     const q = num(f.free_quantity);
-    if (!isInt(q) || q! < 1 || q! > 20) e.free_quantity = 'Free quantity is 1 to 20';
+    if (!isInt(q) || q! < 1 || q! > 20) e.free_quantity = tr('offers.form.free_quantity_is_1_to_20');
   }
   const maxDisc = num(f.max_discount);
-  if (f.benefit_type === 'percent' && maxDisc !== null && (Number.isNaN(maxDisc) || maxDisc <= 0)) e.max_discount = 'Enter a positive amount or leave it empty';
+  if (f.benefit_type === 'percent' && maxDisc !== null && (Number.isNaN(maxDisc) || maxDisc <= 0)) e.max_discount = tr('offers.form.enter_a_positive_amount_or_leave_it_empty');
 
   const minOrder = num(f.min_order);
-  if (minOrder !== null && (Number.isNaN(minOrder) || minOrder < 0)) e.min_order = 'Enter an amount or leave it empty';
+  if (minOrder !== null && (Number.isNaN(minOrder) || minOrder < 0)) e.min_order = tr('offers.form.enter_an_amount_or_leave_it_empty');
 
-  if (f.kind === 'items' && !f.product_ids.length && !f.category_ids.length) e.product_ids = 'Choose the items or categories this offer is for';
+  if (f.kind === 'items' && !f.product_ids.length && !f.category_ids.length) e.product_ids = tr('offers.form.choose_the_items_or_categories_this_offer');
   if (f.kind === 'loyalty') {
     const visits = num(f.min_visits);
-    if (!isInt(visits) || visits! < 1 || visits! > 1000) e.min_visits = 'Enter the number of visits (1 to 1000)';
+    if (!isInt(visits) || visits! < 1 || visits! > 1000) e.min_visits = tr('offers.form.enter_the_number_of_visits_1_to_1000');
     const days = num(f.window_days);
-    if (days !== null && (!isInt(days) || days < 1 || days > 3650)) e.window_days = 'Days must be 1 to 3650, or leave it empty for all time';
+    if (days !== null && (!isInt(days) || days < 1 || days > 3650)) e.window_days = tr('offers.form.days_must_be_1_to_3650_or_leave_it_empty');
   }
 
   const st = f.start_time.trim();
   const et = f.end_time.trim();
-  if (st && !TIME_RE.test(st)) e.start_time = 'Use 24-hour time like 18:00';
-  if (et && !TIME_RE.test(et)) e.end_time = 'Use 24-hour time like 22:30';
+  if (st && !TIME_RE.test(st)) e.start_time = tr('offers.form.use_24_hour_time_like_18_00');
+  if (et && !TIME_RE.test(et)) e.end_time = tr('offers.form.use_24_hour_time_like_22_30');
   if (!e.start_time && !e.end_time && !!st !== !!et) e[st ? 'end_time' : 'start_time'] = 'Set both a start and an end time';
-  if (!e.start_time && !e.end_time && st && st === et) e.end_time = 'End time must be different from the start time';
+  if (!e.start_time && !e.end_time && st && st === et) e.end_time = tr('offers.form.end_time_must_be_different_from_the_start');
 
   const sd = f.starts_on.trim();
   const ed = f.ends_on.trim();
   const start = sd ? parseDate(sd) : null;
   const end = ed ? parseDate(ed) : null;
-  if (sd && !start) e.starts_on = 'Use a date like 2026-11-01';
-  if (ed && !end) e.ends_on = 'Use a date like 2026-11-30';
-  if (start && end && end < start) e.ends_on = 'The last day must be on or after the first day';
+  if (sd && !start) e.starts_on = tr('offers.form.use_a_date_like_2026_11_01');
+  if (ed && !end) e.ends_on = tr('offers.form.use_a_date_like_2026_11_30');
+  if (start && end && end < start) e.ends_on = tr('offers.form.the_last_day_must_be_on_or_after_the');
 
   const maxTotal = num(f.max_total);
-  if (maxTotal !== null && (!isInt(maxTotal) || maxTotal < 1)) e.max_total = 'Whole number of uses, or leave it empty';
+  if (maxTotal !== null && (!isInt(maxTotal) || maxTotal < 1)) e.max_total = tr('offers.form.whole_number_of_uses_or_leave_it_empty');
   const maxPer = num(f.max_per_customer);
-  if (maxPer !== null && (!isInt(maxPer) || maxPer < 1)) e.max_per_customer = 'Whole number of uses, or leave it empty';
+  if (maxPer !== null && (!isInt(maxPer) || maxPer < 1)) e.max_per_customer = tr('offers.form.whole_number_of_uses_or_leave_it_empty');
   const priority = num(f.priority);
-  if (priority !== null && (!isInt(priority) || priority < 0 || priority > 1000)) e.priority = 'Priority is 0 to 1000';
+  if (priority !== null && (!isInt(priority) || priority < 0 || priority > 1000)) e.priority = tr('offers.form.priority_is_0_to_1000');
 
   const code = f.code.trim();
-  if (code && !CODE_RE.test(code)) e.code = '3–20 letters, numbers, - or _ (no spaces)';
+  if (code && !CODE_RE.test(code)) e.code = tr('offers.form.3_20_letters_numbers_or_no_spaces');
   return e;
 }
 
@@ -222,7 +224,7 @@ function listDays(days: number[]): string {
 
 function shortDate(text: string): string | null {
   const d = parseDate(text.trim());
-  return d ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+  return d ? d.toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 }
 
 /**
@@ -273,8 +275,8 @@ export function previewSentence(f: OfferForm, names: { product: (id: string) => 
   text += '.';
 
   const where: string[] = [];
-  if (f.order_types.length && f.order_types.length < ALL_ORDER_TYPES.length) where.push(f.order_types.map((t) => ORDER_TYPE_LABEL[t] ?? t).join(' / '));
-  if (f.channels.length) where.push(`on ${f.channels.map((c) => names.channel?.(c) ?? CHANNEL_LABEL[c] ?? c).join(', ')}`);
+  if (f.order_types.length && f.order_types.length < ALL_ORDER_TYPES.length) where.push(f.order_types.map((t) => ORDER_TYPE_UI[t] ?? t).join(' / '));
+  if (f.channels.length) where.push(`on ${f.channels.map((c) => names.channel?.(c) ?? CHANNEL_UI[c] ?? c).join(', ')}`);
   if (where.length) text += ` ${where.join(' ')} orders only.`;
 
   const how: string[] = [];
@@ -292,9 +294,9 @@ export function previewSentence(f: OfferForm, names: { product: (id: string) => 
 }
 
 export const STATE_META: Record<OfferState, { label: string; tone: 'success' | 'info' | 'neutral' | 'warning' | 'danger' }> = {
-  live: { label: 'Live', tone: 'success' },
-  scheduled: { label: 'Scheduled', tone: 'info' },
-  expired: { label: 'Expired', tone: 'neutral' },
-  off: { label: 'Off', tone: 'neutral' },
-  used_up: { label: 'Used up', tone: 'warning' },
+  live: { get label() { return tr('common.live'); }, tone: 'success' },
+  scheduled: { get label() { return tr('common.scheduled'); }, tone: 'info' },
+  expired: { get label() { return tr('common.expired'); }, tone: 'neutral' },
+  off: { get label() { return tr('common.off'); }, tone: 'neutral' },
+  used_up: { get label() { return tr('offers.form.used_up'); }, tone: 'warning' },
 };

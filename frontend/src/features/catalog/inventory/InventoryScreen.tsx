@@ -25,6 +25,7 @@ import { BarcodeScanSheet } from '../BarcodeScanSheet';
 import { StockActionSheet, type StockAction } from './StockActionSheet';
 import { StockHistorySheet } from './StockHistorySheet';
 import { applyStockChange, clampQty, createScanBuffer, filterStock, stockCounts, type StockFilter } from './stockLogic';
+import { t as tr } from '@/i18n';
 
 type Reason = 'restock' | 'wastage' | 'adjustment' | 'return';
 const WASTE = ['Expired', 'Damaged', 'Spilled / spoiled', 'Staff meal'] as const;
@@ -33,8 +34,8 @@ export function InventoryScreen() {
   const role = useRole();
   if (!can(role, 'manage')) {
     return (
-      <Screen title="Inventory">
-        <NoAccess title="Only owners and managers can manage stock" message="Ask your owner or manager to add stock or record wastage." />
+      <Screen title={tr('common.inventory')}>
+        <NoAccess title={tr('catalog.inventory_InventoryScreen.only_owners_and_managers_can_manage_stock')} message={tr('catalog.inventory_InventoryScreen.ask_your_owner_or_manager_to_add_stock_or')} />
       </Screen>
     );
   }
@@ -98,15 +99,15 @@ function Inventory() {
     const n = qty[row.id] ?? 1;
     const unit = row.unit || 'pcs';
     return [
-      { key: 'in', label: `Stock in ${n} ${unit}`, icon: 'add-circle-outline', group: 'in', onPress: () => void quick(row, n, 'restock', 'Stock in') },
-      { key: 'cost', label: 'Stock in with cost…', icon: 'receipt-outline', description: 'Supplier bill, cost per unit', group: 'in', onPress: () => setAction({ row, action: 'restock' }) },
-      { key: 'return', label: `Customer return +${n}`, icon: 'return-down-back-outline', group: 'in', onPress: () => void quick(row, n, 'return', 'Customer return') },
+      { key: 'in', label: tr('catalog.inventory_InventoryScreen.stock_in_n_unit', { n, unit }), icon: 'add-circle-outline', group: 'in', onPress: () => void quick(row, n, 'restock', 'Stock in') },
+      { key: 'cost', label: tr('catalog.inventory_InventoryScreen.stock_in_with_cost'), icon: 'receipt-outline', description: tr('catalog.inventory_InventoryScreen.supplier_bill_cost_per_unit'), group: 'in', onPress: () => setAction({ row, action: 'restock' }) },
+      { key: 'return', label: tr('catalog.inventory_InventoryScreen.customer_return_n', { n }), icon: 'return-down-back-outline', group: 'in', onPress: () => void quick(row, n, 'return', 'Customer return') },
       ...WASTE.map((w) => ({
-        key: `w-${w}`, label: `Wastage −${n}: ${w}`, icon: 'trash-outline' as const, group: 'waste', onPress: () => void quick(row, -n, 'wastage', w),
+        key: `w-${w}`, label: tr('catalog.inventory_InventoryScreen.wastage_n_w', { n, w }), icon: 'trash-outline' as const, group: 'waste', onPress: () => void quick(row, -n, 'wastage', w),
       })),
-      { key: 'waste', label: 'Wastage with a note…', icon: 'create-outline', group: 'waste', onPress: () => setAction({ row, action: 'wastage' }) },
-      { key: 'count', label: 'Set counted quantity…', icon: 'swap-vertical-outline', description: 'After a stock count', group: 'fix', onPress: () => setAction({ row, action: 'adjust' }) },
-      { key: 'history', label: 'Stock history', icon: 'time-outline', group: 'fix', onPress: () => setHistory(row) },
+      { key: 'waste', label: tr('catalog.inventory_InventoryScreen.wastage_with_a_note'), icon: 'create-outline', group: 'waste', onPress: () => setAction({ row, action: 'wastage' }) },
+      { key: 'count', label: tr('catalog.inventory_InventoryScreen.set_counted_quantity'), icon: 'swap-vertical-outline', description: tr('catalog.inventory_InventoryScreen.after_a_stock_count'), group: 'fix', onPress: () => setAction({ row, action: 'adjust' }) },
+      { key: 'history', label: tr('catalog.inventory_InventoryScreen.stock_history'), icon: 'time-outline', group: 'fix', onPress: () => setHistory(row) },
     ];
   }, [qty, quick]);
 
@@ -118,12 +119,12 @@ function Inventory() {
       setFilter('all');
       setQuery(code);
       setFlash([hit.id]);
-      toast.success(`${hit.name}: ${hit.stock} ${hit.unit || 'pcs'} in stock`);
+      toast.success(tr('catalog.inventory_InventoryScreen.name_stock_v_in_stock', { name: hit.name, stock: hit.stock, v: hit.unit || 'pcs' }));
       return;
     }
     const product = catalogProducts.find((p) => p.barcode === code);
-    if (product) toast.warning(`“${product.name}” isn’t tracked. Turn on “Track stock” for it in Menu & items.`);
-    else toast.warning(`No item has barcode ${code}.`);
+    if (product) toast.warning(tr('catalog.inventory_InventoryScreen.name_isn_t_tracked_turn_on_track_stock', { name: product.name }));
+    else toast.warning(tr('catalog.inventory_InventoryScreen.no_item_has_barcode_code', { code }));
   }, [rows, catalogProducts]);
 
   const scanRef = useRef(onScanned);
@@ -156,12 +157,12 @@ function Inventory() {
     );
   };
   const statusOf = (r: StockRow) => (r.stock <= 0
-    ? <StatusPill status="lapsed" label="Out of stock" />
-    : r.is_low ? <StatusPill status="pending" label="Low" /> : <StatusPill status="active" label="OK" showIcon={false} />);
+    ? <StatusPill status="lapsed" label={tr('catalog.inventory_InventoryScreen.out_of_stock')} />
+    : r.is_low ? <StatusPill status="pending" label={tr('catalog.inventory_InventoryScreen.low')} /> : <StatusPill status="active" label="OK" showIcon={false} />);
 
   const columns = useMemo<DataColumn<StockRow>[]>(() => [
     {
-      key: 'name', title: 'Item', flex: 2, minWidth: 160,
+      key: 'name', title: tr('common.item'), flex: 2, minWidth: 160,
       render: (r) => (
         <View style={{ minWidth: 0 }}>
           <Text variant="bodyStrong" numberOfLines={1}>{r.name}</Text>
@@ -169,21 +170,21 @@ function Inventory() {
         </View>
       ),
     },
-    { key: 'stock', title: 'In stock', width: 96, numeric: true, render: stockCell },
-    { key: 'status', title: 'Status', width: 120, hideBelow: 440, render: statusOf },
-    { key: 'alert', title: 'Alert at', width: 76, numeric: true, hideBelow: 760, value: (r) => String(r.low_stock_threshold) },
-    { key: 'value', title: 'Value', width: 100, numeric: true, hideBelow: 680, value: (r) => money(r.stock_value, symbol, true) },
+    { key: 'stock', title: tr('catalog.inventory_InventoryScreen.in_stock'), width: 96, numeric: true, render: stockCell },
+    { key: 'status', title: tr('common.status'), width: 120, hideBelow: 440, render: statusOf },
+    { key: 'alert', title: tr('catalog.inventory_InventoryScreen.alert_at'), width: 76, numeric: true, hideBelow: 760, value: (r) => String(r.low_stock_threshold) },
+    { key: 'value', title: tr('catalog.inventory_InventoryScreen.value'), width: 100, numeric: true, hideBelow: 680, value: (r) => money(r.stock_value, symbol, true) },
   ], [nameOf, symbol]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const quickControls = (r: StockRow, compact: boolean) => (
     <View style={styles.quick}>
       <QtyStepper value={qtyOf(r.id)} onChange={(v) => setQty((q) => ({ ...q, [r.id]: v }))} label={r.name} compact={compact} />
-      <Button title="In" icon="add" size="sm" variant="tonal" onPress={() => void quick(r, qtyOf(r.id), 'restock', 'Stock in')} disabled={!!busy[r.id]}
-        accessibilityLabel={`Stock in ${qtyOf(r.id)} ${r.unit || 'pcs'} of ${r.name}`} />
-      <Button title="Out" icon="remove" size="sm" variant="outline" onPress={() => void quick(r, -qtyOf(r.id), 'adjustment', 'Stock out')} disabled={!!busy[r.id]}
-        accessibilityLabel={`Stock out ${qtyOf(r.id)} ${r.unit || 'pcs'} of ${r.name}`} />
+      <Button title={tr('catalog.inventory_InventoryScreen.in')} icon="add" size="sm" variant="tonal" onPress={() => void quick(r, qtyOf(r.id), 'restock', 'Stock in')} disabled={!!busy[r.id]}
+        accessibilityLabel={tr('catalog.inventory_InventoryScreen.stock_in_qtyof_v_of_name', { qtyOf: qtyOf(r.id), v: r.unit || 'pcs', name: r.name })} />
+      <Button title={tr('catalog.inventory_InventoryScreen.out')} icon="remove" size="sm" variant="outline" onPress={() => void quick(r, -qtyOf(r.id), 'adjustment', 'Stock out')} disabled={!!busy[r.id]}
+        accessibilityLabel={tr('catalog.inventory_InventoryScreen.stock_out_qtyof_v_of_name', { qtyOf: qtyOf(r.id), v: r.unit || 'pcs', name: r.name })} />
       <ActionMenu items={menuFor(r)} align="end" title={r.name}
-        trigger={(open) => <IconButton icon="ellipsis-horizontal" accessibilityLabel={`More stock actions for ${r.name}`} onPress={open} />} />
+        trigger={(open) => <IconButton icon="ellipsis-horizontal" accessibilityLabel={tr('catalog.inventory_InventoryScreen.more_stock_actions_for_name', { name: r.name })} onPress={open} />} />
     </View>
   );
 
@@ -192,11 +193,11 @@ function Inventory() {
       <View style={styles.cardTop}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text variant="bodyStrong" numberOfLines={1}>{r.name}</Text>
-          <Text variant="caption" tone="subtle" numberOfLines={1}>{[nameOf(r.category_id), r.barcode].filter(Boolean).join(' · ') || 'No category'}</Text>
+          <Text variant="caption" tone="subtle" numberOfLines={1}>{[nameOf(r.category_id), r.barcode].filter(Boolean).join(' · ') || tr('common.no_category')}</Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 2 }}>
           {stockCell(r)}
-          {r.is_low ? statusOf(r) : <Text variant="caption" tone="subtle">Alert at {r.low_stock_threshold}</Text>}
+          {r.is_low ? statusOf(r) : <Text variant="caption" tone="subtle">{tr('catalog.inventory_InventoryScreen.alert_at')} {r.low_stock_threshold}</Text>}
         </View>
       </View>
       {quickControls(r, true)}
@@ -207,27 +208,27 @@ function Inventory() {
     <View style={[styles.summary, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       <Ionicons name="cube-outline" size={16} color={colors.textMuted} />
       <Text variant="small" tone="muted" style={{ flex: 1 }} numberOfLines={2}>
-        <Text variant="smallStrong">{plural(rows.length, 'item')}</Text> tracked ·{' '}
-        <Text variant="smallStrong" tone={counts.low ? 'warning' : 'default'}>{counts.low} low</Text>
-        {counts.out ? <Text variant="smallStrong" tone="danger">{` (${counts.out} out)`}</Text> : null} · Stock value{' '}
+        <Text variant="smallStrong">{plural(rows.length, 'item')}</Text> {tr('catalog.inventory_InventoryScreen.tracked')}{' '}
+        <Text variant="smallStrong" tone={counts.low ? 'warning' : 'default'}>{counts.low} {tr('catalog.inventory_InventoryScreen.low_2')}</Text>
+        {counts.out ? <Text variant="smallStrong" tone="danger">{tr('catalog.inventory_InventoryScreen.out_out', { out: counts.out })}</Text> : null} {tr('catalog.inventory_InventoryScreen.stock_value')}{' '}
         <Text variant="smallStrong">{money(value, symbol, true)}</Text>
-        {missingCost ? ` · ${plural(missingCost, 'item')} without cost price` : ''}
+        {missingCost ? tr('catalog.inventory_InventoryScreen.plural_without_cost_price', { plural: plural(missingCost, 'item') }) : ''}
       </Text>
     </View>
   ) : null;
 
   const filters: FilterOption[] = [
-    { key: 'all', label: 'All', count: counts.all },
-    { key: 'low', label: 'Low stock', icon: 'alert-circle-outline', count: counts.low },
-    { key: 'out', label: 'Out of stock', count: counts.out },
+    { key: 'all', label: tr('common.all'), count: counts.all },
+    { key: 'low', label: tr('catalog.inventory_InventoryScreen.low_stock'), icon: 'alert-circle-outline', count: counts.low },
+    { key: 'out', label: tr('catalog.inventory_InventoryScreen.out_of_stock'), count: counts.out },
   ];
   const toolbar = (
-    <FilterBar onSearch={setQuery} search={query} searchPlaceholder="Search item, barcode or category" filters={filters} value={filter}
+    <FilterBar onSearch={setQuery} search={query} searchPlaceholder={tr('catalog.inventory_InventoryScreen.search_item_barcode_or_category_x')} filters={filters} value={filter}
       onChange={(k) => setFilter(k as StockFilter)}
       right={(
         <>
-          <Button title={isPhone ? undefined : 'Scan'} icon="barcode-outline" variant="outline" onPress={() => setScanOpen(true)} accessibilityLabel="Find an item by scanning its barcode" />
-          {isPhone ? null : <IconButton icon="refresh" variant="secondary" accessibilityLabel="Refresh stock" onPress={reload} loading={refreshing} />}
+          <Button title={isPhone ? undefined : tr('catalog.inventory_InventoryScreen.scan')} icon="barcode-outline" variant="outline" onPress={() => setScanOpen(true)} accessibilityLabel={tr('catalog.inventory_InventoryScreen.find_an_item_by_scanning_its_barcode')} />
+          {isPhone ? null : <IconButton icon="refresh" variant="secondary" accessibilityLabel={tr('catalog.inventory_InventoryScreen.refresh_stock')} onPress={reload} loading={refreshing} />}
         </>
       )} />
   );
@@ -237,8 +238,8 @@ function Inventory() {
 
   return (
     <Screen
-      title="Inventory"
-      subtitle={rows.length ? `${plural(rows.length, 'item')} tracked${counts.low ? ` · ${counts.low} low` : ''}` : 'Stock levels, restocks and wastage'}
+      title={tr('common.inventory')}
+      subtitle={rows.length ? tr('catalog.inventory_InventoryScreen.plural_tracked_v', { plural: plural(rows.length, 'item'), v: counts.low ? tr('catalog.inventory_InventoryScreen.low_low', { low: counts.low }) : '' }) : tr('catalog.inventory_InventoryScreen.stock_levels_restocks_and_wastage')}
       toolbar={noneTracked ? undefined : toolbar}
       scroll={false}
       contentStyle={{ flex: 1, paddingBottom: 16, gap: 10 }}
@@ -266,13 +267,13 @@ function Inventory() {
           ListHeaderComponent={isPhone ? summary : null}
           empty={noneTracked ? {
             icon: 'cube-outline',
-            title: 'No items are tracked yet',
-            message: 'Open an item in Menu & items and turn on “Track stock”. Sales then reduce stock automatically and you get low-stock alerts here.',
-            action: { label: 'Open Menu & items', icon: 'fast-food-outline', onPress: goMenu },
+            title: tr('catalog.inventory_InventoryScreen.no_items_are_tracked_yet'),
+            message: tr('catalog.inventory_InventoryScreen.open_an_item_in_menu_items_and_turn_on'),
+            action: { label: tr('catalog.inventory_InventoryScreen.open_menu_items'), icon: 'fast-food-outline', onPress: goMenu },
           } : {
             icon: query ? 'search-outline' : 'checkmark-circle-outline',
-            title: query ? 'No items match your search' : filter === 'out' ? 'Nothing is out of stock' : 'Nothing is low on stock',
-            action: { label: 'Show all', icon: 'list-outline', onPress: () => { setFilter('all'); setQuery(''); } },
+            title: query ? tr('catalog.inventory_InventoryScreen.no_items_match_your_search') : filter === 'out' ? tr('catalog.inventory_InventoryScreen.nothing_is_out_of_stock') : tr('catalog.inventory_InventoryScreen.nothing_is_low_on_stock'),
+            action: { label: tr('common.show_all'), icon: 'list-outline', onPress: () => { setFilter('all'); setQuery(''); } },
           }}
           testID="stock-list"
         />
@@ -299,7 +300,7 @@ function QtyStepper({ value, onChange, label, compact }: { value: number; onChan
         onLongPress={() => onChange(clampQty(value + delta * 10))}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={`${delta < 0 ? 'Less' : 'More'} for ${label}`}
+        accessibilityLabel={tr('catalog.inventory_InventoryScreen.v_for_label', { v: delta < 0 ? tr('catalog.inventory_InventoryScreen.less') : tr('common.more'), label })}
         hitSlop={4}
         style={({ hovered }: any) => [
           { width: size, height: size, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, opacity: disabled ? 0.35 : 1 },
@@ -312,7 +313,7 @@ function QtyStepper({ value, onChange, label, compact }: { value: number; onChan
     );
   };
   return (
-    <View style={[styles.stepper, { borderColor: colors.border, borderRadius: radius.md, height: size + 2 }]} accessibilityLabel={`Quantity ${value}`}>
+    <View style={[styles.stepper, { borderColor: colors.border, borderRadius: radius.md, height: size + 2 }]} accessibilityLabel={tr('catalog.inventory_InventoryScreen.quantity_value', { value })}>
       {btn('remove', -1)}
       <Text variant="bodyStrong" style={styles.stepValue}>{value}</Text>
       {btn('add', 1)}

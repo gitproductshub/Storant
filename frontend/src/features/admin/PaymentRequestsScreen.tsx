@@ -15,13 +15,15 @@ import { ago, formatDateTime, money } from '@/lib/format';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout, KeyValue, copyText, monoFont } from '@/features/settings/components';
 import { AdminListFrame, PAYMENT_METHOD_LABEL, ReadOnlyNote, goTo, setPendingPayments, useCanEdit, useOnline } from './shared';
+import { brand } from '@/config/brand';
+import { t as tr, currentLocale } from '@/i18n';
 
 type Filter = PaymentRequestStatus | 'all';
 const PAGE = 50;
 const FILTERS: { value: Filter; label: string }[] = [
-  { value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }, { value: 'all', label: 'All' },
+  { value: 'pending', get label() { return tr('common.pending'); } }, { value: 'approved', get label() { return tr('admin.PaymentRequestsScreen.approved'); } }, { value: 'rejected', get label() { return tr('admin.PaymentRequestsScreen.rejected'); } }, { value: 'all', get label() { return tr('common.all'); } },
 ];
-const STATUS_LABEL: Record<PaymentRequestStatus, string> = { pending: 'Waiting for review', approved: 'Approved', rejected: 'Rejected' };
+const STATUS_LABEL: Record<PaymentRequestStatus, string> = { get pending() { return tr('admin.PaymentRequestsScreen.waiting_for_review'); }, get approved() { return tr('admin.PaymentRequestsScreen.approved'); }, get rejected() { return tr('admin.PaymentRequestsScreen.rejected'); } };
 const STATUS_TONE: Record<PaymentRequestStatus, BadgeTone> = { pending: 'warning', approved: 'success', rejected: 'danger' };
 
 export function monthsText(months: number): string {
@@ -88,7 +90,7 @@ export default function PaymentRequestsScreen() {
     setBusyId(r.id);
     try {
       await platformApi.rejectPaymentRequest(r.id, reason);
-      toast.success(`Claim from ${r.business_name} declined`);
+      toast.success(tr('admin.PaymentRequestsScreen.claim_from_business_name_declined', { business_name: r.business_name }));
       done(r.id);
     } catch (e) {
       toast.error(errorMessage(e));
@@ -103,47 +105,47 @@ export default function PaymentRequestsScreen() {
     }
     return (
       <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-        <Button title={isPhone ? undefined : 'Approve'} icon="checkmark" variant="success" size="sm" accessibilityLabel={`Approve ${r.business_name}`}
-          onPress={() => setActing({ request: r, mode: 'approve' })} disabled={!online || busyId === r.id} disabledReason="You're offline" />
-        <ActionMenu align="end" title="Decline with a reason"
+        <Button title={isPhone ? undefined : tr('admin.PaymentRequestsScreen.approve')} icon="checkmark" variant="success" size="sm" accessibilityLabel={tr('admin.PaymentRequestsScreen.approve_business_name', { business_name: r.business_name })}
+          onPress={() => setActing({ request: r, mode: 'approve' })} disabled={!online || busyId === r.id} disabledReason={tr('admin.PaymentRequestsScreen.you_re_offline_x')} />
+        <ActionMenu align="end" title={tr('admin.PaymentRequestsScreen.decline_with_a_reason')}
           items={[
             ...REJECT_REASONS.map((reason) => ({ key: reason, label: reason, icon: 'close-circle-outline' as const, onPress: () => void decline(r, reason) })),
-            { key: 'other', label: 'Other reason…', icon: 'create-outline', group: 'other', onPress: () => setActing({ request: r, mode: 'reject' }) },
+            { key: 'other', label: tr('admin.PaymentRequestsScreen.other_reason'), icon: 'create-outline', group: 'other', onPress: () => setActing({ request: r, mode: 'reject' }) },
           ]}
-          trigger={(open) => <Button title={isPhone ? undefined : 'Decline'} icon="close" variant="dangerOutline" size="sm" accessibilityLabel={`Decline ${r.business_name}`}
-            onPress={open} loading={busyId === r.id} disabled={!online} disabledReason="You're offline" />} />
+          trigger={(open) => <Button title={isPhone ? undefined : tr('admin.PaymentRequestsScreen.decline')} icon="close" variant="dangerOutline" size="sm" accessibilityLabel={tr('admin.PaymentRequestsScreen.decline_business_name', { business_name: r.business_name })}
+            onPress={open} loading={busyId === r.id} disabled={!online} disabledReason={tr('admin.PaymentRequestsScreen.you_re_offline_x')} />} />
       </View>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canEdit, online, busyId, isPhone]);
 
   const columns = useMemo<DataColumn<PaymentRequest>[]>(() => [
-    { key: 'business', title: 'Business', flex: 2.2, render: (r) => (
+    { key: 'business', title: tr('common.business'), flex: 2.2, render: (r) => (
       <View style={{ minWidth: 0 }}>
         <Text variant="bodyStrong" numberOfLines={1}>{r.business_name}</Text>
         <Text variant="small" tone="muted" numberOfLines={1}>{planName(r.plan_key)} · {monthsText(r.months)}{r.offer_code ? ` · ${r.offer_code}` : ''}</Text>
       </View>
     ) },
-    { key: 'reference', title: 'Reference', flex: 1.4, hideBelow: 820, render: (r) => (
+    { key: 'reference', title: tr('admin.PaymentRequestsScreen.reference'), flex: 1.4, hideBelow: 820, render: (r) => (
       <View style={{ minWidth: 0 }}>
         <Text variant="small" numberOfLines={1} style={{ fontFamily: monoFont }} selectable>{r.reference || '—'}</Text>
         <Text variant="caption" tone="subtle" numberOfLines={1}>{PAYMENT_METHOD_LABEL[r.method] ?? r.method}</Text>
       </View>
     ) },
-    { key: 'amount', title: 'Claimed', width: 140, align: 'right', render: (r) => {
+    { key: 'amount', title: tr('admin.PaymentRequestsScreen.claimed'), width: 140, align: 'right', render: (r) => {
       const diff = mismatch(r);
       return (
         <View style={{ alignItems: 'flex-end' }}>
           <Text variant="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>{money(r.amount)}</Text>
-          {r.status === 'pending' && r.offer_error ? <Text variant="caption" tone="warning" numberOfLines={1}>Offer ended</Text>
-            : r.status === 'pending' && diff !== null ? <Text variant="caption" tone="warning" numberOfLines={1}>{`Expected ${money(r.expected_amount!)}`}</Text>
-              : r.status === 'pending' && r.expected_amount !== undefined ? <Text variant="caption" tone="success" numberOfLines={1}>Matches price</Text> : null}
+          {r.status === 'pending' && r.offer_error ? <Text variant="caption" tone="warning" numberOfLines={1}>{tr('admin.PaymentRequestsScreen.offer_ended')}</Text>
+            : r.status === 'pending' && diff !== null ? <Text variant="caption" tone="warning" numberOfLines={1}>{tr('admin.PaymentRequestsScreen.expected_money', { money: money(r.expected_amount!) })}</Text>
+              : r.status === 'pending' && r.expected_amount !== undefined ? <Text variant="caption" tone="success" numberOfLines={1}>{tr('admin.PaymentRequestsScreen.matches_price')}</Text> : null}
         </View>
       );
     } },
-    { key: 'sent', title: 'Sent', width: 96, hideBelow: 700, value: (r) => `${ago(r.created_at)} ago` },
-    { key: 'status', title: 'Status', width: 130, hideBelow: 980, render: (r) => <StatusPill status={r.status === 'pending' ? 'claim' : r.status === 'approved' ? 'paid' : 'cancelled'}
-      label={r.status === 'pending' ? 'Waiting' : r.status === 'approved' ? 'Approved' : 'Declined'} /> },
+    { key: 'sent', title: tr('common.sent'), width: 96, hideBelow: 700, value: (r) => `${ago(r.created_at)} ago` },
+    { key: 'status', title: tr('common.status'), width: 130, hideBelow: 980, render: (r) => <StatusPill status={r.status === 'pending' ? 'claim' : r.status === 'approved' ? 'paid' : 'cancelled'}
+      label={r.status === 'pending' ? tr('common.waiting') : r.status === 'approved' ? tr('admin.PaymentRequestsScreen.approved') : tr('admin.PaymentRequestsScreen.declined')} /> },
   ], [planName]);
 
   const renderCard = useCallback((r: PaymentRequest) => (
@@ -153,13 +155,13 @@ export default function PaymentRequestsScreen() {
         <Text variant="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>{money(r.amount)}</Text>
       </View>
       <Text variant="small" tone="muted" numberOfLines={1}>
-        {planName(r.plan_key)} · {monthsText(r.months)} · {r.reference || 'no reference'} · {ago(r.created_at)} ago
+        {planName(r.plan_key)} · {monthsText(r.months)} · {r.reference || tr('admin.PaymentRequestsScreen.no_reference')} {tr('admin.PaymentRequestsScreen.ago_ago', { ago: ago(r.created_at) })}
       </Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         {r.status === 'pending' && (r.offer_error || mismatch(r) !== null)
-          ? <StatusPill status="pending" label={r.offer_error ? 'Offer ended' : 'Amount differs'} />
+          ? <StatusPill status="pending" label={r.offer_error ? tr('admin.PaymentRequestsScreen.offer_ended') : tr('admin.PaymentRequestsScreen.amount_differs')} />
           : <StatusPill status={r.status === 'pending' ? 'claim' : r.status === 'approved' ? 'paid' : 'cancelled'}
-            label={r.status === 'pending' ? 'Waiting' : r.status === 'approved' ? 'Approved' : 'Declined'} />}
+            label={r.status === 'pending' ? tr('common.waiting') : r.status === 'approved' ? tr('admin.PaymentRequestsScreen.approved') : tr('admin.PaymentRequestsScreen.declined')} />}
         <View style={{ flex: 1 }} />
         {actions(r)}
       </View>
@@ -168,11 +170,11 @@ export default function PaymentRequestsScreen() {
 
   return (
     <AdminListFrame
-      title="Payment requests"
-      subtitle="Owners say they've paid from the renewal page. Check the money arrived, then approve to switch the business on."
+      title={tr('admin.PaymentRequestsScreen.payment_requests')}
+      subtitle={tr('admin.PaymentRequestsScreen.owners_say_they_ve_paid_from_the_renewal')}
       toolbar={
         <View style={{ gap: 8 }}>
-          <FilterBar onSearch={setQuery} searchPlaceholder="Business, reference or email"
+          <FilterBar onSearch={setQuery} searchPlaceholder={tr('admin.PaymentRequestsScreen.business_reference_or_email_x')}
             filters={FILTERS.map((f) => ({ key: f.value, label: f.label, count: statusCounts ? (statusCounts[f.value] ?? 0) : undefined }))}
             value={filter} onChange={changeFilter} />
           {!canEdit ? <ReadOnlyNote what="approve or decline payments" /> : null}
@@ -202,12 +204,12 @@ export default function PaymentRequestsScreen() {
         rowActionsWidth={isPhone ? 110 : 220}
         extraData={busyId}
         empty={filter === 'pending' && !q
-          ? { icon: 'checkmark-done-outline', title: 'All caught up', message: "No payment claims are waiting. New ones appear here when an owner says they've paid." }
-          : { icon: 'wallet-outline', title: 'Nothing here', message: q ? 'No claim matches that search.' : `No ${filter === 'all' ? '' : `${filter} `}payment requests yet.` }}
+          ? { icon: 'checkmark-done-outline', title: tr('common.all_caught_up'), message: tr('admin.PaymentRequestsScreen.no_payment_claims_are_waiting_new_ones') }
+          : { icon: 'wallet-outline', title: tr('admin.PaymentRequestsScreen.nothing_here'), message: q ? tr('admin.PaymentRequestsScreen.no_claim_matches_that_search') : tr('admin.PaymentRequestsScreen.no_v_payment_requests_yet', { v: filter === 'all' ? '' : `${filter} ` }) }}
       />
 
       {acting?.mode === 'view' ? (
-        <Sheet visible onClose={() => setActing(null)} title={acting.request.business_name} subtitle="Payment claim" width={760}>
+        <Sheet visible onClose={() => setActing(null)} title={acting.request.business_name} subtitle={tr('admin.PaymentRequestsScreen.payment_claim')} width={760}>
           <RequestCard request={acting.request} planName={planName(acting.request.plan_key)} canEdit={canEdit}
             onApprove={() => setActing({ request: acting.request, mode: 'approve' })} onReject={() => setActing({ request: acting.request, mode: 'reject' })} />
         </Sheet>
@@ -234,22 +236,22 @@ function RequestCard({ request: r, planName, canEdit, onApprove, onReject }: {
 
   const amountBlock = (
     <View style={{ gap: 6, minWidth: wide ? 220 : undefined }}>
-      <Text variant="caption" tone="subtle">CLAIMED</Text>
+      <Text variant="caption" tone="subtle">{tr('admin.PaymentRequestsScreen.claimed_2')}</Text>
       <Text variant="moneyLarge">{money(r.amount)}</Text>
       {pending && r.expected_amount !== undefined ? (
         diff === null ? (
-          <Badge label="Matches the price" tone="success" icon="checkmark" style={{ alignSelf: 'flex-start' }} />
+          <Badge label={tr('admin.PaymentRequestsScreen.matches_the_price')} tone="success" icon="checkmark" style={{ alignSelf: 'flex-start' }} />
         ) : (
           <View style={{ gap: 4 }}>
-            <Badge label={`Expected ${money(r.expected_amount)}`} tone="warning" icon="warning-outline" style={{ alignSelf: 'flex-start' }} />
-            <Text variant="small" tone="warning">{diff > 0 ? `${money(diff)} more` : `${money(-diff)} less`} than the plan price</Text>
+            <Badge label={tr('admin.PaymentRequestsScreen.expected_money', { money: money(r.expected_amount) })} tone="warning" icon="warning-outline" style={{ alignSelf: 'flex-start' }} />
+            <Text variant="small" tone="warning">{diff > 0 ? tr('admin.PaymentRequestsScreen.money_more', { money: money(diff) }) : tr('admin.PaymentRequestsScreen.money_less', { money: money(-diff) })} {tr('admin.PaymentRequestsScreen.than_the_plan_price')}</Text>
           </View>
         )
       ) : null}
       {pending && canEdit ? (
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-          <Button title="Approve" icon="checkmark" variant="success" size="sm" onPress={onApprove} disabled={!online} />
-          <Button title="Reject" icon="close" variant="secondary" size="sm" onPress={onReject} disabled={!online} />
+          <Button title={tr('admin.PaymentRequestsScreen.approve')} icon="checkmark" variant="success" size="sm" onPress={onApprove} disabled={!online} />
+          <Button title={tr('admin.PaymentRequestsScreen.reject')} icon="close" variant="secondary" size="sm" onPress={onReject} disabled={!online} />
         </View>
       ) : null}
     </View>
@@ -260,7 +262,7 @@ function RequestCard({ request: r, planName, canEdit, onApprove, onReject }: {
       <View style={{ flexDirection: wide ? 'row' : 'column', gap: wide ? 24 : 14 }}>
         <View style={{ flex: wide ? 1 : undefined, minWidth: 0, gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Pressable onPress={() => goTo(`/admin/businesses/${r.business_id}`)} accessibilityRole="link" accessibilityLabel={`Open ${r.business_name}`}
+            <Pressable onPress={() => goTo(`/admin/businesses/${r.business_id}`)} accessibilityRole="link" accessibilityLabel={tr('admin.PaymentRequestsScreen.open_business_name', { business_name: r.business_name })}
               style={({ hovered }: any) => [{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }, hovered && { opacity: 0.75 },
                 Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
               <Text variant="h3" numberOfLines={1} style={{ flexShrink: 1 }}>{r.business_name}</Text>
@@ -272,19 +274,19 @@ function RequestCard({ request: r, planName, canEdit, onApprove, onReject }: {
             <Badge label={planName} tone="primary" icon="pricetag-outline" />
             <Text variant="small" tone="muted">{monthsText(r.months)}</Text>
             {r.offer_code ? <Badge label={r.offer_code} tone="accent" icon="gift-outline" /> : null}
-            <Text variant="small" tone="subtle">· {ago(r.created_at)} ago</Text>
+            <Text variant="small" tone="subtle">{tr('admin.PaymentRequestsScreen.ago_ago', { ago: ago(r.created_at) })}</Text>
           </View>
           {pending && r.offer_error ? (
-            <Callout tone="warning" title={`Offer ${r.offer_code ?? ''} can't be used now`}>
-              {`${r.offer_error}. You can approve it without the offer, at the amount that arrived, or decline it.`}
+            <Callout tone="warning" title={tr('admin.PaymentRequestsScreen.offer_v_can_t_be_used_now', { v: r.offer_code ?? '' })}>
+              {tr('admin.PaymentRequestsScreen.offer_error_you_can_approve_it_without', { offer_error: r.offer_error })}
             </Callout>
           ) : null}
           <View style={{ gap: 2 }}>
-            <KeyValue label="Reference" value={r.reference || '—'} mono={!!r.reference}
-              right={r.reference ? <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel="Copy reference" onPress={() => copyText(r.reference!, 'Reference')} /> : undefined} />
-            <KeyValue label="Method" value={PAYMENT_METHOD_LABEL[r.method] ?? r.method} />
-            <KeyValue label="Sent by" value={r.requested_by ?? '—'} />
-            <KeyValue label="Sent at" value={formatDateTime(r.created_at)} />
+            <KeyValue label={tr('admin.PaymentRequestsScreen.reference')} value={r.reference || '—'} mono={!!r.reference}
+              right={r.reference ? <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel={tr('admin.PaymentRequestsScreen.copy_reference')} onPress={() => copyText(r.reference!, 'Reference')} /> : undefined} />
+            <KeyValue label={tr('admin.PaymentRequestsScreen.method')} value={PAYMENT_METHOD_LABEL[r.method] ?? r.method} />
+            <KeyValue label={tr('admin.PaymentRequestsScreen.sent_by')} value={r.requested_by ?? '—'} />
+            <KeyValue label={tr('admin.PaymentRequestsScreen.sent_at')} value={formatDateTime(r.created_at)} />
           </View>
           {r.note ? (
             <View style={{ padding: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.surfaceSunken, flexDirection: 'row', gap: 8 }}>
@@ -294,7 +296,7 @@ function RequestCard({ request: r, planName, canEdit, onApprove, onReject }: {
           ) : null}
           {r.status !== 'pending' ? (
             <Text variant="small" tone="muted">
-              {r.status === 'approved' ? 'Approved' : 'Rejected'}{r.reviewed_by ? ` by ${r.reviewed_by}` : ''}{r.reviewed_at ? ` · ${formatDateTime(r.reviewed_at)}` : ''}
+              {r.status === 'approved' ? tr('admin.PaymentRequestsScreen.approved') : tr('admin.PaymentRequestsScreen.rejected')}{r.reviewed_by ? tr('admin.PaymentRequestsScreen.by_reviewed_by', { reviewed_by: r.reviewed_by }) : ''}{r.reviewed_at ? ` · ${formatDateTime(r.reviewed_at)}` : ''}
               {r.review_note ? ` · “${r.review_note}”` : ''}
             </Text>
           ) : null}
@@ -324,7 +326,7 @@ function ApproveSheet({ request: r, planName, onClose, onDone }: { request: Paym
     setFormError(null);
     try {
       const res = await platformApi.approvePaymentRequest(r.id, { amount_paid: amountNum, note: note.trim() || null, ...(r.offer_code && withoutOffer ? { ignore_offer: true } : {}) });
-      toast.success(`${r.business_name} is switched on · paid until ${new Date(res.paid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`);
+      toast.success(tr('admin.PaymentRequestsScreen.business_name_is_switched_on_paid_until', { business_name: r.business_name, toLocaleDateString: new Date(res.paid_until).toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short', year: 'numeric' }) }));
       onDone();
     } catch (e) {
       setFormError(errorMessage(e));
@@ -334,40 +336,40 @@ function ApproveSheet({ request: r, planName, onClose, onDone }: { request: Paym
   };
 
   return (
-    <Sheet visible onClose={onClose} title="Approve payment" subtitle={`${r.business_name} · ${planName} · ${monthsText(r.months)}`} width={560}
+    <Sheet visible onClose={onClose} title={tr('admin.PaymentRequestsScreen.approve_payment')} subtitle={`${r.business_name} · ${planName} · ${monthsText(r.months)}`} width={560}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title="Approve & switch on" icon="checkmark" variant="success" onPress={submit} loading={saving} disabled={!online || !!amountError} />
+          <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={tr('admin.PaymentRequestsScreen.approve_switch_on')} icon="checkmark" variant="success" onPress={submit} loading={saving} disabled={!online || !!amountError} />
         </View>
       }>
       {formError ? <Callout tone="danger">{formError}</Callout> : null}
       {r.offer_code ? (
         <View style={{ gap: 6 }}>
-          {r.offer_error ? <Callout tone="warning" title={`Offer ${r.offer_code} can't be used now`}>{`${r.offer_error}. Approve without the offer, at the amount that arrived, or decline and ask the owner to pay again.`}</Callout> : null}
+          {r.offer_error ? <Callout tone="warning" title={tr('admin.PaymentRequestsScreen.offer_offer_code_can_t_be_used_now', { offer_code: r.offer_code })}>{tr('admin.PaymentRequestsScreen.offer_error_approve_without_the_offer_at', { offer_error: r.offer_error })}</Callout> : null}
           <Segmented value={withoutOffer ? 'without' : 'with'} onChange={(v) => setWithoutOffer(v === 'without')}
-            options={[{ value: 'with', label: `With offer ${r.offer_code}` }, { value: 'without', label: 'Without the offer' }]} />
+            options={[{ value: 'with', label: tr('admin.PaymentRequestsScreen.with_offer_offer_code', { offer_code: r.offer_code }) }, { value: 'without', label: tr('admin.PaymentRequestsScreen.without_the_offer') }]} />
         </View>
       ) : null}
       <Callout tone="info">
-        {`Records ${monthsText(r.months)} of ${planName}${r.offer_code && !withoutOffer ? ` with offer ${r.offer_code}` : ''} from the current paid-until date (or today) and unlocks the business straight away. Approve only after the money is in the account.`}
+        {tr('admin.PaymentRequestsScreen.records_monthstext_of_planname_v_from_the', { monthsText: monthsText(r.months), planName, v: r.offer_code && !withoutOffer ? tr('admin.PaymentRequestsScreen.with_offer_offer_code_2', { offer_code: r.offer_code }) : '' })}
       </Callout>
       <Card style={{ gap: 2 }}>
-        <KeyValue label="Claimed" value={money(r.amount)} />
-        {r.expected_amount !== undefined ? <KeyValue label="Plan price" value={money(r.expected_amount)} /> : null}
-        <KeyValue label="Reference" value={r.reference || '—'} mono={!!r.reference} />
+        <KeyValue label={tr('admin.PaymentRequestsScreen.claimed')} value={money(r.amount)} />
+        {r.expected_amount !== undefined ? <KeyValue label={tr('admin.PaymentRequestsScreen.plan_price')} value={money(r.expected_amount)} /> : null}
+        <KeyValue label={tr('admin.PaymentRequestsScreen.reference')} value={r.reference || '—'} mono={!!r.reference} />
       </Card>
-      {diff !== null ? <Callout tone="warning">{`The claim is ${money(Math.abs(diff))} ${diff > 0 ? 'more' : 'less'} than the plan price. Enter what actually arrived.`}</Callout> : null}
-      <Input label="Amount received" required prefix="₹" value={amount} onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad"
-        maxLength={11} error={amountError} hint="What actually reached Tallyko's account." />
+      {diff !== null ? <Callout tone="warning">{tr('admin.PaymentRequestsScreen.the_claim_is_money_v_than_the_plan_price', { money: money(Math.abs(diff)), v: diff > 0 ? 'more' : 'less' })}</Callout> : null}
+      <Input label={tr('admin.PaymentRequestsScreen.amount_received')} required prefix="₹" value={amount} onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad"
+        maxLength={11} error={amountError} hint={tr('admin.PaymentRequestsScreen.what_actually_reached_brand_s_account', { brand: brand.name })} />
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        <Button title={`Claimed ${money(r.amount)}`} size="sm" variant={amountNum === r.amount ? 'soft' : 'secondary'} onPress={() => setAmount(String(r.amount))} />
+        <Button title={tr('admin.PaymentRequestsScreen.claimed_money', { money: money(r.amount) })} size="sm" variant={amountNum === r.amount ? 'soft' : 'secondary'} onPress={() => setAmount(String(r.amount))} />
         {r.expected_amount !== undefined && diff !== null ? (
-          <Button title={`Plan price ${money(r.expected_amount)}`} size="sm" variant={amountNum === r.expected_amount ? 'soft' : 'secondary'}
+          <Button title={tr('admin.PaymentRequestsScreen.plan_price_money', { money: money(r.expected_amount) })} size="sm" variant={amountNum === r.expected_amount ? 'soft' : 'secondary'}
             onPress={() => setAmount(String(r.expected_amount))} />
         ) : null}
       </View>
-      <Input label="Note (optional)" value={note} onChangeText={setNote} maxLength={300} placeholder="e.g. UPI credit checked in the bank app" />
+      <Input label={tr('admin.PaymentRequestsScreen.note_optional')} value={note} onChangeText={setNote} maxLength={300} placeholder={tr('admin.PaymentRequestsScreen.e_g_upi_credit_checked_in_the_bank_app')} />
     </Sheet>
   );
 }
@@ -380,7 +382,7 @@ function RejectSheet({ request: r, onClose, onDone }: { request: PaymentRequest;
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const error = submitted && reason.trim().length < 3 ? 'Tell the owner why (at least 3 characters).' : undefined;
+  const error = submitted && reason.trim().length < 3 ? tr('admin.PaymentRequestsScreen.tell_the_owner_why_at_least_3_characters') : undefined;
 
   const submit = async () => {
     setSubmitted(true);
@@ -389,7 +391,7 @@ function RejectSheet({ request: r, onClose, onDone }: { request: PaymentRequest;
     setFormError(null);
     try {
       await platformApi.rejectPaymentRequest(r.id, reason.trim());
-      toast.success(`Claim from ${r.business_name} rejected`);
+      toast.success(tr('admin.PaymentRequestsScreen.claim_from_business_name_rejected', { business_name: r.business_name }));
       onDone();
     } catch (e) {
       setFormError(errorMessage(e));
@@ -399,17 +401,17 @@ function RejectSheet({ request: r, onClose, onDone }: { request: PaymentRequest;
   };
 
   return (
-    <Sheet visible onClose={onClose} title="Reject payment claim" subtitle={`${r.business_name} · ${money(r.amount)}${r.reference ? ` · ${r.reference}` : ''}`} width={540}
+    <Sheet visible onClose={onClose} title={tr('admin.PaymentRequestsScreen.reject_payment_claim')} subtitle={`${r.business_name} · ${money(r.amount)}${r.reference ? ` · ${r.reference}` : ''}`} width={540}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title="Reject claim" icon="close" variant="danger" onPress={submit} loading={saving} disabled={!online} />
+          <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={tr('admin.PaymentRequestsScreen.reject_claim')} icon="close" variant="danger" onPress={submit} loading={saving} disabled={!online} />
         </View>
       }>
       {formError ? <Callout tone="danger">{formError}</Callout> : null}
-      <Callout tone="warning">The business stays as it is (locked if its subscription ended). The owner sees your reason on the renewal page and can send a new claim.</Callout>
-      <Input label="Reason (shown to the owner)" required value={reason} onChangeText={setReason} maxLength={300} error={error} autoFocus
-        placeholder="e.g. We couldn't find this UTR in our account" />
+      <Callout tone="warning">{tr('admin.PaymentRequestsScreen.the_business_stays_as_it_is_locked_if_its')}</Callout>
+      <Input label={tr('admin.PaymentRequestsScreen.reason_shown_to_the_owner')} required value={reason} onChangeText={setReason} maxLength={300} error={error} autoFocus
+        placeholder={tr('admin.PaymentRequestsScreen.e_g_we_couldn_t_find_this_utr_in_our')} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {REJECT_REASONS.map((t) => <Button key={t} title={t} size="sm" variant={reason === t ? 'soft' : 'secondary'} onPress={() => setReason(t)} />)}
       </View>

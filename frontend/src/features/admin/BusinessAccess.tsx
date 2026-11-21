@@ -18,6 +18,7 @@ import { Callout, ChoiceChips, FieldRow, KeyValue, SettingSwitch } from '@/featu
 import {
   ACCESS_LABEL, AccessBadge, KIND_LABEL, KIND_TONE, PAYMENT_METHODS, PAYMENT_METHOD_LABEL, accessDaysText, plural, shortDate, useOnline,
 } from './shared';
+import { t } from '@/i18n';
 
 const DAY = 86_400_000;
 
@@ -44,19 +45,19 @@ function accessHeadline(b: BusinessDetail): { title: string; detail: string } {
   const kind = a.kind ? KIND_LABEL[a.kind] : null;
   switch (a.state) {
     case 'trial':
-      return { title: `Free demo · ${accessDaysText(a)}`, detail: `Until ${shortDate(a.paid_until)}. Locks then unless a payment is recorded.` };
+      return { title: t('admin.BusinessAccess.free_demo_accessdaystext', { accessDaysText: accessDaysText(a) }), detail: t('admin.BusinessAccess.until_shortdate_locks_then_unless_a', { shortDate: shortDate(a.paid_until) }) };
     case 'development':
-      return { title: 'Development access', detail: 'Works with no expiry until you switch it off.' };
+      return { title: t('common.development_access'), detail: t('admin.BusinessAccess.works_with_no_expiry_until_you_switch_it') };
     case 'active':
-      return { title: `${kind && a.kind !== 'paid' ? kind : 'Active'} · ${accessDaysText(a)}`, detail: `Paid until ${shortDate(a.paid_until)}.` };
+      return { title: `${kind && a.kind !== 'paid' ? kind : t('common.active')} · ${accessDaysText(a)}`, detail: t('admin.BusinessAccess.paid_until_shortdate', { shortDate: shortDate(a.paid_until) }) };
     case 'grace':
-      return { title: 'Grace period', detail: `The paid period ended ${shortDate(a.paid_until)}. Locks on ${shortDate(a.lock_at ?? a.paid_until)}.` };
+      return { title: t('admin.BusinessAccess.grace_period'), detail: t('admin.BusinessAccess.the_paid_period_ended_shortdate_locks_on', { shortDate: shortDate(a.paid_until), shortDate2: shortDate(a.lock_at ?? a.paid_until) }) };
     default:
       return {
-        title: 'Locked',
+        title: t('common.locked'),
         detail: a.paid_until
-          ? `Subscription ended ${shortDate(a.paid_until)}${b.lapsed_at ? `; devices signed out ${shortDate(b.lapsed_at)}` : ''}. The owner sees the renewal page; data and offline bills are safe.`
-          : 'No demo or payment yet. The owner sees the renewal page.',
+          ? t('admin.BusinessAccess.subscription_ended_shortdate_v_the_owner', { shortDate: shortDate(a.paid_until), v: b.lapsed_at ? t('admin.BusinessAccess.devices_signed_out_shortdate', { shortDate: shortDate(b.lapsed_at) }) : '' })
+          : t('admin.BusinessAccess.no_demo_or_payment_yet_the_owner_sees_the'),
       };
   }
 }
@@ -80,16 +81,16 @@ export function AccessCard({ business: b, editable, online, onRecordPayment, onC
   const giveDemo = async () => {
     if (daysError) return;
     const ok = await confirm({
-      title: `Give ${b.name} a ${daysNum}-day demo?`, confirmLabel: 'Give demo',
+      title: t('admin.BusinessAccess.give_name_a_daysnum_day_demo', { name: b.name, daysNum }), confirmLabel: t('admin.BusinessAccess.give_demo'),
       message: a.state === 'lapsed' || a.state === 'grace'
-        ? 'The business is switched on straight away and can sign in and bill again.'
-        : `Adds ${daysNum} days after the current end date (${shortDate(a.paid_until)}).`,
+        ? t('admin.BusinessAccess.the_business_is_switched_on_straight_away')
+        : t('admin.BusinessAccess.adds_daysnum_days_after_the_current_end', { daysNum, shortDate: shortDate(a.paid_until) }),
     });
     if (!ok) return;
     setBusy('demo');
     try {
       const r = await platformApi.giveDemo(b.id, { days: daysNum });
-      toast.success(r ? `${daysNum}-day demo given · works until ${shortDate(r.paid_until)}` : 'Demo given');
+      toast.success(r ? t('admin.BusinessAccess.daysnum_day_demo_given_works_until', { daysNum, shortDate: shortDate(r.paid_until) }) : t('admin.BusinessAccess.demo_given'));
       onChanged();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -100,17 +101,17 @@ export function AccessCard({ business: b, editable, online, onRecordPayment, onC
 
   const setDevelopment = async (enabled: boolean) => {
     const ok = await confirm(enabled ? {
-      title: 'Give development access?', confirmLabel: 'Turn on',
-      message: `${b.name} works with no expiry until you switch this off. Use it for internal testing and pilot shops.`,
+      title: t('admin.BusinessAccess.give_development_access'), confirmLabel: t('admin.BusinessAccess.turn_on'),
+      message: t('admin.BusinessAccess.name_works_with_no_expiry_until_you', { name: b.name }),
     } : {
-      title: 'Remove development access?', confirmLabel: 'Turn off', danger: true,
-      message: 'The development period ends now. If nothing else is paid, the business is locked (after any grace days) and the owner sees the renewal page.',
+      title: t('admin.BusinessAccess.remove_development_access'), confirmLabel: t('admin.BusinessAccess.turn_off'), danger: true,
+      message: t('admin.BusinessAccess.the_development_period_ends_now_if'),
     });
     if (!ok) return;
     setBusy('dev');
     try {
       const next = await platformApi.setDevelopment(b.id, { enabled });
-      toast.success(enabled ? 'Development access is on' : 'Development access removed');
+      toast.success(enabled ? t('admin.BusinessAccess.development_access_is_on') : t('admin.BusinessAccess.development_access_removed'));
       onChanged(next);
     } catch (e) {
       toast.error(errorMessage(e));
@@ -121,7 +122,7 @@ export function AccessCard({ business: b, editable, online, onRecordPayment, onC
 
   return (
     <Card style={{ gap: 14 }}>
-      <CardTitle title="Access" subtitle="Whether the business can sign in and bill right now." right={<AccessBadge access={a} />} />
+      <CardTitle title={t('admin.BusinessAccess.access')} subtitle={t('admin.BusinessAccess.whether_the_business_can_sign_in_and_bill')} right={<AccessBadge access={a} />} />
       <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', padding: 12, borderRadius: radius.md, backgroundColor: tone }}>
         <Ionicons name={icon} size={26} color={fg} />
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -131,40 +132,40 @@ export function AccessCard({ business: b, editable, online, onRecordPayment, onC
         {a.state !== 'development' && a.state !== 'lapsed' && a.days_left !== null ? (
           <View style={{ alignItems: 'center', minWidth: 56 }}>
             <Text variant="h1" color={fg}>{a.days_left}</Text>
-            <Text variant="caption" color={fg}>DAYS LEFT</Text>
+            <Text variant="caption" color={fg}>{t('admin.BusinessAccess.days_left')}</Text>
           </View>
         ) : null}
       </View>
-      {b.status === 'suspended' ? <Text variant="small" tone="danger">Suspended: nobody can sign in, whatever the subscription says.</Text> : null}
+      {b.status === 'suspended' ? <Text variant="small" tone="danger">{t('admin.BusinessAccess.suspended_nobody_can_sign_in_whatever_the')}</Text> : null}
       {editable && (a.state === 'lapsed' || a.state === 'grace') ? (
-        <Button title="Record payment to unlock" icon="card-outline" variant="success" onPress={onRecordPayment} disabled={!online} style={{ alignSelf: 'flex-start' }} />
+        <Button title={t('admin.BusinessAccess.record_payment_to_unlock')} icon="card-outline" variant="success" onPress={onRecordPayment} disabled={!online} style={{ alignSelf: 'flex-start' }} />
       ) : null}
 
       {editable ? (
         <>
           <Divider />
           {b.development ? (
-            <Text variant="small" tone="muted">Development access is on, so a demo isn't needed. Switch it off below to go back to demo or paid access.</Text>
+            <Text variant="small" tone="muted">{t('admin.BusinessAccess.development_access_is_on_so_a_demo_isn_t')}</Text>
           ) : (
             <View style={{ gap: 8 }}>
               <View>
-                <Text variant="bodyStrong">Give a free demo</Text>
-                <Text variant="small" tone="muted">Extends a running period, or unlocks a locked business straight away.</Text>
+                <Text variant="bodyStrong">{t('admin.BusinessAccess.give_a_free_demo')}</Text>
+                <Text variant="small" tone="muted">{t('admin.BusinessAccess.extends_a_running_period_or_unlocks_a')}</Text>
               </View>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-                <ChoiceChips value={Number.isFinite(daysNum) && DEMO_CHOICES.includes(daysNum) ? String(daysNum) : ''} onChange={setDays} accessibilityLabel="Demo length"
-                  options={DEMO_CHOICES.map((d) => ({ value: String(d), label: `${d} days` }))} />
+                <ChoiceChips value={Number.isFinite(daysNum) && DEMO_CHOICES.includes(daysNum) ? String(daysNum) : ''} onChange={setDays} accessibilityLabel={t('common.demo_length')}
+                  options={DEMO_CHOICES.map((d) => ({ value: String(d), label: t('admin.BusinessAccess.d_days', { d }) }))} />
                 <Input value={days} onChangeText={(v) => setDays(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={3}
-                  containerStyle={{ width: 84 }} accessibilityLabel="Custom demo days" error={daysError ? ' ' : undefined} placeholder="Days" />
-                <Button title={Number.isFinite(daysNum) && !daysError ? `Give ${daysNum}-day demo` : 'Give demo'} icon="gift-outline" variant="secondary"
+                  containerStyle={{ width: 84 }} accessibilityLabel={t('admin.BusinessAccess.custom_demo_days')} error={daysError ? ' ' : undefined} placeholder={t('common.days')} />
+                <Button title={Number.isFinite(daysNum) && !daysError ? t('admin.BusinessAccess.give_daysnum_day_demo', { daysNum }) : t('admin.BusinessAccess.give_demo')} icon="gift-outline" variant="secondary"
                   onPress={giveDemo} loading={busy === 'demo'} disabled={!online || !!daysError || busy !== null} />
               </View>
               {daysError && days ? <Text variant="small" tone="danger">{daysError}</Text> : null}
             </View>
           )}
           <Divider />
-          <SettingSwitch title="Development access" value={b.development} onValueChange={(v) => void setDevelopment(v)} disabled={!online || busy !== null}
-            subtitle={b.development ? 'On: no expiry until you switch it off.' : 'For internal or pilot owners: works with no expiry until switched off.'} />
+          <SettingSwitch title={t('common.development_access')} value={b.development} onValueChange={(v) => void setDevelopment(v)} disabled={!online || busy !== null}
+            subtitle={b.development ? t('admin.BusinessAccess.on_no_expiry_until_you_switch_it_off') : t('admin.BusinessAccess.for_internal_or_pilot_owners_works_with')} />
         </>
       ) : null}
     </Card>
@@ -202,15 +203,15 @@ export function DevicesCard({ business: b, editable }: { business: BusinessDetai
 
   const signOutAll = async () => {
     const reason = await prompt({
-      title: `Sign out every device of ${b.name}?`, confirmLabel: 'Sign out everywhere', danger: true, minLength: 2,
-      message: 'Everyone (owner and staff) is signed out now. Bills waiting on a device stay there and sync after they sign in again.',
-      label: 'Reason (kept in the audit log)', placeholder: b.access.locked ? 'e.g. Subscription unpaid' : 'e.g. Owner asked: lost tablet',
+      title: t('admin.BusinessAccess.sign_out_every_device_of_name', { name: b.name }), confirmLabel: t('admin.BusinessAccess.sign_out_everywhere'), danger: true, minLength: 2,
+      message: t('admin.BusinessAccess.everyone_owner_and_staff_is_signed_out'),
+      label: t('admin.BusinessAccess.reason_kept_in_the_audit_log'), placeholder: b.access.locked ? t('admin.BusinessAccess.e_g_subscription_unpaid') : t('admin.BusinessAccess.e_g_owner_asked_lost_tablet'),
     });
     if (!reason?.trim()) return;
     setBusy('all');
     try {
       const r = await platformApi.signOutBusiness(b.id, reason.trim());
-      toast.success(r.signed_out ? `Signed out ${plural(r.signed_out, 'device')}` : 'Signed out (no tracked devices were active)');
+      toast.success(r.signed_out ? t('admin.BusinessAccess.signed_out_plural', { plural: plural(r.signed_out, 'device') }) : t('admin.BusinessAccess.signed_out_no_tracked_devices_were_active'));
       void sessions.silentReload();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -221,15 +222,15 @@ export function DevicesCard({ business: b, editable }: { business: BusinessDetai
 
   const signOutOne = async (s: DeviceSession) => {
     const reason = await prompt({
-      title: `Sign out ${s.name ?? s.email ?? 'this device'}?`, confirmLabel: 'Sign out', danger: true, minLength: 2,
-      message: `${s.device}${s.ip ? ` · ${s.ip}` : ''}. They need to sign in again on this device; bills waiting on it stay safe.`,
-      label: 'Reason', placeholder: 'e.g. Lost phone',
+      title: t('admin.BusinessAccess.sign_out_v', { v: s.name ?? s.email ?? t('admin.BusinessAccess.this_device') }), confirmLabel: t('common.sign_out'), danger: true, minLength: 2,
+      message: t('admin.BusinessAccess.device_v_they_need_to_sign_in_again_on', { device: s.device, v: s.ip ? ` · ${s.ip}` : '' }),
+      label: t('common.reason'), placeholder: t('admin.BusinessAccess.e_g_lost_phone'),
     });
     if (!reason?.trim()) return;
     setBusy(s.id);
     try {
       await platformApi.revokeSession(s.id, reason.trim());
-      toast.success('Device signed out');
+      toast.success(t('admin.BusinessAccess.device_signed_out'));
       void sessions.silentReload();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -240,19 +241,19 @@ export function DevicesCard({ business: b, editable }: { business: BusinessDetai
 
   return (
     <Card style={{ gap: 10 }}>
-      <CardTitle title="Signed-in devices"
-        subtitle={sessions.data ? (active.length ? `${plural(active.length, 'device')} signed in` : 'No devices signed in') : 'Phones, tablets and browsers using this business.'}
+      <CardTitle title={t('admin.BusinessAccess.signed_in_devices')}
+        subtitle={sessions.data ? (active.length ? t('admin.BusinessAccess.plural_signed_in', { plural: plural(active.length, 'device') }) : t('admin.BusinessAccess.no_devices_signed_in')) : t('admin.BusinessAccess.phones_tablets_and_browsers_using_this')}
         right={editable && active.length ? (
-          <Button title={isPhone ? 'Sign out all' : 'Sign out everywhere'} icon="log-out-outline" variant="danger" size="sm" onPress={signOutAll}
+          <Button title={isPhone ? t('admin.BusinessAccess.sign_out_all') : t('admin.BusinessAccess.sign_out_everywhere')} icon="log-out-outline" variant="danger" size="sm" onPress={signOutAll}
             loading={busy === 'all'} disabled={!online || busy !== null} />
         ) : undefined} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Chip label="Include signed out" icon={showEnded ? 'checkmark' : 'time-outline'} selected={showEnded} onPress={() => setShowEnded((v) => !v)} />
+        <Chip label={t('admin.BusinessAccess.include_signed_out')} icon={showEnded ? 'checkmark' : 'time-outline'} selected={showEnded} onPress={() => setShowEnded((v) => !v)} />
       </View>
       {sessions.loading && !sessions.data ? <Loading /> : null}
       {sessions.error && !sessions.data ? <ErrorState message={sessions.error} onRetry={sessions.reload} /> : null}
       {sessions.data && rows.length === 0 ? (
-        <EmptyState icon="phone-portrait-outline" title="No devices" message="Devices appear here when the owner or staff sign in." />
+        <EmptyState icon="phone-portrait-outline" title={t('admin.BusinessAccess.no_devices')} message={t('admin.BusinessAccess.devices_appear_here_when_the_owner_or')} />
       ) : null}
       {rows.map((s, i) => {
         const ended = !!s.revoked_at;
@@ -263,19 +264,19 @@ export function DevicesCard({ business: b, editable }: { business: BusinessDetai
               <Ionicons name={deviceIcon(s.device)} size={22} color={ended ? colors.textSubtle : colors.textMuted} />
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>{s.name ?? s.email ?? 'Unknown user'}</Text>
+                  <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>{s.name ?? s.email ?? t('admin.BusinessAccess.unknown_user')}</Text>
                   <Badge label={roleLabel(s.role)} tone={s.role === 'owner' ? 'accent' : 'neutral'} />
-                  {ended ? <Badge label="Signed out" tone="neutral" /> : null}
+                  {ended ? <Badge label={t('admin.BusinessAccess.signed_out')} tone="neutral" /> : null}
                 </View>
                 <Text variant="small" tone="muted" numberOfLines={1}>{s.device}{s.ip ? ` · ${s.ip}` : ''}</Text>
                 <Text variant="caption" tone="subtle" numberOfLines={2}>
                   {ended
-                    ? `Signed out ${formatDateTime(s.revoked_at)}${s.revoked_reason ? ` · ${s.revoked_reason}` : ''}`
-                    : `Active ${s.last_seen_at ? `${ago(s.last_seen_at)} ago` : 'recently'} · signed in ${formatDateTime(s.created_at)}`}
+                    ? t('admin.BusinessAccess.signed_out_formatdatetime_v', { formatDateTime: formatDateTime(s.revoked_at), v: s.revoked_reason ? ` · ${s.revoked_reason}` : '' })
+                    : t('admin.BusinessAccess.active_v_signed_in_formatdatetime', { v: s.last_seen_at ? t('admin.BusinessAccess.ago_ago', { ago: ago(s.last_seen_at) }) : 'recently', formatDateTime: formatDateTime(s.created_at) })}
                 </Text>
               </View>
               {editable && !ended ? (
-                <Button title={isPhone ? undefined : 'Sign out'} icon="log-out-outline" size="sm" variant="ghost" accessibilityLabel={`Sign out ${s.name ?? 'device'}`}
+                <Button title={isPhone ? undefined : t('common.sign_out')} icon="log-out-outline" size="sm" variant="ghost" accessibilityLabel={t('admin.BusinessAccess.sign_out_v_2', { v: s.name ?? 'device' })}
                   onPress={() => void signOutOne(s)} loading={busy === s.id} disabled={!online || busy !== null} />
               ) : null}
             </View>
@@ -283,7 +284,7 @@ export function DevicesCard({ business: b, editable }: { business: BusinessDetai
         );
       })}
       {allRows.length > DEVICE_PREVIEW ? (
-        <Button title={showAll ? 'Show fewer' : `Show all ${allRows.length}`} size="sm" variant="ghost" icon={showAll ? 'chevron-up' : 'chevron-down'}
+        <Button title={showAll ? t('admin.BusinessAccess.show_fewer') : t('admin.BusinessAccess.show_all_length', { length: allRows.length })} size="sm" variant="ghost" icon={showAll ? 'chevron-up' : 'chevron-down'}
           onPress={() => setShowAll((v) => !v)} style={{ alignSelf: 'flex-start' }} />
       ) : null}
     </Card>
@@ -309,14 +310,14 @@ export function PaymentsCard({ business: b, planName, editable, online, onRecord
   const a = b.access;
   return (
     <Card style={{ gap: 12 }}>
-      <CardTitle title="Subscription & payments"
-        subtitle={a.paid_until ? `${planName} · ${a.state === 'development' ? 'development access' : `${ACCESS_LABEL[a.state].toLowerCase()} · until ${shortDate(a.paid_until)}`}` : 'No demo or payment recorded yet.'}
-        right={editable ? <Button title="Record payment" icon="add" size="sm" onPress={onRecord} disabled={!online} /> : undefined} />
+      <CardTitle title={t('admin.BusinessAccess.subscription_payments')}
+        subtitle={a.paid_until ? `${planName} · ${a.state === 'development' ? t('admin.BusinessAccess.development_access_2') : t('admin.BusinessAccess.tolowercase_until_shortdate', { toLowerCase: ACCESS_LABEL[a.state].toLowerCase(), shortDate: shortDate(a.paid_until) })}` : t('admin.BusinessAccess.no_demo_or_payment_recorded_yet')}
+        right={editable ? <Button title={t('admin.BusinessAccess.record_payment')} icon="add" size="sm" onPress={onRecord} disabled={!online} /> : undefined} />
       {a.state === 'active' && a.days_left !== null && a.days_left <= 7 ? (
-        <Callout tone="warning">Renewal due {a.days_left === 0 ? 'today' : `in ${plural(a.days_left, 'day')}`}.</Callout>
+        <Callout tone="warning">{t('admin.BusinessAccess.renewal_due')} {a.days_left === 0 ? 'today' : t('admin.BusinessAccess.in_plural', { plural: plural(a.days_left, 'day') })}.</Callout>
       ) : null}
       {b.subscriptions.length === 0 ? (
-        <Text variant="small" tone="subtle">Payments, demos and complimentary periods appear here with their period, amount and offer.</Text>
+        <Text variant="small" tone="subtle">{t('admin.BusinessAccess.payments_demos_and_complimentary_periods')}</Text>
       ) : (
         <View>
           {b.subscriptions.map((s, i) => {
@@ -342,17 +343,17 @@ export function PaymentsCard({ business: b, planName, editable, online, onRecord
                   ) : null}
                   {s.payment_reference || s.note ? (
                     <Text variant="small" tone="subtle" selectable numberOfLines={2}>
-                      {s.payment_reference ? `Ref ${s.payment_reference}` : ''}{s.payment_reference && s.note ? ' · ' : ''}{s.note ?? ''}
+                      {s.payment_reference ? t('admin.BusinessAccess.ref_payment_reference', { payment_reference: s.payment_reference }) : ''}{s.payment_reference && s.note ? ' · ' : ''}{s.note ?? ''}
                     </Text>
                   ) : null}
-                  {s.recorded_by ? <Text variant="caption" tone="subtle">By {s.recorded_by}{s.paid_at ? ` · ${shortDate(s.paid_at.endsWith('Z') ? s.paid_at : `${s.paid_at}Z`)}` : ''}</Text> : null}
+                  {s.recorded_by ? <Text variant="caption" tone="subtle">{t('admin.BusinessAccess.by')} {s.recorded_by}{s.paid_at ? ` · ${shortDate(s.paid_at.endsWith('Z') ? s.paid_at : `${s.paid_at}Z`)}` : ''}</Text> : null}
                 </View>
               </View>
             );
           })}
           <Divider style={{ marginVertical: 6 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text variant="smallStrong" tone="muted">Total received</Text>
+            <Text variant="smallStrong" tone="muted">{t('admin.BusinessAccess.total_received')}</Text>
             <Text variant="smallStrong">{money(received)}</Text>
           </View>
         </View>
@@ -367,7 +368,7 @@ export function PaymentsCard({ business: b, planName, editable, online, onRecord
 
 const NEEDS_REFERENCE: PaymentMethod[] = ['upi', 'bank_transfer', 'card', 'cheque'];
 const KINDS: { value: RecordKind; label: string }[] = [
-  { value: 'paid', label: 'Paid' }, { value: 'complimentary', label: 'Complimentary' }, { value: 'trial', label: 'Demo' },
+  { value: 'paid', get label() { return t('common.paid'); } }, { value: 'complimentary', get label() { return t('common.complimentary'); } }, { value: 'trial', get label() { return t('common.demo'); } },
 ];
 const GOODWILL_CHOICES = [0, 7, 15, 30];
 
@@ -487,7 +488,7 @@ export function RecordPaymentSheet({ business: b, plans, onClose, onDone }: { bu
         payment_reference: reference.trim() || null, note: note.trim() || null,
         offer_code: offerOk ? code : null, extra_days: goodwillNum || 0,
       });
-      toast.success(`${KIND_LABEL[kind]} recorded · works until ${shortDate(r.paid_until)}`);
+      toast.success(t('admin.BusinessAccess.v_recorded_works_until_shortdate', { v: KIND_LABEL[kind], shortDate: shortDate(r.paid_until) }));
       onDone();
     } catch (e) {
       setFormError(errorMessage(e));
@@ -502,31 +503,31 @@ export function RecordPaymentSheet({ business: b, plans, onClose, onDone }: { bu
   };
 
   return (
-    <Sheet visible onClose={onClose} title="Record payment" subtitle={`${b.name} · renewal, new subscription or a free period`} width={680}
+    <Sheet visible onClose={onClose} title={t('admin.BusinessAccess.record_payment')} subtitle={t('admin.BusinessAccess.name_renewal_new_subscription_or_a_free', { name: b.name })} width={680}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
           <Text variant="smallStrong" tone="muted" style={{ flex: 1, minWidth: 160 }}>
-            {Number.isFinite(amountNum) ? `${money(amountNum)} · until ${shortDate(end.toISOString())}` : ''}
+            {Number.isFinite(amountNum) ? t('admin.BusinessAccess.money_until_shortdate', { money: money(amountNum), shortDate: shortDate(end.toISOString()) }) : ''}
           </Text>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title={paid ? 'Record payment' : `Record ${KIND_LABEL[kind].toLowerCase()}`} icon="checkmark" onPress={submit} loading={saving}
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={paid ? t('admin.BusinessAccess.record_payment') : t('admin.BusinessAccess.record_tolowercase', { toLowerCase: KIND_LABEL[kind].toLowerCase() })} icon="checkmark" onPress={submit} loading={saving}
             disabled={!online || !plans.length} />
         </View>
       }>
       {formError ? <Callout tone="danger">{formError}</Callout> : null}
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Type</Text>
+        <Text variant="smallStrong" tone="muted">{t('admin.BusinessAccess.type')}</Text>
         <View style={{ maxWidth: 440 }}>
           <Segmented value={kind} options={KINDS} onChange={changeKind} />
         </View>
         <Text variant="small" tone="subtle">
-          {kind === 'paid' ? 'Money received for a plan.' : kind === 'complimentary' ? 'A free period you give (goodwill, partner shops). Shows as complimentary.' : 'A free demo period of the chosen plan.'}
+          {kind === 'paid' ? t('admin.BusinessAccess.money_received_for_a_plan') : kind === 'complimentary' ? t('admin.BusinessAccess.a_free_period_you_give_goodwill_partner') : t('admin.BusinessAccess.a_free_demo_period_of_the_chosen_plan')}
         </Text>
       </View>
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Plan</Text>
+        <Text variant="smallStrong" tone="muted">{t('common.plan')}</Text>
         {options.length ? (
           <ChoiceChips value={planKey} onChange={(k) => {
             setPlanKey(k);
@@ -535,14 +536,14 @@ export function RecordPaymentSheet({ business: b, plans, onClose, onDone }: { bu
             if (!custom && next.length && !next.some((o) => o.months === monthsNum)) {
               setMonths(String((next.find((o) => o.months === 12) ?? next[next.length - 1])!.months));
             }
-          }} accessibilityLabel="Plan"
-            options={options.map((p) => ({ value: p.key, label: `${p.name} · ${money(p.price_monthly, '₹', true)}/mo` }))} />
-        ) : <Text variant="small" tone="danger">Plans couldn't be loaded. Close and refresh the page.</Text>}
-        {planKey !== b.plan_key ? <Text variant="small" tone="warning">The business moves to this plan when you record this.</Text> : null}
+          }} accessibilityLabel={t('common.plan')}
+            options={options.map((p) => ({ value: p.key, label: t('admin.BusinessAccess.name_money_mo', { name: p.name, money: money(p.price_monthly, '₹', true) }) }))} />
+        ) : <Text variant="small" tone="danger">{t('admin.BusinessAccess.plans_couldn_t_be_loaded_close_and')}</Text>}
+        {planKey !== b.plan_key ? <Text variant="small" tone="warning">{t('admin.BusinessAccess.the_business_moves_to_this_plan_when_you')}</Text> : null}
       </View>
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Duration</Text>
+        <Text variant="smallStrong" tone="muted">{t('admin.BusinessAccess.duration')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityRole="radiogroup">
           {priceOptions.map((o) => (
             <DurationTile key={o.months} title={o.label} selected={!custom && monthsNum === o.months} onPress={() => pickMonths(o.months)}
@@ -550,24 +551,24 @@ export function RecordPaymentSheet({ business: b, plans, onClose, onDone }: { bu
               sub={paid && o.months > 1 ? `${money(o.per_month, '₹', true)}/mo` : undefined}
               saving={paid && o.saving > 0 ? `Save ${money(o.saving, '₹', true)}` : undefined} />
           ))}
-          <DurationTile title="Custom" selected={custom || (!option && Number.isFinite(monthsNum))} onPress={() => setCustom(true)}
-            sub="Any number of months" price={custom || !option ? (Number.isFinite(monthsNum) ? `${monthsNum} mo` : '—') : undefined} />
+          <DurationTile title={t('common.custom')} selected={custom || (!option && Number.isFinite(monthsNum))} onPress={() => setCustom(true)}
+            sub={t('admin.BusinessAccess.any_number_of_months_x')} price={custom || !option ? (Number.isFinite(monthsNum) ? `${monthsNum} mo` : '—') : undefined} />
         </View>
         {custom || !option ? (
-          <Input label="Months" value={months} onChangeText={(v) => { setCustom(true); setMonths(v.replace(/[^0-9]/g, '')); }} keyboardType="number-pad" maxLength={2}
-            containerStyle={{ maxWidth: 160 }} error={show('months')} hint={paid && plan ? `${money(plan.price_monthly, '₹', true)} × months` : undefined} />
+          <Input label={t('admin.BusinessAccess.months')} value={months} onChangeText={(v) => { setCustom(true); setMonths(v.replace(/[^0-9]/g, '')); }} keyboardType="number-pad" maxLength={2}
+            containerStyle={{ maxWidth: 160 }} error={show('months')} hint={paid && plan ? t('admin.BusinessAccess.money_months', { money: money(plan.price_monthly, '₹', true) }) : undefined} />
         ) : null}
       </View>
 
       {paid ? (
         <View style={{ gap: 6 }}>
-          <Input label="Offer code" value={offerCode} onChangeText={(v) => setOfferCode(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))} maxLength={30}
-            autoCapitalize="characters" autoCorrect={false} placeholder="e.g. DIWALI25" containerStyle={{ maxWidth: 320 }}
-            right={offerCode ? <Button icon="close" size="sm" variant="ghost" accessibilityLabel="Clear offer code" onPress={() => setOfferCode('')} /> : undefined} />
-          {code && (quote.loading || code !== debouncedCode) ? <Text variant="small" tone="subtle">Checking the code…</Text> : null}
+          <Input label={t('admin.BusinessAccess.offer_code')} value={offerCode} onChangeText={(v) => setOfferCode(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))} maxLength={30}
+            autoCapitalize="characters" autoCorrect={false} placeholder={t('admin.BusinessAccess.e_g_diwali25')} containerStyle={{ maxWidth: 320 }}
+            right={offerCode ? <Button icon="close" size="sm" variant="ghost" accessibilityLabel={t('admin.BusinessAccess.clear_offer_code')} onPress={() => setOfferCode('')} /> : undefined} />
+          {code && (quote.loading || code !== debouncedCode) ? <Text variant="small" tone="subtle">{t('admin.BusinessAccess.checking_the_code')}</Text> : null}
           {offerOk ? (
-            <Callout tone="success" icon="gift-outline" title={`${quote.data!.offer!.name} applied`}>
-              {`${quote.data!.offer!.summary}: ${discount ? `−${money(discount)}` : 'no discount'}${offerDays ? ` · +${offerDays} days free` : ''}`}
+            <Callout tone="success" icon="gift-outline" title={t('admin.BusinessAccess.name_applied', { name: quote.data!.offer!.name })}>
+              {`${quote.data!.offer!.summary}: ${discount ? `−${money(discount)}` : t('admin.BusinessAccess.no_discount')}${offerDays ? t('admin.BusinessAccess.offerdays_days_free', { offerDays }) : ''}`}
             </Callout>
           ) : null}
           {offerError ? <Callout tone="danger">{`${code}: ${offerError}`}</Callout> : null}
@@ -575,40 +576,40 @@ export function RecordPaymentSheet({ business: b, plans, onClose, onDone }: { bu
       ) : null}
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Extra goodwill days</Text>
+        <Text variant="smallStrong" tone="muted">{t('admin.BusinessAccess.extra_goodwill_days')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
           <ChoiceChips value={Number.isFinite(goodwillNum) && GOODWILL_CHOICES.includes(goodwillNum) ? String(goodwillNum) : ''} onChange={setGoodwill}
-            accessibilityLabel="Extra goodwill days" options={GOODWILL_CHOICES.map((d) => ({ value: String(d), label: d === 0 ? 'None' : `+${d} days` }))} />
+            accessibilityLabel={t('admin.BusinessAccess.extra_goodwill_days')} options={GOODWILL_CHOICES.map((d) => ({ value: String(d), label: d === 0 ? t('common.none') : t('admin.BusinessAccess.d_days_2', { d }) }))} />
           <Input value={goodwill} onChangeText={(v) => setGoodwill(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={3}
-            containerStyle={{ width: 84 }} accessibilityLabel="Custom goodwill days" error={show('goodwill') ? ' ' : undefined} />
+            containerStyle={{ width: 84 }} accessibilityLabel={t('admin.BusinessAccess.custom_goodwill_days')} error={show('goodwill') ? ' ' : undefined} />
         </View>
         {show('goodwill') ? <Text variant="small" tone="danger">{show('goodwill')}</Text> : null}
       </View>
 
       <Card style={{ gap: 2 }}>
-        {paid ? <KeyValue label="List price" value={Number.isFinite(monthsNum) ? `${money(listPrice)}${option ? ` · ${option.label}` : ''}` : '—'} /> : null}
-        {paid && discount ? <KeyValue label="Offer discount" value={`−${money(discount)}`} /> : null}
-        {paid ? <KeyValue label="Amount due" value={money(due)} /> : null}
-        <KeyValue label="Period" value={`${Number.isFinite(monthsNum) ? `${monthsNum} mo` : '—'}${goodwillNum ? ` + ${goodwillNum} d goodwill` : ''}${offerDays ? ` + ${offerDays} d offer` : ''}`} />
-        <KeyValue label="Covers" value={`${shortDate(new Date(start).toISOString())} → ${shortDate(end.toISOString())}`} />
+        {paid ? <KeyValue label={t('admin.BusinessAccess.list_price')} value={Number.isFinite(monthsNum) ? `${money(listPrice)}${option ? ` · ${option.label}` : ''}` : '—'} /> : null}
+        {paid && discount ? <KeyValue label={t('admin.BusinessAccess.offer_discount')} value={`−${money(discount)}`} /> : null}
+        {paid ? <KeyValue label={t('admin.BusinessAccess.amount_due')} value={money(due)} /> : null}
+        <KeyValue label={t('admin.BusinessAccess.period')} value={`${Number.isFinite(monthsNum) ? `${monthsNum} mo` : '—'}${goodwillNum ? ` + ${goodwillNum} d goodwill` : ''}${offerDays ? ` + ${offerDays} d offer` : ''}`} />
+        <KeyValue label={t('admin.BusinessAccess.covers')} value={`${shortDate(new Date(start).toISOString())} → ${shortDate(end.toISOString())}`} />
       </Card>
 
       <FieldRow>
-        <Input label="Amount received" required prefix="₹" value={amount} onChangeText={(v) => { setAmountTouched(true); setAmount(v.replace(/[^0-9.]/g, '')); }}
+        <Input label={t('admin.BusinessAccess.amount_received')} required prefix="₹" value={amount} onChangeText={(v) => { setAmountTouched(true); setAmount(v.replace(/[^0-9.]/g, '')); }}
           keyboardType="decimal-pad" maxLength={11} error={show('amount')}
-          hint={amountTouched && paid && Number.isFinite(amountNum) && Math.abs(amountNum - due) >= 0.5 ? `Differs from the amount due (${money(due)})` : undefined} />
-        <Input label="Reference" value={reference} onChangeText={setReference} maxLength={100} error={show('reference')}
-          placeholder="UTR / transaction no." autoCapitalize="characters" required={paid && NEEDS_REFERENCE.includes(method)} />
+          hint={amountTouched && paid && Number.isFinite(amountNum) && Math.abs(amountNum - due) >= 0.5 ? t('admin.BusinessAccess.differs_from_the_amount_due_money', { money: money(due) }) : undefined} />
+        <Input label={t('admin.BusinessAccess.reference')} value={reference} onChangeText={setReference} maxLength={100} error={show('reference')}
+          placeholder={t('admin.BusinessAccess.utr_transaction_no')} autoCapitalize="characters" required={paid && NEEDS_REFERENCE.includes(method)} />
       </FieldRow>
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Payment method</Text>
-        <ChoiceChips value={method} onChange={setMethod} accessibilityLabel="Payment method" options={PAYMENT_METHODS} />
+        <Text variant="smallStrong" tone="muted">{t('admin.BusinessAccess.payment_method')}</Text>
+        <ChoiceChips value={method} onChange={setMethod} accessibilityLabel={t('admin.BusinessAccess.payment_method')} options={PAYMENT_METHODS} />
       </View>
-      <Input label="Note (optional)" value={note} onChangeText={setNote} maxLength={300} placeholder="e.g. Paid at the Pune expo" />
+      <Input label={t('admin.BusinessAccess.note_optional')} value={note} onChangeText={setNote} maxLength={300} placeholder={t('admin.BusinessAccess.e_g_paid_at_the_pune_expo')} />
       {submitted && errors.offer ? <Text variant="small" tone="danger">{errors.offer}</Text> : null}
-      {b.access.locked ? <Callout tone="success">This business is locked. Recording this unlocks it straight away.</Callout> : null}
+      {b.access.locked ? <Callout tone="success">{t('admin.BusinessAccess.this_business_is_locked_recording_this')}</Callout> : null}
       {b.status === 'suspended' && (b.status_reason ?? '').toLowerCase().startsWith('payment') ? (
-        <Callout tone="success">This business was suspended for payment. Recording this reactivates it.</Callout>
+        <Callout tone="success">{t('admin.BusinessAccess.this_business_was_suspended_for_payment')}</Callout>
       ) : null}
     </Sheet>
   );

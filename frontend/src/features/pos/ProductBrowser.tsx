@@ -15,6 +15,7 @@ import { money } from '@/lib/format';
 import { unitPriceFor } from '@/lib/billing';
 import { matchesQuery } from './totals';
 import { gridMetrics, listMetrics, moveHighlight, rowLayout, scrollToReveal, type Direction, type ProductView } from './posLayout';
+import { t } from '@/i18n';
 
 export interface ProductBrowserProps {
   products: Product[];
@@ -164,36 +165,36 @@ export function ProductBrowser(props: ProductBrowserProps) {
             onSubmitEditing={(e) => onSubmitSearch(e.nativeEvent.text ?? query, highlighted)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder={compact ? 'Search or scan' : 'Search items, SKU or scan a barcode'}
+            placeholder={compact ? t('pos.ProductBrowser.search_or_scan') : t('pos.ProductBrowser.search_items_sku_or_scan_a_barcode')}
             placeholderTextColor={colors.textSubtle}
             autoFocus={autoFocusSearch}
             autoCorrect={false}
             autoCapitalize="none"
             returnKeyType="done"
             blurOnSubmit={false}
-            accessibilityLabel="Search items or scan a barcode"
+            accessibilityLabel={t('pos.ProductBrowser.search_items_or_scan_a_barcode')}
             testID="pos-search"
             style={[styles.searchInput, { color: colors.text, fontFamily: fonts.regular }, Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)]}
           />
           {query ? (
-            <Pressable onPress={() => onQueryChange('')} accessibilityRole="button" accessibilityLabel="Clear search" style={styles.searchIcon} hitSlop={6}>
+            <Pressable onPress={() => onQueryChange('')} accessibilityRole="button" accessibilityLabel={t('common.clear_search')} style={styles.searchIcon} hitSlop={6}>
               <Ionicons name="close-circle" size={18} color={colors.textSubtle} />
             </Pressable>
           ) : !focused ? <ShortcutHint keys="/" style={{ marginRight: 8 }} /> : null}
-          <Pressable onPress={onScan} accessibilityRole="button" accessibilityLabel="Scan barcode with camera"
+          <Pressable onPress={onScan} accessibilityRole="button" accessibilityLabel={t('pos.ProductBrowser.scan_barcode_with_camera')}
             style={({ hovered }: any) => [styles.searchIcon, { borderLeftWidth: 1, borderLeftColor: colors.divider, backgroundColor: hovered ? colors.surfaceSunken : 'transparent' }]}>
             <Ionicons name="barcode-outline" size={20} color={colors.textMuted} />
           </Pressable>
         </View>
         <IconButton icon={isGrid ? 'list' : 'grid-outline'} variant="secondary" onPress={() => onViewChange(isGrid ? 'list' : 'grid')}
-          accessibilityLabel={isGrid ? 'Show items as a list' : 'Show items as tiles'} testID="pos-view-toggle" />
+          accessibilityLabel={isGrid ? t('pos.ProductBrowser.show_items_as_a_list') : t('pos.ProductBrowser.show_items_as_tiles')} testID="pos-view-toggle" />
         {actions?.(compact)}
       </View>
 
       {products.length > 0 && visibleCats.length > 0 && !q ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}
           contentContainerStyle={[styles.chips, { paddingHorizontal: pad }]} keyboardShouldPersistTaps="handled">
-          <Chip label="All" selected={!activeCategory} onPress={() => setCategory(null)} count={products.length} />
+          <Chip label={t('common.all')} selected={!activeCategory} onPress={() => setCategory(null)} count={products.length} />
           {visibleCats.map((c) => (
             <Chip key={c.id} label={c.name} selected={activeCategory === c.id} onPress={() => setCategory(c.id)} count={counts.get(c.id)} />
           ))}
@@ -201,7 +202,7 @@ export function ProductBrowser(props: ProductBrowserProps) {
       ) : q ? (
         <View style={[styles.resultsRow, { paddingHorizontal: pad }]}>
           <Text variant="caption" tone="muted" numberOfLines={1} style={{ flex: 1 }}>
-            {filtered.length} match{filtered.length === 1 ? '' : 'es'}{filtered.length ? ' · Enter adds the highlighted item' : ''}
+            {t('pos.ProductBrowser.length_match', { length: filtered.length })}{filtered.length === 1 ? '' : 'es'}{filtered.length ? t('pos.ProductBrowser.enter_adds_the_highlighted_item') : ''}
           </Text>
         </View>
       ) : <View style={{ height: 10 }} />}
@@ -209,7 +210,7 @@ export function ProductBrowser(props: ProductBrowserProps) {
       {products.length === 0 ? (
         <View style={{ flex: 1 }}>{emptyMenu}</View>
       ) : filtered.length === 0 ? (
-        <EmptyState icon="search-outline" title={`No items match “${q}”`} message="Check the spelling, or search by SKU or barcode. Press Enter to look the code up." />
+        <EmptyState icon="search-outline" title={t('pos.ProductBrowser.no_items_match_q', { q })} message={t('pos.ProductBrowser.check_the_spelling_or_search_by_sku_or')} />
       ) : width > 0 ? (
         <FlatList
           ref={listRef}
@@ -264,7 +265,7 @@ const ProductTile = memo(function ProductTile({ product, index, width, height, g
     <Pressable
       onPress={() => onPick(product, index)}
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${money(showFrom ? fromPrice! : price, currency)}${hasVariants ? ', has options' : ''}${qty ? `, ${qty} in bill` : ''}`}
+      accessibilityLabel={`${product.name}, ${money(showFrom ? fromPrice! : price, currency)}${hasVariants ? t('pos.ProductBrowser.has_options') : ''}${qty ? t('pos.ProductBrowser.qty_in_bill', { qty }) : ''}`}
       style={({ pressed, hovered }: any) => [
         styles.tile,
         {
@@ -317,7 +318,7 @@ const ProductRow = memo(function ProductRow({ product, index, height, qty, adjus
   return (
     <View style={[styles.row, { height, borderBottomColor: colors.divider }, highlighted && { backgroundColor: colors.selectedRow, borderRadius: radius.sm }]}>
       <Pressable onPress={() => onPick(product, index)} accessibilityRole="button"
-        accessibilityLabel={`${product.name}, ${money(showFrom ? fromPrice! : price, currency)}${hasVariants ? ', has options' : ''}. Add one`}
+        accessibilityLabel={t('pos.ProductBrowser.name_money_v_add_one', { name: product.name, money: money(showFrom ? fromPrice! : price, currency), v: hasVariants ? t('pos.ProductBrowser.has_options') : '' })}
         style={({ hovered }: any) => [styles.rowMain, { borderRadius: radius.sm }, hovered && { backgroundColor: colors.surfaceAlt },
           highlighted && Platform.OS === 'web' && ({ boxShadow: `inset 0 0 0 2px ${colors.focus}` } as any),
           Platform.OS === 'web' && ({ cursor: 'pointer', userSelect: 'none' } as any)]}>
@@ -335,14 +336,14 @@ const ProductRow = memo(function ProductRow({ product, index, height, qty, adjus
       <View style={[styles.stepper, { borderColor: qty ? colors.primary : colors.border, borderRadius: radius.md, backgroundColor: qty ? colors.primarySoft : colors.surface }]}>
         {qty ? (
           <>
-            <StepButton icon={qty === 1 ? 'trash-outline' : 'remove'} size={step} label={qty === 1 ? `Remove ${product.name}` : `One less ${product.name}`}
+            <StepButton icon={qty === 1 ? 'trash-outline' : 'remove'} size={step} label={qty === 1 ? t('pos.ProductBrowser.remove_name', { name: product.name }) : t('pos.ProductBrowser.one_less_name', { name: product.name })}
               danger={qty === 1} onPress={() => onDecrement(product)} />
             <View style={[styles.stepQty, { height: step }]}>
               <Text variant="bodyStrong" color={colors.primarySoftText} style={styles.num}>{qty}</Text>
             </View>
           </>
         ) : null}
-        <StepButton icon="add" size={step} label={`Add ${product.name}`} onPress={() => onPick(product, index)} />
+        <StepButton icon="add" size={step} label={t('pos.ProductBrowser.add_name', { name: product.name })} onPress={() => onPick(product, index)} />
       </View>
       </View>
     </View>

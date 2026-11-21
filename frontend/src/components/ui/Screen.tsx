@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Text } from './Text';
 import { OfflineBanner } from '../OfflineBanner';
+import { ThemeToggle } from '@/theme/ThemeToggle';
+import { LanguageMenu } from '@/i18n/LanguageSwitcher';
 
 /**
  * Standard page frame: title row with actions, optional toolbar, scrollable or fixed body.
@@ -25,7 +27,7 @@ export function Screen({ title, subtitle, actions, toolbar, children, scroll = t
           <Text variant={isPhone ? 'h1' : 'display'} numberOfLines={1}>{title}</Text>
           {subtitle ? <Text tone="muted" numberOfLines={2}>{subtitle}</Text> : null}
         </View>
-        {actions ? <View style={styles.actions}>{actions}</View> : null}
+        <View style={styles.actions}>{actions}{isPhone ? <><LanguageMenu compact /><ThemeToggle compact /></> : null}</View>
       </View>
       {toolbar ? <View style={[styles.toolbar, { maxWidth }]}>{toolbar}</View> : null}
     </View>

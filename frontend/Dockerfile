@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Tallyko web app.
+# Storant web app.
 #   target "dev"  : Expo dev server for the web UI (docker-compose.yml)
 #   target "prod" : static production build served by Caddy, which also proxies /api to the backend
 FROM node:22-bookworm-slim AS deps

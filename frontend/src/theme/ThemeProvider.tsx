@@ -18,7 +18,7 @@ function makeShadow(colors: ThemeColors, dark: boolean) {
     const opacity = dark ? [0, 0.35, 0.45, 0.55][level] : [0, 0.05, 0.08, 0.14][level];
     const blur = [0, 3, 10, 24][level];
     if (Platform.OS === 'web') {
-      return { boxShadow: `0 ${Math.ceil(blur / 3)}px ${blur}px rgba(${dark ? '0,0,0' : '15,23,42'},${opacity})` } as ViewStyle;
+      return { boxShadow: `0 ${Math.ceil(blur / 3)}px ${blur}px rgba(${dark ? '0,0,0' : '27,18,48'},${opacity})` } as ViewStyle;
     }
     return {
       shadowColor: colors.shadow,

@@ -4,6 +4,8 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'ex
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Sheet, Text } from '@/components/ui';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 /** Camera barcode scanner. Stays open for fast retail scanning; one physical scan = one add. */
 export function ScannerSheet({ visible, onClose, onCode, lastAdded }: {
@@ -39,25 +41,25 @@ export function ScannerSheet({ visible, onClose, onCode, lastAdded }: {
   const camHeight = Math.min(isPhone ? height * 0.45 : 340, 380);
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Scan barcode" subtitle="Point the camera at the item's barcode" width={520} scroll={false}
-      footer={<Button title="Done" variant="secondary" full onPress={onClose} />}>
+    <Sheet visible={visible} onClose={onClose} title={t('pos.ScannerSheet.scan_barcode')} subtitle={t('pos.ScannerSheet.point_the_camera_at_the_item_s_barcode')} width={520} scroll={false}
+      footer={<Button title={t('common.done')} variant="secondary" full onPress={onClose} />}>
       {!permission ? (
-        <View style={[styles.state, { height: camHeight }]}><Text tone="muted">Starting camera…</Text></View>
+        <View style={[styles.state, { height: camHeight }]}><Text tone="muted">{t('pos.ScannerSheet.starting_camera')}</Text></View>
       ) : !permission.granted ? (
         <View style={[styles.state, { height: camHeight, backgroundColor: colors.surfaceSunken, borderRadius: radius.lg }]}>
           <Ionicons name="camera-outline" size={36} color={colors.textSubtle} />
-          <Text variant="h3" align="center">Camera access needed</Text>
+          <Text variant="h3" align="center">{t('pos.ScannerSheet.camera_access_needed')}</Text>
           <Text tone="muted" align="center" style={{ maxWidth: 320 }}>
-            {permission.canAskAgain ? 'Allow camera access to scan barcodes.' : 'Camera access is turned off for Tallyko. Turn it on in your device settings, or use a USB/Bluetooth barcode scanner.'}
+            {permission.canAskAgain ? t('pos.ScannerSheet.allow_camera_access_to_scan_barcodes') : t('pos.ScannerSheet.camera_access_is_turned_off_for_brand', { brand: brand.name })}
           </Text>
           {permission.canAskAgain ? (
-            <Button title="Allow camera" icon="camera" onPress={() => void requestPermission()} />
+            <Button title={t('pos.ScannerSheet.allow_camera')} icon="camera" onPress={() => void requestPermission()} />
           ) : Platform.OS !== 'web' ? (
-            <Button title="Open settings" icon="settings-outline" variant="secondary" onPress={() => void Linking.openSettings()} />
+            <Button title={t('pos.ScannerSheet.open_settings')} icon="settings-outline" variant="secondary" onPress={() => void Linking.openSettings()} />
           ) : null}
         </View>
       ) : visible ? (
-        <View style={{ height: camHeight, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.sidebar }}>
+        <View style={{ height: camHeight, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.mediaBg }}>
           <CameraView
             style={StyleSheet.absoluteFill}
             facing="back"
@@ -72,7 +74,7 @@ export function ScannerSheet({ visible, onClose, onCode, lastAdded }: {
       <View style={styles.status}>
         <Ionicons name={lastAdded ? 'checkmark-circle' : 'scan-outline'} size={18} color={lastAdded ? colors.success : colors.textSubtle} />
         <Text variant="small" tone={lastAdded ? 'success' : 'muted'} numberOfLines={1} style={{ flex: 1 }}>
-          {lastAdded ? `Added ${lastAdded}` : 'Tip: USB / Bluetooth scanners work too — just scan with the search box focused.'}
+          {lastAdded ? t('pos.ScannerSheet.added_lastadded', { lastAdded }) : t('pos.ScannerSheet.tip_usb_bluetooth_scanners_work_too_just')}
         </Text>
       </View>
     </Sheet>

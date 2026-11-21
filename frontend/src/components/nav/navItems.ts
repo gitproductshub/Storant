@@ -1,6 +1,7 @@
 import type { Ionicons } from '@expo/vector-icons';
 import type { AccessInfo, BusinessType, Role } from '@/api/types';
 import { hasAccess } from '@/store/access';
+import { t } from '@/i18n';
 
 export interface NavItem {
   route: string; // tab route name
@@ -30,29 +31,29 @@ const STAFF: Role[] = ['owner', 'manager', 'cashier', 'waiter'];
 const MANAGERS: Role[] = ['owner', 'manager'];
 
 export const NAV_ITEMS: NavItem[] = [
-  { route: 'pos', href: '/pos', label: 'Billing', icon: 'receipt-outline', iconActive: 'receipt', roles: STAFF, primary: true, group: 'sell',
+  { route: 'pos', href: '/pos', get label() { return t('nav.navItems.billing'); }, icon: 'receipt-outline', iconActive: 'receipt', roles: STAFF, primary: true, group: 'sell',
     permissions: ['orders.create'], goKey: 'b' },
-  { route: 'orders', href: '/orders', label: 'Orders', icon: 'document-text-outline', iconActive: 'document-text', roles: STAFF, primary: true, group: 'sell',
+  { route: 'orders', href: '/orders', get label() { return t('common.orders'); }, icon: 'document-text-outline', iconActive: 'document-text', roles: STAFF, primary: true, group: 'sell',
     permissions: ['orders.create', 'orders.view_all', 'orders.pay'], goKey: 'o' },
-  { route: 'tables', href: '/tables', label: 'Tables', icon: 'grid-outline', iconActive: 'grid', roles: STAFF, primary: true, hideFor: ['retail'], group: 'sell',
+  { route: 'tables', href: '/tables', get label() { return t('common.tables'); }, icon: 'grid-outline', iconActive: 'grid', roles: STAFF, primary: true, hideFor: ['retail'], group: 'sell',
     permissions: ['tables.view'], feature: 'tables', goKey: 't' },
-  { route: 'online', href: '/online', label: 'Online orders', short: 'Online', icon: 'bicycle-outline', iconActive: 'bicycle', roles: STAFF, group: 'sell',
+  { route: 'online', href: '/online', get label() { return t('common.online_orders'); }, short: 'Online', icon: 'bicycle-outline', iconActive: 'bicycle', roles: STAFF, group: 'sell',
     permissions: ['orders.accept_online'], goKey: 'n' },
-  { route: 'kitchen', href: '/kitchen', label: 'Kitchen', icon: 'flame-outline', iconActive: 'flame', roles: ALL, primary: true, hideFor: ['retail'], group: 'sell',
+  { route: 'kitchen', href: '/kitchen', get label() { return t('common.kitchen'); }, icon: 'flame-outline', iconActive: 'flame', roles: ALL, primary: true, hideFor: ['retail'], group: 'sell',
     permissions: ['kitchen.view'], feature: 'kitchen', goKey: 'k' },
-  { route: 'menu', href: '/menu', label: 'Menu & items', short: 'Menu', icon: 'fast-food-outline', iconActive: 'fast-food', roles: MANAGERS, group: 'manage',
+  { route: 'menu', href: '/menu', get label() { return t('common.menu_items'); }, short: 'Menu', icon: 'fast-food-outline', iconActive: 'fast-food', roles: MANAGERS, group: 'manage',
     permissions: ['menu.manage'], goKey: 'm' },
-  { route: 'inventory', href: '/inventory', label: 'Inventory', short: 'Stock', icon: 'cube-outline', iconActive: 'cube', roles: MANAGERS, group: 'manage',
+  { route: 'inventory', href: '/inventory', get label() { return t('common.inventory'); }, short: 'Stock', icon: 'cube-outline', iconActive: 'cube', roles: MANAGERS, group: 'manage',
     permissions: ['inventory.view', 'inventory.manage'], feature: 'inventory', goKey: 'i' },
-  { route: 'customers', href: '/customers', label: 'Customers', icon: 'people-outline', iconActive: 'people', roles: STAFF, group: 'manage',
+  { route: 'customers', href: '/customers', get label() { return t('common.customers'); }, icon: 'people-outline', iconActive: 'people', roles: STAFF, group: 'manage',
     permissions: ['customers.view'], feature: 'customers', goKey: 'c' },
-  { route: 'offers', href: '/offers', label: 'Offers & rewards', short: 'Offers', icon: 'gift-outline', iconActive: 'gift', roles: MANAGERS, group: 'manage',
+  { route: 'offers', href: '/offers', get label() { return t('common.offers_rewards'); }, short: 'Offers', icon: 'gift-outline', iconActive: 'gift', roles: MANAGERS, group: 'manage',
     permissions: ['offers.manage'], feature: 'offers', goKey: 'f' },
-  { route: 'reports', href: '/reports', label: 'Reports', icon: 'stats-chart-outline', iconActive: 'stats-chart', roles: MANAGERS, group: 'business',
+  { route: 'reports', href: '/reports', get label() { return t('common.reports'); }, icon: 'stats-chart-outline', iconActive: 'stats-chart', roles: MANAGERS, group: 'business',
     permissions: ['reports.view', 'reports.view_own', 'staff.view'], feature: 'reports', goKey: 'r' },
-  { route: 'watch', href: '/watch', label: "Owner's watch", short: 'Watch', icon: 'eye-outline', iconActive: 'eye', roles: ['owner'], group: 'business', ownerOnly: true,
+  { route: 'watch', href: '/watch', get label() { return t('common.owner_s_watch'); }, short: 'Watch', icon: 'eye-outline', iconActive: 'eye', roles: ['owner'], group: 'business', ownerOnly: true,
     goKey: 'w' },
-  { route: 'settings', href: '/settings', label: 'Settings', icon: 'settings-outline', iconActive: 'settings', roles: ALL, group: 'business', goKey: 's' },
+  { route: 'settings', href: '/settings', get label() { return t('common.settings'); }, icon: 'settings-outline', iconActive: 'settings', roles: ALL, group: 'business', goKey: 's' },
 ];
 
 export function visibleNavItems(role: Role | null, businessType: BusinessType | undefined, access: AccessInfo | null = null): NavItem[] {

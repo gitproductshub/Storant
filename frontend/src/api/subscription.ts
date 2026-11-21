@@ -1,5 +1,5 @@
 /**
- * The business's own Tallyko subscription (renewal, plans, offers, "I've paid" claims) and signed-in devices.
+ * The business's own Storant subscription (renewal, plans, offers, "I've paid" claims) and signed-in devices.
  * These endpoints keep working after the subscription ends; everything else answers 402 then.
  */
 import { api } from './client';

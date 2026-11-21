@@ -12,6 +12,7 @@ import { money } from '@/lib/format';
 import { isVoidItem } from '@/lib/billing';
 import { QtyStepper } from './RunningBill';
 import { billName, itemsLocked, kitchenCounts, kitchenProgress } from './runningBill';
+import { t } from '@/i18n';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -43,8 +44,8 @@ export function BillTabs({ bills, currentId, newBill, newLabel, currency, onSwit
           dot={kitchenProgress(b.kitchen ?? (b.items ? kitchenCounts(b.items) : null))?.tone === 'success'}
           onPress={() => onSwitch(b.id)} disabled={disabled} />
       ))}
-      {newBill ? <Tab label={newLabel.trim() || `Bill ${bills.length + 1}`} sub="new" active onPress={() => {}} /> : null}
-      {!newBill ? <Tab label="Separate bill" icon="add" onPress={onSeparate} disabled={disabled} ghost /> : null}
+      {newBill ? <Tab label={newLabel.trim() || t('pos.BillSheets.bill_v', { v: bills.length + 1 })} sub={t('pos.BillSheets.new_x')} active onPress={() => {}} /> : null}
+      {!newBill ? <Tab label={t('common.separate_bill')} icon="add" onPress={onSeparate} disabled={disabled} ghost /> : null}
     </ScrollView>
   );
 }
@@ -55,7 +56,7 @@ function Tab({ label, sub, active, onPress, icon, disabled, ghost, dot }: {
   const { colors, radius } = useTheme();
   return (
     <Pressable onPress={onPress} disabled={disabled || active} accessibilityRole="tab" accessibilityState={{ selected: !!active, disabled: !!disabled }}
-      accessibilityLabel={`${label}${dot ? ', items ready to serve' : ''}`}
+      accessibilityLabel={`${label}${dot ? t('pos.BillSheets.items_ready_to_serve') : ''}`}
       style={({ hovered }: any) => [styles.tab, {
         borderRadius: radius.pill,
         borderColor: active ? colors.primary : colors.border,
@@ -83,29 +84,29 @@ export function TableBillsSheet({ visible, tableLabel, bills, newItems, currency
   const [guests, setGuests] = useState(0);
   useEffect(() => { if (visible) { setLabel(''); setGuests(0); } }, [visible]);
   return (
-    <Sheet visible={visible} onClose={onClose} width={520} title={`Table ${tableLabel} has ${bills.length === 1 ? 'a running bill' : `${bills.length} running bills`}`}
-      subtitle={newItems ? `Where should the ${newItems} new item${newItems === 1 ? '' : 's'} go?` : 'Add to a bill, or start a separate one for another party'}>
-      {!online ? <Badge label="Offline — running bills need internet" tone="warning" icon="cloud-offline-outline" /> : null}
+    <Sheet visible={visible} onClose={onClose} width={520} title={t('pos.BillSheets.table_tablelabel_has_v', { tableLabel, v: bills.length === 1 ? t('pos.BillSheets.a_running_bill') : t('pos.BillSheets.length_running_bills', { length: bills.length }) })}
+      subtitle={newItems ? t('pos.BillSheets.where_should_the_newitems_new_item_v_go', { newItems, v: newItems === 1 ? '' : 's' }) : t('pos.BillSheets.add_to_a_bill_or_start_a_separate_one_for')}>
+      {!online ? <Badge label={t('pos.BillSheets.offline_running_bills_need_internet')} tone="warning" icon="cloud-offline-outline" /> : null}
       <View style={{ gap: 2 }}>
         {bills.map((b, i) => {
           const progress = kitchenProgress(b.kitchen ?? (b.items ? kitchenCounts(b.items) : null));
           return (
-            <ListRow key={b.id} icon="receipt-outline" title={`Add to ${billName(b, i)}`}
+            <ListRow key={b.id} icon="receipt-outline" title={t('pos.BillSheets.add_to_billname', { billName: billName(b, i) })}
               subtitle={[money(b.total_amount, currency), b.customer_name, b.guests ? `${b.guests} guests` : null, progress?.label].filter(Boolean).join(' · ')}
               onPress={online ? () => onAddTo(b.id) : undefined} />
           );
         })}
       </View>
       <View style={styles.separate}>
-        <Text variant="bodyStrong">Start a separate bill</Text>
-        <Text variant="small" tone="muted">For another party at this table — they get their own bill and pay separately.</Text>
+        <Text variant="bodyStrong">{t('pos.BillSheets.start_a_separate_bill')}</Text>
+        <Text variant="small" tone="muted">{t('pos.BillSheets.for_another_party_at_this_table_they_get')}</Text>
         <View style={styles.separateRow}>
-          <Input value={label} onChangeText={setLabel} maxLength={40} placeholder={`Name, e.g. Rahul (or Bill ${bills.length + 1})`} icon="person-outline"
+          <Input value={label} onChangeText={setLabel} maxLength={40} placeholder={t('pos.BillSheets.name_e_g_rahul_or_bill_v', { v: bills.length + 1 })} icon="person-outline"
             containerStyle={{ flex: 1, minWidth: 180 }} />
           <GuestsField value={guests} onChange={setGuests} />
         </View>
-        <Button title="Start separate bill" icon="add" onPress={() => onSeparate({ label: label.trim(), guests: guests || null })} disabled={!online}
-          accessibilityLabel="Start a separate bill on this table" />
+        <Button title={t('pos.BillSheets.start_separate_bill')} icon="add" onPress={() => onSeparate({ label: label.trim(), guests: guests || null })} disabled={!online}
+          accessibilityLabel={t('pos.BillSheets.start_a_separate_bill_on_this_table')} />
       </View>
     </Sheet>
   );
@@ -114,9 +115,9 @@ export function TableBillsSheet({ visible, tableLabel, bills, newItems, currency
 function GuestsField({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const { colors } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }} accessibilityLabel="Guests">
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }} accessibilityLabel={t('pos.BillSheets.guests')}>
       <Ionicons name="people-outline" size={18} color={colors.textMuted} />
-      <QtyStepper value={value} min={0} max={500} onChange={onChange} label="guest" />
+      <QtyStepper value={value} min={0} max={500} onChange={onChange} label={t('pos.BillSheets.guest')} />
     </View>
   );
 }
@@ -142,21 +143,21 @@ export function BillDetailsSheet({ visible, title, label, guests, placeholder, o
     }
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title={title} subtitle="Tells bills on a shared table apart" width={440}
+    <Sheet visible={visible} onClose={onClose} title={title} subtitle={t('pos.BillSheets.tells_bills_on_a_shared_table_apart')} width={440}
       footer={
         <View style={styles.footer}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title="Save" icon="checkmark" onPress={() => void save()} loading={saving} disabled={saving} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={t('common.save')} icon="checkmark" onPress={() => void save()} loading={saving} disabled={saving} />
         </View>
       }>
-      <Input label="Bill name" value={name} onChangeText={setName} maxLength={40} placeholder={placeholder} icon="person-outline" autoFocus
+      <Input label={t('pos.BillSheets.bill_name')} value={name} onChangeText={setName} maxLength={40} placeholder={placeholder} icon="person-outline" autoFocus
         onSubmitEditing={() => void save()} />
       <View style={styles.guestsRow}>
         <View style={{ flex: 1 }}>
-          <Text variant="bodyStrong">Guests</Text>
-          <Text variant="small" tone="muted">{count ? `${count} at this bill` : 'Not set'}</Text>
+          <Text variant="bodyStrong">{t('pos.BillSheets.guests')}</Text>
+          <Text variant="small" tone="muted">{count ? t('pos.BillSheets.count_at_this_bill', { count }) : t('common.not_set')}</Text>
         </View>
-        <QtyStepper value={count} min={0} max={500} onChange={setCount} label="guest" />
+        <QtyStepper value={count} min={0} max={500} onChange={setCount} label={t('pos.BillSheets.guest')} />
       </View>
     </Sheet>
   );
@@ -177,11 +178,11 @@ export function MergeBillsSheet({ visible, current, currentName, bills, currency
     try { await onMerge(id); } finally { setBusy(null); }
   };
   return (
-    <Sheet visible={visible} onClose={onClose} width={500} title={`Merge into ${currentName}`}
-      subtitle="The other bill's items move onto this one (tables joined, one person pays). The emptied bill closes as merged.">
-      {!online ? <Badge label="Needs internet" tone="warning" icon="cloud-offline-outline" /> : null}
-      {current && itemsLocked(current) ? <Badge label="This bill has a payment — bills with payments can't be merged" tone="warning" icon="lock-closed-outline" /> : null}
-      {others.length === 0 ? <Text tone="muted">There is no other open bill on this table.</Text> : null}
+    <Sheet visible={visible} onClose={onClose} width={500} title={t('pos.BillSheets.merge_into_currentname', { currentName })}
+      subtitle={t('pos.BillSheets.the_other_bill_s_items_move_onto_this_one')}>
+      {!online ? <Badge label={t('common.needs_internet')} tone="warning" icon="cloud-offline-outline" /> : null}
+      {current && itemsLocked(current) ? <Badge label={t('pos.BillSheets.this_bill_has_a_payment_bills_with')} tone="warning" icon="lock-closed-outline" /> : null}
+      {others.length === 0 ? <Text tone="muted">{t('pos.BillSheets.there_is_no_other_open_bill_on_this_table')}</Text> : null}
       <View style={{ gap: 6 }}>
         {others.map((b) => {
           const locked = itemsLocked(b);
@@ -190,10 +191,10 @@ export function MergeBillsSheet({ visible, current, currentName, bills, currency
             <View key={b.id} style={styles.mergeRow}>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text variant="bodyStrong" numberOfLines={1}>{billName(b, bills.indexOf(b))}</Text>
-                <Text variant="small" tone="muted" numberOfLines={1}>{money(b.total_amount, currency)} · {n} item{n === 1 ? '' : 's'}{locked ? ' · has a payment' : ''}</Text>
+                <Text variant="small" tone="muted" numberOfLines={1}>{money(b.total_amount, currency)} {t('pos.BillSheets.n_item', { n })}{n === 1 ? '' : 's'}{locked ? t('pos.BillSheets.has_a_payment') : ''}</Text>
               </View>
-              <Button title="Merge" icon="git-merge-outline" variant="secondary" onPress={() => void merge(b.id)} loading={busy === b.id}
-                disabled={!online || !!busy || locked || !current || itemsLocked(current)} accessibilityLabel={`Merge ${billName(b, bills.indexOf(b))} into ${currentName}`} />
+              <Button title={t('pos.BillSheets.merge')} icon="git-merge-outline" variant="secondary" onPress={() => void merge(b.id)} loading={busy === b.id}
+                disabled={!online || !!busy || locked || !current || itemsLocked(current)} accessibilityLabel={t('pos.BillSheets.merge_billname_into_currentname', { billName: billName(b, bills.indexOf(b)), currentName })} />
             </View>
           );
         })}

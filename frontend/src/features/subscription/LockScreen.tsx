@@ -4,7 +4,7 @@
  * - Nothing is lost: the reassurance line counts this business's offline bills, which stay in the outbox and sync after renewal.
  * - The owner can renew right here (plans, offers, UPI / bank, "I've paid"); staff are asked to contact the owner.
  * - The page re-checks GET /subscription every 30 s, when the app returns to the foreground and after a claim, so it
- *   unlocks by itself as soon as Tallyko approves the payment.
+ *   unlocks by itself as soon as Storant approves the payment.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
@@ -24,6 +24,8 @@ import { useSubscription } from '@/store/subscription';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { RenewFlow, RequestsList, SupportLinks } from './RenewFlow';
 import { lockHeadline } from './format';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 const RECHECK_MS = 30_000;
 
@@ -35,10 +37,10 @@ export function useSavedBills(): number {
 
 export function SafeDataLine({ count }: { count: number }) {
   return (
-    <Callout tone="success" icon="shield-checkmark" title="Your data is safe">
+    <Callout tone="success" icon="shield-checkmark" title={t('subscription.LockScreen.your_data_is_safe')}>
       {count > 0
-        ? `${count} offline bill${count === 1 ? ' is' : 's are'} saved on this device and will sync after renewal. Menu, customers, bills and reports are all kept.`
-        : 'Menu, customers, bills and reports are all kept. Everything is back the moment you renew.'}
+        ? t('subscription.LockScreen.count_offline_bill_v_saved_on_this_device', { count, v: count === 1 ? t('common.is') : t('common.s_are') })
+        : t('subscription.LockScreen.menu_customers_bills_and_reports_are_all')}
     </Callout>
   );
 }
@@ -63,7 +65,7 @@ export default function LockScreen() {
     try {
       const next = await useSubscription.getState().refresh();
       setError(null);
-      if (manual && next.locked) toast.info(next.requests.some((r) => r.status === 'pending') ? 'Not confirmed yet. We will unlock as soon as it is.' : 'Still waiting for renewal.');
+      if (manual && next.locked) toast.info(next.requests.some((r) => r.status === 'pending') ? t('subscription.LockScreen.not_confirmed_yet_we_will_unlock_as_soon') : t('subscription.LockScreen.still_waiting_for_renewal'));
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -82,12 +84,12 @@ export default function LockScreen() {
     };
   }, [status, check]);
 
-  // Unlocked (Tallyko approved the payment, or the lock was stale): straight back to work; sync resumes and uploads the outbox
+  // Unlocked (Storant approved the payment, or the lock was stale): straight back to work; sync resumes and uploads the outbox
   const sawLock = useRef(false);
   if (locked) sawLock.current = true;
   useEffect(() => {
     if (status !== 'signedIn' || locked) return;
-    if (sawLock.current) toast.success('Your subscription is active again. Welcome back!');
+    if (sawLock.current) toast.success(t('subscription.LockScreen.your_subscription_is_active_again_welcome'));
     router.replace('/' as Href);
   }, [status, locked]);
 
@@ -124,7 +126,7 @@ export default function LockScreen() {
             <Text variant="caption" tone="muted" numberOfLines={1}>{session.fullName || session.email} · {ROLE_LABEL[session.role] ?? session.role}</Text>
           </View>
         ) : null}
-        <Button title="Sign out" icon="log-out-outline" variant="ghost" size="sm" onPress={signOut} loading={signingOut} />
+        <Button title={t('common.sign_out')} icon="log-out-outline" variant="ghost" size="sm" onPress={signOut} loading={signingOut} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: pad, paddingTop: isPhone ? 16 : 28, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
@@ -141,34 +143,34 @@ export default function LockScreen() {
                 <Text tone="muted">{subtitle}</Text>
                 {session.businessName && isPhone ? <Text variant="small" tone="subtle">{session.businessName}</Text> : null}
               </View>
-              <Button title="Check again" icon="refresh" variant="secondary" size="sm" onPress={() => void check(true)} loading={checking} />
+              <Button title={t('subscription.LockScreen.check_again')} icon="refresh" variant="secondary" size="sm" onPress={() => void check(true)} loading={checking} />
             </View>
             <SafeDataLine count={savedBills} />
             {lockMessage && !info ? <Text variant="small" tone="subtle">{lockMessage}</Text> : null}
-            {error ? <Callout tone="warning" title="Could not check the subscription">{`${error} We will try again automatically.`}</Callout> : null}
+            {error ? <Callout tone="warning" title={t('subscription.LockScreen.could_not_check_the_subscription')}>{t('subscription.LockScreen.error_we_will_try_again_automatically', { error })}</Callout> : null}
           </Card>
 
           {pending.length && canPay ? (
             <Card style={{ gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <Ionicons name="time-outline" size={20} color={colors.warningText} />
-                <Text variant="h3" style={{ flex: 1 }}>Payment sent — waiting for confirmation</Text>
-                <Badge label="Checking automatically" tone="info" icon="sync" />
+                <Text variant="h3" style={{ flex: 1 }}>{t('subscription.LockScreen.payment_sent_waiting_for_confirmation')}</Text>
+                <Badge label={t('subscription.LockScreen.checking_automatically')} tone="info" icon="sync" />
               </View>
               <Text variant="small" tone="muted">
-                Sent {formatDateTime(pending[0]!.created_at)}. This page unlocks by itself as soon as Tallyko confirms your payment — you don't need to restart the app.
+                {t('subscription.LockScreen.sent_formatdatetime_this_page_unlocks_by', { formatDateTime: formatDateTime(pending[0]!.created_at), brand: brand.name })}
               </Text>
               <RequestsList requests={pending} plans={info?.plans ?? []} />
             </Card>
           ) : null}
 
           {latestRejected && !pending.length && canPay ? (
-            <Callout tone="danger" title="Your last payment was not approved">
-              {`${latestRejected.review_note || 'Tallyko could not match the payment.'} Reference ${latestRejected.reference}. Check the details and send it again, or contact support.`}
+            <Callout tone="danger" title={t('subscription.LockScreen.your_last_payment_was_not_approved')}>
+              {t('subscription.LockScreen.v_reference_reference_check_the_details', { v: latestRejected.review_note || t('subscription.LockScreen.brand_could_not_match_the_payment', { brand: brand.name }), reference: latestRejected.reference })}
             </Callout>
           ) : null}
 
-          {!info && !error ? <Loading label="Loading plans…" /> : null}
+          {!info && !error ? <Loading label={t('subscription.LockScreen.loading_plans')} /> : null}
 
           {info && canPay ? <RenewFlow info={info} onSubmitted={() => void check()} /> : null}
 
@@ -177,28 +179,27 @@ export default function LockScreen() {
               <View style={[styles.heroIcon, { backgroundColor: colors.infoSoft, width: 44, height: 44 }]}>
                 <Ionicons name="person-outline" size={22} color={colors.infoText} />
               </View>
-              <Text variant="h2">Ask the owner to renew</Text>
+              <Text variant="h2">{t('subscription.LockScreen.ask_the_owner_to_renew')}</Text>
               <Text tone="muted">
-                Only the owner of {session.businessName || 'this business'} can renew the Tallyko subscription. Once they do, this screen unlocks
-                by itself and billing continues where you left off.
+                {t('subscription.LockScreen.only_the_owner_of')} {session.businessName || t('subscription.LockScreen.this_business')} {t('subscription.LockScreen.can_renew_the_brand_subscription_once', { brand: brand.name })}
               </Text>
-              {pending.length ? <Badge label="The owner has already sent a payment" tone="info" icon="checkmark" /> : null}
+              {pending.length ? <Badge label={t('subscription.LockScreen.the_owner_has_already_sent_a_payment')} tone="info" icon="checkmark" /> : null}
             </Card>
           ) : null}
 
           {info && canPay && info.requests.some((r) => r.status !== 'pending') ? (
             <Card style={{ gap: 12 }}>
-              <Text variant="h3">Earlier payments</Text>
+              <Text variant="h3">{t('subscription.LockScreen.earlier_payments')}</Text>
               <RequestsList requests={info.requests.filter((r) => r.status !== 'pending')} plans={info.plans} limit={3} />
             </Card>
           ) : null}
 
           <Card style={{ gap: 10 }}>
-            <Text variant="h3">Need help?</Text>
-            <Text variant="small" tone="muted">Questions about plans, payments or GST invoices for your subscription — talk to Tallyko billing support.</Text>
+            <Text variant="h3">{t('subscription.LockScreen.need_help')}</Text>
+            <Text variant="small" tone="muted">{t('subscription.LockScreen.questions_about_plans_payments_or_gst', { brand: brand.name })}</Text>
             <SupportLinks payment={info?.payment} />
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-              <Button title="Sign out" icon="log-out-outline" variant="secondary" size="sm" onPress={signOut} loading={signingOut} />
+              <Button title={t('common.sign_out')} icon="log-out-outline" variant="secondary" size="sm" onPress={signOut} loading={signingOut} />
             </View>
           </Card>
         </View>

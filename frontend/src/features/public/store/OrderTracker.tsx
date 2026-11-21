@@ -7,13 +7,14 @@ import { publicApi } from '@/api/endpoints';
 import { ApiError } from '@/api/client';
 import { formatTime, money } from '@/lib/format';
 import { statusStage, type PlacedOrder, type PublicOrderStatus } from './model';
+import { t } from '@/i18n';
 
 const POLL_MS = 10_000;
 
 const STEPS: { title: string; body: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { title: 'Received', body: 'The shop has your order.', icon: 'receipt-outline' },
-  { title: 'Accepted', body: 'Your order is being prepared.', icon: 'flame-outline' },
-  { title: 'Completed', body: 'Enjoy! Thank you for ordering.', icon: 'checkmark-done-outline' },
+  { get title() { return t('public.store_OrderTracker.received'); }, get body() { return t('public.store_OrderTracker.the_shop_has_your_order'); }, icon: 'receipt-outline' },
+  { get title() { return t('public.store_OrderTracker.accepted'); }, get body() { return t('public.store_OrderTracker.your_order_is_being_prepared'); }, icon: 'flame-outline' },
+  { get title() { return t('common.completed'); }, get body() { return t('public.store_OrderTracker.enjoy_thank_you_for_ordering'); }, icon: 'checkmark-done-outline' },
 ];
 
 /** Live status of a placed order. Polls every 10 s until it is completed or cancelled. */
@@ -76,26 +77,26 @@ export function OrderTracker({ tenantId, order, symbol, businessName, phone, onB
           <Ionicons name={stage === -1 ? 'close' : stage === 2 ? 'checkmark-done' : 'checkmark'} size={32} color={stage === -1 ? colors.danger : colors.success} />
         </View>
         <Text variant="h1" align="center" accessibilityRole="header">
-          {stage === -1 ? 'Order cancelled' : stage === 2 ? 'Order completed' : stage === 1 ? 'Order accepted' : 'Order placed!'}
+          {stage === -1 ? t('public.store_OrderTracker.order_cancelled') : stage === 2 ? t('public.store_OrderTracker.order_completed') : stage === 1 ? t('public.store_OrderTracker.order_accepted') : t('public.store_OrderTracker.order_placed')}
         </Text>
         <Text tone="muted" align="center" style={{ maxWidth: 420 }}>
           {stage === -1
-            ? `${businessName} couldn't take this order. If you've already paid, please speak to the shop.`
+            ? t('public.store_OrderTracker.businessname_couldn_t_take_this_order_if', { businessName })
             : order.mode === 'QR'
-              ? `We've sent your order to the kitchen${order.tableLabel ? ` for Table ${order.tableLabel}` : ''}.`
+              ? t('public.store_OrderTracker.we_ve_sent_your_order_to_the_kitchen_v', { v: order.tableLabel ? t('public.store_OrderTracker.for_table_tablelabel', { tableLabel: order.tableLabel }) : '' })
               : order.orderType === 'DELIVERY'
-                ? `${businessName} has received your order and will deliver it to your address.`
-                : `${businessName} has received your order. Show this screen when you collect it.`}
+                ? t('public.store_OrderTracker.businessname_has_received_your_order_and', { businessName })
+                : t('public.store_OrderTracker.businessname_has_received_your_order_show', { businessName })}
         </Text>
         <View style={[styles.codeBox, { backgroundColor: colors.surfaceSunken, borderRadius: radius.lg }]}>
           {token ? (
             <View style={{ alignItems: 'center' }}>
-              <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>Token</Text>
-              <Text variant="display" style={{ fontSize: 40, lineHeight: 46 }} accessibilityLabel={`Token number ${token}`}>{token}</Text>
+              <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>{t('public.store_OrderTracker.token')}</Text>
+              <Text variant="display" style={{ fontSize: 40, lineHeight: 46 }} accessibilityLabel={t('public.store_OrderTracker.token_number_token', { token })}>{token}</Text>
             </View>
           ) : null}
           <View style={{ alignItems: 'center' }}>
-            <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>Order</Text>
+            <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>{t('public.store_OrderTracker.order')}</Text>
             <Text variant={token ? 'h3' : 'h1'} selectable>#{status?.code ?? order.code}</Text>
           </View>
         </View>
@@ -107,7 +108,7 @@ export function OrderTracker({ tenantId, order, symbol, businessName, phone, onB
             const done = stage >= i;
             const active = stage === i && !final;
             return (
-              <View key={step.title} style={styles.step} accessibilityLabel={`${step.title}${done ? ', done' : ''}`}>
+              <View key={step.title} style={styles.step} accessibilityLabel={`${step.title}${done ? t('public.store_OrderTracker.done') : ''}`}>
                 <View style={{ alignItems: 'center' }}>
                   <View style={[styles.stepDot, {
                     backgroundColor: done ? colors.primary : colors.surface,
@@ -131,34 +132,34 @@ export function OrderTracker({ tenantId, order, symbol, businessName, phone, onB
       ) : null}
 
       <Card style={{ gap: 10 }}>
-        <Text variant="h3">Order summary</Text>
+        <Text variant="h3">{t('public.store_OrderTracker.order_summary')}</Text>
         {(status?.items ?? []).map((item, i) => (
           <View key={i} style={styles.itemRow}>
             <Text tone="muted" style={{ minWidth: 28, fontVariant: ['tabular-nums'] }}>{item.quantity}×</Text>
             <Text style={{ flex: 1 }}>{item.name}{item.variant_name ? <Text tone="muted"> · {item.variant_name}</Text> : null}</Text>
           </View>
         ))}
-        {!status ? <Text tone="subtle" variant="small">Loading items…</Text> : null}
+        {!status ? <Text tone="subtle" variant="small">{t('public.store_OrderTracker.loading_items')}</Text> : null}
         <View style={[styles.itemRow, { borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: 10, marginTop: 4 }]}>
-          <Text variant="bodyStrong" style={{ flex: 1 }}>Total (incl. taxes)</Text>
+          <Text variant="bodyStrong" style={{ flex: 1 }}>{t('public.store_OrderTracker.total_incl_taxes')}</Text>
           <Text variant="money">{money(total, symbol)}</Text>
         </View>
-        {status?.payment_status === 'paid' ? <Text variant="small" tone="success">Paid</Text> : <Text variant="small" tone="muted">{order.mode === 'QR' ? 'Ask for the bill at your table or pay at the counter.' : order.orderType === 'DELIVERY' ? 'Pay when your order is delivered.' : 'Pay at the counter when you collect.'}</Text>}
+        {status?.payment_status === 'paid' ? <Text variant="small" tone="success">{t('common.paid')}</Text> : <Text variant="small" tone="muted">{order.mode === 'QR' ? t('public.store_OrderTracker.ask_for_the_bill_at_your_table_or_pay_at') : order.orderType === 'DELIVERY' ? t('public.store_OrderTracker.pay_when_your_order_is_delivered') : t('public.store_OrderTracker.pay_at_the_counter_when_you_collect')}</Text>}
       </Card>
 
       <View style={styles.meta}>
         <Ionicons name={failing ? 'cloud-offline-outline' : 'sync-outline'} size={14} color={failing ? colors.warningText : colors.textSubtle} />
         <Text variant="small" tone={failing ? 'warning' : 'subtle'}>
-          {failing ? "Can't reach the shop right now — we'll keep trying."
-            : final ? `Last updated ${updatedAt ? formatTime(updatedAt.toISOString()) : ''}`
-              : `Updates automatically${updatedAt ? ` · checked ${formatTime(updatedAt.toISOString())}` : ''}`}
+          {failing ? t('public.store_OrderTracker.can_t_reach_the_shop_right_now_we_ll_keep')
+            : final ? t('public.store_OrderTracker.last_updated_v', { v: updatedAt ? formatTime(updatedAt.toISOString()) : '' })
+              : t('public.store_OrderTracker.updates_automatically_v', { v: updatedAt ? t('public.store_OrderTracker.checked_formattime', { formatTime: formatTime(updatedAt.toISOString()) }) : '' })}
         </Text>
       </View>
 
       <View style={styles.actions}>
-        {!final ? <Button title="Refresh" variant="secondary" icon="refresh" onPress={() => void load()} loading={checking} /> : null}
-        {phone ? <Button title="Call shop" variant="secondary" icon="call-outline" onPress={() => void Linking.openURL(`tel:${phone.replace(/\s/g, '')}`).catch(() => {})} /> : null}
-        <Button title={final ? 'Back to menu' : 'Order more'} icon="restaurant-outline" onPress={onBack} />
+        {!final ? <Button title={t('common.refresh')} variant="secondary" icon="refresh" onPress={() => void load()} loading={checking} /> : null}
+        {phone ? <Button title={t('public.store_OrderTracker.call_shop')} variant="secondary" icon="call-outline" onPress={() => void Linking.openURL(`tel:${phone.replace(/\s/g, '')}`).catch(() => {})} /> : null}
+        <Button title={final ? t('public.store_OrderTracker.back_to_menu') : t('public.store_OrderTracker.order_more')} icon="restaurant-outline" onPress={onBack} />
       </View>
     </View>
   );

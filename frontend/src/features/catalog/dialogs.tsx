@@ -12,6 +12,7 @@ import { View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { create } from 'zustand';
 import { Button, Input, Sheet, Text } from '@/components/ui';
+import { t } from '@/i18n';
 
 interface DialogState {
   open: boolean;
@@ -23,13 +24,13 @@ interface DialogState {
   resolve?: (v: string | boolean | null) => void;
 }
 
-const useTopDialog = create<DialogState>(() => ({ open: false, title: '', confirmLabel: 'Confirm', danger: false }));
+const useTopDialog = create<DialogState>(() => ({ open: false, title: '', confirmLabel: t('common.confirm'), danger: false }));
 
 export function confirmTop(opts: { title: string; message?: string; confirmLabel?: string; danger?: boolean }): Promise<boolean> {
   return new Promise((resolve) => {
     useTopDialog.getState().resolve?.(null);
     useTopDialog.setState({
-      open: true, title: opts.title, message: opts.message, confirmLabel: opts.confirmLabel ?? 'Confirm', danger: !!opts.danger, prompt: undefined,
+      open: true, title: opts.title, message: opts.message, confirmLabel: opts.confirmLabel ?? t('common.confirm'), danger: !!opts.danger, prompt: undefined,
       resolve: (v) => resolve(v === true),
     });
   });
@@ -39,7 +40,7 @@ export function promptTop(opts: { title: string; message?: string; confirmLabel?
   return new Promise((resolve) => {
     useTopDialog.getState().resolve?.(null);
     useTopDialog.setState({
-      open: true, title: opts.title, message: opts.message, confirmLabel: opts.confirmLabel ?? 'Save', danger: false,
+      open: true, title: opts.title, message: opts.message, confirmLabel: opts.confirmLabel ?? t('common.save'), danger: false,
       prompt: { label: opts.label, placeholder: opts.placeholder, initial: opts.initial, maxLength: opts.maxLength },
       resolve: (v) => resolve(typeof v === 'string' ? v : null),
     });
@@ -83,7 +84,7 @@ function TopDialog() {
     <Sheet visible onClose={() => close(null)} title={state.title} width={440}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={() => close(null)} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={() => close(null)} />
           <Button title={state.confirmLabel} variant={state.danger ? 'danger' : 'primary'} disabled={!valid} onPress={submit} />
         </View>
       }>

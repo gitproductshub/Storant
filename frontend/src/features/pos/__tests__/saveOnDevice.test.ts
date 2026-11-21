@@ -10,7 +10,7 @@ describe('bills the server did not take are kept on this device', () => {
   });
 
   it('keeps them when the subscription ends at that moment (402)', () => {
-    expect(saveOnDevice(new ApiError('Your Tallyko plan has ended', 402, 'SUBSCRIPTION_LAPSED'))).toBe('lapsed');
+    expect(saveOnDevice(new ApiError('Your Storant plan has ended', 402, 'SUBSCRIPTION_LAPSED'))).toBe('lapsed');
   });
 
   it('shows real errors instead of hiding them in the outbox', () => {

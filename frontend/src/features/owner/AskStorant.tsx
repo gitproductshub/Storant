@@ -1,5 +1,5 @@
 /**
- * Requests to Tallyko: the business can never archive or delete its own records; the owner asks and Tallyko's
+ * Requests to Storant: the business can never archive or delete its own records; the owner asks and Storant's
  * super admin does it (or explains why not). The reply shows up in "Your requests".
  */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -12,17 +12,19 @@ import { Badge, Button, Card, Chip, Divider, Input, Loading, Segmented, Sheet, T
 import { useTheme } from '@/theme/ThemeProvider';
 import { formatDate, formatDateTime, money } from '@/lib/format';
 import { plural } from './watchUtils';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 const KIND_LABEL: Record<OwnerRequestKind, string> = {
-  archive_bills: 'Archive bills',
-  delete_bills: 'Delete bills',
-  other: 'Other',
+  get archive_bills() { return tr('common.archive_bills'); },
+  get delete_bills() { return tr('owner.AskStorant.delete_bills'); },
+  get other() { return tr('common.other'); },
 };
 
 const KIND_HELP: Record<OwnerRequestKind, string> = {
-  archive_bills: 'Tallyko hides these bills from your everyday lists and reports (for example test bills). They stay in the records.',
-  delete_bills: 'Tallyko checks the request first. Tax invoices usually have to be kept for several years, so Tallyko may archive them instead.',
-  other: 'Tell Tallyko what looks wrong, for example a bill that was cancelled by mistake.',
+  archive_bills: `${brand.name} hides these bills from your everyday lists and reports (for example test bills). They stay in the records.`,
+  delete_bills: `${brand.name} checks the request first. Tax invoices usually have to be kept for several years, so ${brand.name} may archive them instead.`,
+  other: `Tell ${brand.name} what looks wrong, for example a bill that was cancelled by mistake.`,
 };
 
 interface PickBill { id: string; bill: string; total: number; at: string | null; note: string }
@@ -37,7 +39,7 @@ function fromOrder(o: Order): PickBill {
     note: `${status}${(o as Order & { archived?: boolean }).archived ? ' · archived' : ''}` };
 }
 
-export function AskTallykoSheet({ visible, onClose, cancelled, symbol, onSent }: {
+export function AskStorantSheet({ visible, onClose, cancelled, symbol, onSent }: {
   visible: boolean; onClose: () => void; cancelled: WatchCancelledBill[]; symbol: string; onSent: (r: OwnerRequest) => void;
 }) {
   const { colors } = useTheme();
@@ -94,7 +96,7 @@ export function AskTallykoSheet({ visible, onClose, cancelled, symbol, onSent }:
     setError(null);
     try {
       const row = await ownerApi.ask({ kind, order_ids: needsBills ? chosen.map((b) => b.id) : [], message: trimmed });
-      toast.success('Sent to Tallyko. You will see the reply here.');
+      toast.success(tr('owner.AskStorant.sent_to_brand_you_will_see_the_reply_here', { brand: brand.name }));
       onSent(row);
       onClose();
     } catch (e) {
@@ -106,15 +108,15 @@ export function AskTallykoSheet({ visible, onClose, cancelled, symbol, onSent }:
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} width={640} title="Ask Tallyko"
-      subtitle="Nobody in your business can archive or delete records. Tallyko does it for you on request."
+    <Sheet visible={visible} onClose={onClose} width={640} title={tr('owner.AskStorant.ask_brand', { brand: brand.name })}
+      subtitle={tr('owner.AskStorant.nobody_in_your_business_can_archive_or', { brand: brand.name })}
       footer={(
         <View style={styles.footer}>
           <Text variant="small" tone={error ? 'danger' : 'subtle'} style={{ flex: 1, minWidth: 160 }}>
-            {error ?? (needsBills ? (chosen.length ? `${plural(chosen.length, 'bill')} selected` : 'No bills selected yet') : ' ')}
+            {error ?? (needsBills ? (chosen.length ? tr('owner.AskStorant.plural_selected', { plural: plural(chosen.length, 'bill') }) : tr('owner.AskStorant.no_bills_selected_yet')) : ' ')}
           </Text>
-          <Button title="Cancel" variant="ghost" onPress={onClose} disabled={busy} />
-          <Button title="Send to Tallyko" icon="send" onPress={send} loading={busy} disabled={busy} />
+          <Button title={tr('common.cancel')} variant="ghost" onPress={onClose} disabled={busy} />
+          <Button title={tr('owner.AskStorant.send_to_brand', { brand: brand.name })} icon="send" onPress={send} loading={busy} disabled={busy} />
         </View>
       )}>
       <View style={{ gap: 14 }}>
@@ -125,18 +127,18 @@ export function AskTallykoSheet({ visible, onClose, cancelled, symbol, onSent }:
         {needsBills ? (
           <View style={{ gap: 10 }}>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-              <Chip label="Cancelled in this period" count={cancelled.length} selected={source === 'cancelled'} onPress={() => setSource('cancelled')} />
-              <Chip label="All recent bills" icon="search" selected={source === 'recent'} onPress={() => setSource('recent')} />
+              <Chip label={tr('owner.AskStorant.cancelled_in_this_period')} count={cancelled.length} selected={source === 'cancelled'} onPress={() => setSource('cancelled')} />
+              <Chip label={tr('owner.AskStorant.all_recent_bills')} icon="search" selected={source === 'recent'} onPress={() => setSource('recent')} />
             </View>
             {source === 'recent' ? (
-              <Input value={search} onChangeText={setSearch} placeholder="Bill number, customer name or phone" icon="search" autoCorrect={false} />
+              <Input value={search} onChangeText={setSearch} placeholder={tr('owner.AskStorant.bill_number_customer_name_or_phone')} icon="search" autoCorrect={false} />
             ) : null}
             <Card padded={false} style={{ maxHeight: 300, overflow: 'hidden' }}>
-              {source === 'recent' && recent === null && !recentError ? <Loading label="Loading bills" /> : null}
+              {source === 'recent' && recent === null && !recentError ? <Loading label={tr('owner.AskStorant.loading_bills')} /> : null}
               {source === 'recent' && recentError ? <Text tone="danger" style={{ padding: 16 }}>{recentError}</Text> : null}
               {list.length === 0 && (source === 'cancelled' || recent !== null) ? (
                 <Text tone="subtle" style={{ padding: 16 }}>
-                  {source === 'cancelled' ? 'No cancelled bills in this period. Look in All recent bills.' : 'No bills found.'}
+                  {source === 'cancelled' ? tr('owner.AskStorant.no_cancelled_bills_in_this_period_look_in') : tr('owner.AskStorant.no_bills_found')}
                 </Text>
               ) : null}
               <View>
@@ -146,7 +148,7 @@ export function AskTallykoSheet({ visible, onClose, cancelled, symbol, onSent }:
                     <View key={b.id}>
                       {i ? <Divider /> : null}
                       <Pressable onPress={() => toggle(b)} accessibilityRole="checkbox" accessibilityState={{ checked: on }}
-                        accessibilityLabel={`Bill ${b.bill}`}
+                        accessibilityLabel={tr('owner.AskStorant.bill_bill', { bill: b.bill })}
                         style={({ hovered }: any) => [styles.pick, (hovered || on) && { backgroundColor: on ? colors.primarySoft : colors.surfaceSunken },
                           Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
                         <Ionicons name={on ? 'checkbox' : 'square-outline'} size={22} color={on ? colors.primary : colors.textSubtle} />
@@ -164,9 +166,9 @@ export function AskTallykoSheet({ visible, onClose, cancelled, symbol, onSent }:
           </View>
         ) : null}
 
-        <Input label="Message to Tallyko" required value={message} onChangeText={(v) => { setMessage(v); if (error) setError(null); }}
+        <Input label={tr('owner.AskStorant.message_to_brand', { brand: brand.name })} required value={message} onChangeText={(v) => { setMessage(v); if (error) setError(null); }}
           multiline numberOfLines={3} maxLength={1000} style={{ minHeight: 84, textAlignVertical: 'top' }}
-          placeholder={kind === 'other' ? 'What happened and what should be corrected?' : 'Why should these bills be archived or deleted? e.g. test bills made while setting up'}
+          placeholder={kind === 'other' ? tr('owner.AskStorant.what_happened_and_what_should_be_corrected') : tr('owner.AskStorant.why_should_these_bills_be_archived_or')}
           hint={`${message.length}/1000`} />
       </View>
     </Sheet>
@@ -174,9 +176,9 @@ export function AskTallykoSheet({ visible, onClose, cancelled, symbol, onSent }:
 }
 
 const STATUS: Record<string, { label: string; tone: BadgeTone; icon: keyof typeof Ionicons.glyphMap }> = {
-  pending: { label: 'Waiting for Tallyko', tone: 'warning', icon: 'time-outline' },
-  done: { label: 'Done', tone: 'success', icon: 'checkmark-circle' },
-  rejected: { label: 'Not done', tone: 'neutral', icon: 'close-circle-outline' },
+  pending: { get label() { return tr('owner.AskStorant.waiting_for_brand', { brand: brand.name }); }, tone: 'warning', icon: 'time-outline' },
+  done: { get label() { return tr('common.done'); }, tone: 'success', icon: 'checkmark-circle' },
+  rejected: { get label() { return tr('owner.AskStorant.not_done'); }, tone: 'neutral', icon: 'close-circle-outline' },
 };
 
 const ACTION_TAKEN: Record<string, string> = { archived: 'Bills archived', deleted: 'Bills deleted', none: 'No change made' };
@@ -189,20 +191,20 @@ export function RequestsCard({ requests, loading, error, onRetry, onAsk }: {
     <Card style={{ gap: 12 }}>
       <View style={styles.cardHead}>
         <View style={{ flex: 1, minWidth: 180 }}>
-          <Text variant="h3">Your requests to Tallyko</Text>
-          <Text variant="small" tone="muted">Archiving, deleting or correcting records. Tallyko replies here.</Text>
+          <Text variant="h3">{tr('owner.AskStorant.your_requests_to')} {brand.name}</Text>
+          <Text variant="small" tone="muted">{tr('owner.AskStorant.archiving_deleting_or_correcting_records', { brand: brand.name })}</Text>
         </View>
-        <Button title="New request" size="sm" variant="secondary" icon="add" onPress={onAsk} />
+        <Button title={tr('owner.AskStorant.new_request')} size="sm" variant="secondary" icon="add" onPress={onAsk} />
       </View>
       {loading && !requests ? <Loading /> : null}
       {error && !requests ? (
         <View style={{ gap: 8 }}>
           <Text tone="danger" variant="small">{error}</Text>
-          <Button title="Try again" size="sm" variant="ghost" icon="refresh" onPress={onRetry} style={{ alignSelf: 'flex-start' }} />
+          <Button title={tr('common.try_again')} size="sm" variant="ghost" icon="refresh" onPress={onRetry} style={{ alignSelf: 'flex-start' }} />
         </View>
       ) : null}
       {requests && requests.length === 0 ? (
-        <Text tone="subtle" variant="small">No requests yet. Use Ask Tallyko to archive test bills or report a mistake.</Text>
+        <Text tone="subtle" variant="small">{tr('owner.AskStorant.no_requests_yet_use_ask_brand_to_archive', { brand: brand.name })}</Text>
       ) : null}
       {(requests ?? []).map((r, i) => {
         const st = STATUS[r.status] ?? { label: r.status, tone: 'neutral' as BadgeTone, icon: 'help-circle-outline' as const };
@@ -221,7 +223,7 @@ export function RequestsCard({ requests, loading, error, onRetry, onAsk }: {
             </Text>
             {r.response ? (
               <View style={[styles.reply, { backgroundColor: colors.surfaceSunken, borderRadius: radius.md, borderLeftColor: colors.primary }]}>
-                <Text variant="caption" tone="subtle">TALLYKO REPLIED{r.handled_at ? ` · ${formatDateTime(r.handled_at)}` : ''}</Text>
+                <Text variant="caption" tone="subtle">{brand.name.toUpperCase()} {tr('owner.AskStorant.replied')}{r.handled_at ? ` · ${formatDateTime(r.handled_at)}` : ''}</Text>
                 <Text variant="small">{r.response}</Text>
               </View>
             ) : null}

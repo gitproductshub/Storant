@@ -1,4 +1,4 @@
-# Tallyko web server.
+# Storant web server.
 # SITE_ADDRESS=":80" serves plain HTTP (local preview / behind another proxy).
 # SITE_ADDRESS="pos.yourshop.com" makes Caddy fetch a free Let's Encrypt certificate and serve HTTPS automatically.
 {

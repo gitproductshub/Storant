@@ -5,6 +5,7 @@ import type { EmailPreview } from '@/api/email';
 import { Text } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeProvider';
 import { monoFont } from '../components';
+import { t } from '@/i18n';
 
 export function EmailPreviewFrame({ preview, loading, error, height = 600 }: {
   preview: EmailPreview | null; loading: boolean; error: string | null; height?: number;
@@ -14,7 +15,7 @@ export function EmailPreviewFrame({ preview, loading, error, height = 600 }: {
     <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface }}>
       <View style={{ paddingHorizontal: 14, paddingVertical: 10, gap: 2, borderBottomWidth: 1, borderBottomColor: colors.divider, backgroundColor: colors.surfaceAlt }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase', flex: 1 }}>Preview with sample customer</Text>
+          <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase', flex: 1 }}>{t('settings.email_EmailPreviewFrame.preview_with_sample_customer')}</Text>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : null}
         </View>
         <Text variant="bodyStrong" numberOfLines={2}>{preview?.subject ?? ' '}</Text>
@@ -25,7 +26,7 @@ export function EmailPreviewFrame({ preview, loading, error, height = 600 }: {
         <View style={{ height: 200, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={colors.primary} /></View>
       ) : Platform.OS === 'web' ? (
         React.createElement('iframe', {
-          title: 'Email preview',
+          title: t('settings.email_EmailPreviewFrame.email_preview'),
           srcDoc: preview.html,
           // No scripts, no same-origin access: the template text is only ever rendered, never run.
           sandbox: '',

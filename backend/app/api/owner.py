@@ -195,7 +195,7 @@ async def ask_tallyko(data: OwnerRequestIn, access: Access = Depends(require_own
         pending = (await system.execute(select(func.count()).select_from(OwnerRequest)
                                         .where(OwnerRequest.vendor_id == access.tenant_id, OwnerRequest.status == "pending"))).scalar_one()
         if pending >= 10:
-            raise HTTPException(status_code=429, detail="You have many requests waiting; Tallyko will get to them shortly")
+            raise HTTPException(status_code=429, detail="You have many requests waiting; Storant will get to them shortly")
         row = OwnerRequest(vendor_id=access.tenant_id, kind=data.kind, order_ids=[str(o) for o in data.order_ids], message=data.message.strip(),
                            requested_by=staff.username if staff else None)
         system.add(row)

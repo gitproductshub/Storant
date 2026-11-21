@@ -158,4 +158,4 @@ def require(*permissions: str, feature: str | None = None, any_of: bool = False)
 def check_limit(access: Access, limit: str, current_count: int, label: str) -> None:
     maximum = access.limits.get(limit)
     if maximum is not None and current_count >= int(maximum):
-        raise HTTPException(status_code=403, detail=f"Your plan allows up to {maximum} {label}. Ask Tallyko support to upgrade.")
+        raise HTTPException(status_code=403, detail=f"Your plan allows up to {maximum} {label}. Ask Storant support to upgrade.")

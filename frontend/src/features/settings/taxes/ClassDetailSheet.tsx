@@ -14,6 +14,8 @@ import { confirmTop as confirm } from '@/features/catalog/dialogs';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout, ChoiceChips, FieldRow, Hairline, SettingSwitch } from '../components';
 import { DateTimeField, RatePill, formatEffective, tomorrowMidnight } from './shared';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 const QUICK_RATES = [0, 3, 5, 18, 40];
 const HSN_PATTERN = /^[0-9]{4,8}$/;
@@ -87,16 +89,16 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
     setSubmitted(true);
     if (scheduleInvalid || rate === null || !when) return;
     const ok = await confirm({
-      title: 'Schedule this GST change?',
-      message: `${previewText}.\n\nBills made before then keep the old rate. ${taxClass.follow_preset ? 'This class will stop following the Tallyko GST library, so later government changes will not be applied to it automatically.' : ''}`.trim(),
-      confirmLabel: 'Schedule change',
+      title: tr('settings.taxes_ClassDetailSheet.schedule_this_gst_change'),
+      message: `${previewText}.\n\nBills made before then keep the old rate. ${taxClass.follow_preset ? `This class will stop following the ${brand.name} GST library, so later government changes will not be applied to it automatically.` : ''}`.trim(),
+      confirmLabel: tr('settings.taxes_ClassDetailSheet.schedule_change'),
     });
     if (!ok) return;
     setBusy('schedule');
     try {
       const overview = await taxesApi.scheduleRate(taxClass.id, { rate, effective_from: when.toISOString(), note: note.trim() || null, igst_only: igst });
       onChanged(overview);
-      toast.success(`${taxClass.name}: ${formatRate(rate)}% from ${formatEffective(when)}`);
+      toast.success(tr('settings.taxes_ClassDetailSheet.name_formatrate_from_formateffective', { name: taxClass.name, formatRate: formatRate(rate), formatEffective: formatEffective(when) }));
       resetSchedule();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -107,16 +109,16 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
 
   const cancelChange = async (r: TaxRateVersion) => {
     const ok = await confirm({
-      title: 'Cancel this rate change?',
-      message: `${taxClass.name} will not change to ${formatRate(r.total_rate)}% on ${formatEffective(r.effective_from)}.`,
-      confirmLabel: 'Cancel change',
+      title: tr('settings.taxes_ClassDetailSheet.cancel_this_rate_change'),
+      message: tr('settings.taxes_ClassDetailSheet.name_will_not_change_to_formatrate_on', { name: taxClass.name, formatRate: formatRate(r.total_rate), formatEffective: formatEffective(r.effective_from) }),
+      confirmLabel: tr('settings.taxes_ClassDetailSheet.cancel_change'),
       danger: true,
     });
     if (!ok) return;
     setBusy(r.id);
     try {
       onChanged(await taxesApi.cancelRate(taxClass.id, r.id));
-      toast.success('Scheduled change cancelled');
+      toast.success(tr('settings.taxes_ClassDetailSheet.scheduled_change_cancelled'));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -133,7 +135,7 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
     setBusy('details');
     try {
       onChanged(await taxesApi.update(taxClass.id, { name: name.trim(), hsn_sac: hsn.trim() }));
-      toast.success('Tax class saved');
+      toast.success(tr('settings.taxes_ClassDetailSheet.tax_class_saved'));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -145,7 +147,7 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
     setBusy('follow');
     try {
       onChanged(await taxesApi.update(taxClass.id, { follow_preset: follow }));
-      toast.success(follow ? 'Now follows the Tallyko GST library' : 'Stopped following the GST library');
+      toast.success(follow ? tr('settings.taxes_ClassDetailSheet.now_follows_the_brand_gst_library', { brand: brand.name }) : tr('settings.taxes_ClassDetailSheet.stopped_following_the_gst_library'));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -157,11 +159,11 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
     const turningOff = taxClass.is_active;
     if (turningOff) {
       const ok = await confirm({
-        title: `Turn off ${taxClass.name}?`,
+        title: tr('settings.taxes_ClassDetailSheet.turn_off_name', { name: taxClass.name }),
         message: taxClass.products
-          ? `${taxClass.products} item${taxClass.products === 1 ? '' : 's'} use this class. They will be billed with your default tax class until you assign another one. Past bills don't change.`
-          : 'It will no longer be offered for items. Past bills don\'t change.',
-        confirmLabel: 'Turn off',
+          ? tr('settings.taxes_ClassDetailSheet.products_item_v_use_this_class_they_will', { products: taxClass.products, v: taxClass.products === 1 ? '' : 's' })
+          : tr('settings.taxes_ClassDetailSheet.it_will_no_longer_be_offered_for_items'),
+        confirmLabel: tr('settings.taxes_ClassDetailSheet.turn_off'),
         danger: true,
       });
       if (!ok) return;
@@ -169,7 +171,7 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
     setBusy('active');
     try {
       onChanged(await taxesApi.update(taxClass.id, { is_active: !turningOff }));
-      toast.success(turningOff ? `${taxClass.name} turned off` : `${taxClass.name} turned on`);
+      toast.success(turningOff ? tr('settings.taxes_ClassDetailSheet.name_turned_off', { name: taxClass.name }) : tr('settings.taxes_ClassDetailSheet.name_turned_on', { name: taxClass.name }));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -182,22 +184,22 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
 
   return (
     <Sheet visible onClose={anyBusy ? () => undefined : onClose} title={taxClass.name} width={680}
-      subtitle={`${taxClass.current_rate === null ? 'No rate yet' : `GST ${formatRate(taxClass.current_rate)}% · ${describeComponents(taxClass.current_components, taxClass.current_rate)}`} · ${taxClass.products} item${taxClass.products === 1 ? '' : 's'}`}>
+      subtitle={tr('settings.taxes_ClassDetailSheet.v_products_item_v2', { v: taxClass.current_rate === null ? tr('settings.taxes_ClassDetailSheet.no_rate_yet') : tr('settings.taxes_ClassDetailSheet.gst_formatrate_describecomponents', { formatRate: formatRate(taxClass.current_rate), describeComponents: describeComponents(taxClass.current_components, taxClass.current_rate) }), products: taxClass.products, v2: taxClass.products === 1 ? '' : 's' })}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {taxClass.is_default ? <Badge label="Business default" tone="primary" icon="star" /> : null}
-        {taxClass.follow_preset ? <Badge label="Follows Tallyko GST library" tone="info" icon="sync" /> : taxClass.preset_key ? <Badge label="Managed by you" tone="neutral" /> : null}
-        {!taxClass.is_active ? <Badge label="Turned off" tone="warning" /> : null}
-        {taxClass.hsn_sac ? <Badge label={`HSN/SAC ${taxClass.hsn_sac}`} tone="neutral" /> : null}
+        {taxClass.is_default ? <Badge label={tr('settings.taxes_ClassDetailSheet.business_default')} tone="primary" icon="star" /> : null}
+        {taxClass.follow_preset ? <Badge label={tr('settings.taxes_ClassDetailSheet.follows_brand_gst_library', { brand: brand.name })} tone="info" icon="sync" /> : taxClass.preset_key ? <Badge label={tr('settings.taxes_ClassDetailSheet.managed_by_you')} tone="neutral" /> : null}
+        {!taxClass.is_active ? <Badge label={tr('settings.taxes_ClassDetailSheet.turned_off')} tone="warning" /> : null}
+        {taxClass.hsn_sac ? <Badge label={tr('settings.taxes_ClassDetailSheet.hsn_sac_hsn_sac', { hsn_sac: taxClass.hsn_sac })} tone="neutral" /> : null}
       </View>
       {onAssign && editable && taxClass.is_active ? (
-        <Button title={taxClass.products ? `Add more items to ${taxClass.name}` : `Assign items to ${taxClass.name}`} icon="git-merge-outline" variant="secondary"
+        <Button title={taxClass.products ? tr('settings.taxes_ClassDetailSheet.add_more_items_to_name', { name: taxClass.name }) : tr('settings.taxes_ClassDetailSheet.assign_items_to_name', { name: taxClass.name })} icon="git-merge-outline" variant="secondary"
           size="sm" onPress={onAssign} disabled={anyBusy} style={{ alignSelf: 'flex-start' }} />
       ) : null}
 
       {/* Rate history */}
       <View style={{ gap: 4 }}>
-        <Text variant="h3">Rate history</Text>
-        <Text variant="small" tone="muted">Each bill keeps the rate that applied when it was made.</Text>
+        <Text variant="h3">{tr('settings.taxes_ClassDetailSheet.rate_history')}</Text>
+        <Text variant="small" tone="muted">{tr('settings.taxes_ClassDetailSheet.each_bill_keeps_the_rate_that_applied')}</Text>
       </View>
       <View>
         {history.map((r, i) => {
@@ -213,22 +215,22 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Text variant="bodyStrong">{formatRate(r.total_rate)}%</Text>
                   <Text variant="small" tone="muted">{describeComponents(r.components, r.total_rate)}</Text>
-                  {r.current ? <Badge label="Current" tone="success" /> : null}
-                  {r.upcoming ? <Badge label="Upcoming" tone="warning" icon="time-outline" /> : null}
+                  {r.current ? <Badge label={tr('common.current')} tone="success" /> : null}
+                  {r.upcoming ? <Badge label={tr('settings.taxes_ClassDetailSheet.upcoming')} tone="warning" icon="time-outline" /> : null}
                 </View>
-                <Text variant="small">{r.upcoming ? 'Starts' : 'From'} {formatEffective(r.effective_from)}</Text>
+                <Text variant="small">{r.upcoming ? tr('settings.taxes_ClassDetailSheet.starts') : tr('common.from')} {formatEffective(r.effective_from)}</Text>
                 <Text variant="small" tone="subtle">
-                  {[r.note, r.source === 'preset' ? 'Tallyko GST library' : 'Set by your business'].filter(Boolean).join(' · ')}
+                  {[r.note, r.source === 'preset' ? `${brand.name} GST library` : 'Set by your business'].filter(Boolean).join(' · ')}
                 </Text>
                 {r.upcoming && editable ? (
-                  <Button title="Cancel this change" size="sm" variant="ghost" icon="close-circle-outline" onPress={() => cancelChange(r)}
+                  <Button title={tr('settings.taxes_ClassDetailSheet.cancel_this_change')} size="sm" variant="ghost" icon="close-circle-outline" onPress={() => cancelChange(r)}
                     loading={busy === r.id} disabled={anyBusy} style={{ alignSelf: 'flex-start', marginLeft: -12 }} />
                 ) : null}
               </View>
             </View>
           );
         })}
-        {!history.length ? <Text tone="muted">No rate set yet.</Text> : null}
+        {!history.length ? <Text tone="muted">{tr('settings.taxes_ClassDetailSheet.no_rate_set_yet')}</Text> : null}
       </View>
 
       {/* Schedule a change */}
@@ -238,36 +240,36 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name="calendar-outline" size={20} color={colors.primary} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text variant="bodyStrong">Government changed the rate?</Text>
-              <Text variant="small" tone="muted">Schedule the new rate. Bills switch automatically on that date.</Text>
+              <Text variant="bodyStrong">{tr('settings.taxes_ClassDetailSheet.government_changed_the_rate')}</Text>
+              <Text variant="small" tone="muted">{tr('settings.taxes_ClassDetailSheet.schedule_the_new_rate_bills_switch')}</Text>
             </View>
-            {!scheduling ? <Button title="Schedule change" size="sm" variant="soft" icon="add" onPress={() => setScheduling(true)} disabled={!online} /> : null}
+            {!scheduling ? <Button title={tr('settings.taxes_ClassDetailSheet.schedule_change')} size="sm" variant="soft" icon="add" onPress={() => setScheduling(true)} disabled={!online} /> : null}
           </View>
           {scheduling ? (
             <>
               <View style={{ gap: 6 }}>
-                <Input label="New GST rate" value={rateText} onChangeText={(t) => setRateText(t.replace(/[^\d.,]/g, ''))} keyboardType="decimal-pad"
+                <Input label={tr('settings.taxes_ClassDetailSheet.new_gst_rate')} value={rateText} onChangeText={(t) => setRateText(t.replace(/[^\d.,]/g, ''))} keyboardType="decimal-pad"
                   maxLength={6} placeholder={current ? formatRate(current.total_rate) : '5'} right={<Text tone="muted" style={{ marginRight: 12 }}>%</Text>}
                   error={submitted ? rateError : null} containerStyle={{ maxWidth: isPhone ? undefined : 220 }} />
-                <ChoiceChips<number> value={rate ?? -1} onChange={(v) => setRateText(String(v))} accessibilityLabel="Common GST rates"
+                <ChoiceChips<number> value={rate ?? -1} onChange={(v) => setRateText(String(v))} accessibilityLabel={tr('common.common_gst_rates')}
                   options={QUICK_RATES.map((r) => ({ value: r, label: `${r}%` }))} />
               </View>
               <DateTimeField value={when} onChange={setWhen} error={submitted || when === null ? whenError : null} />
-              <Input label="Government notification (optional)" value={note} onChangeText={setNote} maxLength={300}
-                placeholder="e.g. Notification No. 9/2025-Central Tax (Rate)" hint="Kept with the rate so you can show where it came from." />
-              <SettingSwitch title="Charge as IGST only" value={igst} onValueChange={setIgst}
-                subtitle="Only for businesses that bill inter-state supplies. Leave off for normal CGST + SGST bills." />
+              <Input label={tr('settings.taxes_ClassDetailSheet.government_notification_optional')} value={note} onChangeText={setNote} maxLength={300}
+                placeholder={tr('settings.taxes_ClassDetailSheet.e_g_notification_no_9_2025_central_tax')} hint={tr('settings.taxes_ClassDetailSheet.kept_with_the_rate_so_you_can_show_where')} />
+              <SettingSwitch title={tr('settings.taxes_ClassDetailSheet.charge_as_igst_only')} value={igst} onValueChange={setIgst}
+                subtitle={tr('settings.taxes_ClassDetailSheet.only_for_businesses_that_bill_inter_state')} />
               {previewText ? (
-                <Callout tone={sameRate ? 'warning' : 'info'} icon="eye-outline" title="Preview">
-                  {sameRate ? `${previewText}. This is the same as the rate already in effect then.` : previewText}
+                <Callout tone={sameRate ? 'warning' : 'info'} icon="eye-outline" title={tr('common.preview')}>
+                  {sameRate ? tr('settings.taxes_ClassDetailSheet.previewtext_this_is_the_same_as_the_rate', { previewText }) : previewText}
                 </Callout>
               ) : null}
               {taxClass.follow_preset ? (
-                <Text variant="small" tone="warning">Scheduling your own change stops automatic updates from the Tallyko GST library for this class.</Text>
+                <Text variant="small" tone="warning">{tr('settings.taxes_ClassDetailSheet.scheduling_your_own_change_stops', { brand: brand.name })}</Text>
               ) : null}
               <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                <Button title="Cancel" variant="secondary" onPress={resetSchedule} disabled={anyBusy} />
-                <Button title="Review & schedule" icon="checkmark" onPress={schedule} loading={busy === 'schedule'} disabled={anyBusy || !online || (submitted && scheduleInvalid)} />
+                <Button title={tr('common.cancel')} variant="secondary" onPress={resetSchedule} disabled={anyBusy} />
+                <Button title={tr('settings.taxes_ClassDetailSheet.review_schedule')} icon="checkmark" onPress={schedule} loading={busy === 'schedule'} disabled={anyBusy || !online || (submitted && scheduleInvalid)} />
               </View>
             </>
           ) : null}
@@ -278,32 +280,32 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
       {canEdit ? (
         <>
           <Hairline />
-          <Text variant="h3">Details</Text>
+          <Text variant="h3">{tr('settings.taxes_ClassDetailSheet.details')}</Text>
           <FieldRow>
-            <Input label="Name" value={name} onChangeText={setName} maxLength={80} error={nameError} editable={editable} />
-            <Input label="HSN / SAC code" value={hsn} onChangeText={(t) => setHsn(t.replace(/\D/g, ''))} maxLength={8} keyboardType="number-pad"
-              error={hsnError} hint="Printed on tax invoices. 4–8 digits." editable={editable} placeholder="e.g. 996331" />
+            <Input label={tr('common.name')} value={name} onChangeText={setName} maxLength={80} error={nameError} editable={editable} />
+            <Input label={tr('settings.taxes_ClassDetailSheet.hsn_sac_code')} value={hsn} onChangeText={(t) => setHsn(t.replace(/\D/g, ''))} maxLength={8} keyboardType="number-pad"
+              error={hsnError} hint={tr('settings.taxes_ClassDetailSheet.printed_on_tax_invoices_4_8_digits')} editable={editable} placeholder={tr('settings.taxes_ClassDetailSheet.e_g_996331')} />
           </FieldRow>
           {detailsDirty ? (
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-              <Button title="Undo" variant="secondary" onPress={() => { setName(taxClass.name); setHsn(taxClass.hsn_sac ?? ''); }} disabled={anyBusy} />
-              <Button title="Save details" icon="checkmark" onPress={saveDetails} loading={busy === 'details'} disabled={anyBusy || !online || !!nameError || !!hsnError} />
+              <Button title={tr('settings.taxes_ClassDetailSheet.undo')} variant="secondary" onPress={() => { setName(taxClass.name); setHsn(taxClass.hsn_sac ?? ''); }} disabled={anyBusy} />
+              <Button title={tr('settings.taxes_ClassDetailSheet.save_details')} icon="checkmark" onPress={saveDetails} loading={busy === 'details'} disabled={anyBusy || !online || !!nameError || !!hsnError} />
             </View>
           ) : null}
           {taxClass.preset_key ? (
-            <SettingSwitch title="Follow the Tallyko GST library" value={taxClass.follow_preset} onValueChange={setFollow} disabled={!editable || anyBusy}
-              subtitle="When the government changes this slab, Tallyko schedules the new rate for you. Turn off to manage the rate yourself." />
+            <SettingSwitch title={tr('settings.taxes_ClassDetailSheet.follow_the_brand_gst_library', { brand: brand.name })} value={taxClass.follow_preset} onValueChange={setFollow} disabled={!editable || anyBusy}
+              subtitle={tr('settings.taxes_ClassDetailSheet.when_the_government_changes_this_slab', { brand: brand.name })} />
           ) : null}
           <Hairline />
           <View style={{ flexDirection: isPhone ? 'column' : 'row', gap: 10, alignItems: isPhone ? 'stretch' : 'center' }}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text variant="bodyStrong">{taxClass.is_active ? 'Turn off this class' : 'This class is turned off'}</Text>
+              <Text variant="bodyStrong">{taxClass.is_active ? tr('settings.taxes_ClassDetailSheet.turn_off_this_class') : tr('settings.taxes_ClassDetailSheet.this_class_is_turned_off')}</Text>
               <Text variant="small" tone="muted">
-                {taxClass.is_default && taxClass.is_active ? 'Choose another default class before turning this one off.'
-                  : taxClass.is_active ? 'Items using it fall back to your default class. Past bills never change.' : 'Turn it on to use it for items again.'}
+                {taxClass.is_default && taxClass.is_active ? tr('settings.taxes_ClassDetailSheet.choose_another_default_class_before')
+                  : taxClass.is_active ? tr('settings.taxes_ClassDetailSheet.items_using_it_fall_back_to_your_default') : tr('settings.taxes_ClassDetailSheet.turn_it_on_to_use_it_for_items_again')}
               </Text>
             </View>
-            <Button title={taxClass.is_active ? 'Turn off' : 'Turn on'} variant={taxClass.is_active ? 'secondary' : 'soft'}
+            <Button title={taxClass.is_active ? tr('settings.taxes_ClassDetailSheet.turn_off') : tr('settings.taxes_ClassDetailSheet.turn_on')} variant={taxClass.is_active ? 'secondary' : 'soft'}
               icon={taxClass.is_active ? 'pause-circle-outline' : 'play-circle-outline'} onPress={toggleActive} loading={busy === 'active'}
               disabled={anyBusy || !online || (taxClass.is_default && taxClass.is_active)} />
           </View>
@@ -311,7 +313,7 @@ export function ClassDetailSheet({ taxClass, canEdit, online, onClose, onChanged
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <RatePill rate={taxClass.current_rate} muted={!taxClass.is_active} />
-          <Text variant="small" tone="muted" style={{ flex: 1 }}>Ask the owner or a manager to change this tax class.</Text>
+          <Text variant="small" tone="muted" style={{ flex: 1 }}>{tr('settings.taxes_ClassDetailSheet.ask_the_owner_or_a_manager_to_change_this')}</Text>
         </View>
       )}
     </Sheet>

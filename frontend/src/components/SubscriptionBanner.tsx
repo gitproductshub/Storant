@@ -1,5 +1,5 @@
 /**
- * Compact app-shell notice for owners and managers when the Tallyko subscription needs attention:
+ * Compact app-shell notice for owners and managers when the Storant subscription needs attention:
  *   "Free demo · 3 days left · Renew", "Subscription ending · 5 days left", "Payment due · access stops on 28 Oct 2026".
  * - One 40 px line that never floats over content: at the top of the page on tablets/desktops, above the bottom bar on phones.
  * - Hidden for the rest of the day with ×, per notice; "Payment due" (grace) cannot be hidden.
@@ -18,6 +18,7 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { bannerFor } from '@/features/subscription/format';
 import { hideNoticeToday, isNoticeHidden, useNavPrefs } from './nav/navPrefs';
 import { Text } from './ui';
+import { t } from '@/i18n';
 
 export function SubscriptionBanner({ placement = 'top' }: { placement?: 'top' | 'bottom' }) {
   const { colors, radius } = useTheme();
@@ -50,22 +51,22 @@ export function SubscriptionBanner({ placement = 'top' }: { placement?: 'top' | 
   return (
     <View style={[styles.bar, { backgroundColor: tone.bg, paddingTop: topPad, borderColor: colors.border },
       placement === 'top' ? { borderBottomWidth: StyleSheet.hairlineWidth } : { borderTopWidth: StyleSheet.hairlineWidth }]}
-      accessibilityRole={grace ? 'alert' : 'text'} accessibilityLabel={isOwner ? `${label}. Renew.` : `${label}. Ask the owner to renew.`}>
+      accessibilityRole={grace ? 'alert' : 'text'} accessibilityLabel={isOwner ? t('shell.SubscriptionBanner.label_renew', { label }) : t('shell.SubscriptionBanner.label_ask_the_owner_to_renew', { label })}>
       <Ionicons name={tone.icon} size={16} color={tone.fg} />
       <Text variant="smallStrong" color={tone.fg} numberOfLines={1} style={styles.text}>
         {banner.title}<Text variant="small" color={tone.fg}>{` · ${banner.detail}`}</Text>
-        {!isOwner && !isPhone ? <Text variant="small" color={tone.fg}>{' · ask the owner to renew'}</Text> : null}
+        {!isOwner && !isPhone ? <Text variant="small" color={tone.fg}>{t('shell.SubscriptionBanner.ask_the_owner_to_renew')}</Text> : null}
       </Text>
       {isOwner ? (
-        <Pressable onPress={renew} accessibilityRole="button" accessibilityLabel="Renew subscription" hitSlop={8}
+        <Pressable onPress={renew} accessibilityRole="button" accessibilityLabel={t('shell.SubscriptionBanner.renew_subscription')} hitSlop={8}
           style={({ hovered, pressed }: any) => [styles.renew, { borderColor: tone.fg, borderRadius: radius.pill, opacity: pressed ? 0.7 : 1 },
             hovered && { backgroundColor: colors.surface }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
-          <Text variant="smallStrong" color={tone.fg}>Renew</Text>
+          <Text variant="smallStrong" color={tone.fg}>{t('shell.SubscriptionBanner.renew')}</Text>
         </Pressable>
       ) : null}
       {!grace ? (
-        <Pressable onPress={() => hideNoticeToday(key)} accessibilityRole="button" accessibilityLabel="Hide until tomorrow" hitSlop={6}
-          {...(Platform.OS === 'web' ? ({ title: 'Hide until tomorrow' } as object) : {})}
+        <Pressable onPress={() => hideNoticeToday(key)} accessibilityRole="button" accessibilityLabel={t('shell.SubscriptionBanner.hide_until_tomorrow')} hitSlop={6}
+          {...(Platform.OS === 'web' ? ({ title: t('shell.SubscriptionBanner.hide_until_tomorrow') } as object) : {})}
           style={({ hovered }: any) => [styles.close, { borderRadius: radius.md }, hovered && { backgroundColor: colors.surface },
             Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
           <Ionicons name="close" size={16} color={tone.fg} />

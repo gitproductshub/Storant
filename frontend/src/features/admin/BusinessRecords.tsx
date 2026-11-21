@@ -1,6 +1,6 @@
 /**
  * Business records: search a business's bills and archive, restore or permanently delete them. Businesses can never delete
- * their own records; only a Tallyko super admin can, usually when the owner asks. Archiving is preferred: the bill leaves
+ * their own records; only a Storant super admin can, usually when the owner asks. Archiving is preferred: the bill leaves
  * lists and reports but stays in the database, the GST invoice series stays continuous, and it can be undone.
  */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -14,6 +14,7 @@ import { formatDateTime, money } from '@/lib/format';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout, monoFont } from '@/features/settings/components';
 import { BILL_STATUS_LABEL, BILL_STATUS_TONE, plural, useOnline } from './shared';
+import { t } from '@/i18n';
 
 function useDebounced<T>(value: T, ms = 350): T {
   const [v, setV] = useState(value);
@@ -48,7 +49,7 @@ export function BillRow({ bill: b, selected, onToggle, first }: { bill: AdminBil
   const status = (
     <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' }}>
       <Badge label={BILL_STATUS_LABEL[b.status] ?? b.status} tone={BILL_STATUS_TONE[b.status] ?? 'neutral'} />
-      {b.archived ? <Badge label="Archived" tone="warning" icon="archive-outline" /> : null}
+      {b.archived ? <Badge label={t('admin.BusinessRecords.archived')} tone="warning" icon="archive-outline" /> : null}
     </View>
   );
   const body = wide ? (
@@ -57,7 +58,7 @@ export function BillRow({ bill: b, selected, onToggle, first }: { bill: AdminBil
         <Text variant="bodyStrong" numberOfLines={1} style={{ fontFamily: monoFont }}>{b.invoice_no ?? `#${b.code}`}</Text>
         <Text variant="caption" tone="subtle" numberOfLines={1}>{b.invoice_no ? `#${b.code} · ` : ''}{b.channel ?? 'POS'}</Text>
       </View>
-      <Text variant="small" tone={b.customer_name ? 'default' : 'subtle'} numberOfLines={1} style={{ flex: 1 }}>{b.customer_name ?? 'Walk-in'}</Text>
+      <Text variant="small" tone={b.customer_name ? 'default' : 'subtle'} numberOfLines={1} style={{ flex: 1 }}>{b.customer_name ?? t('admin.BusinessRecords.walk_in')}</Text>
       <View style={{ flex: 1 }}>{status}</View>
       <Text variant="small" tone="muted" numberOfLines={1} style={{ flex: 1 }}>{formatDateTime(b.created_at)}</Text>
       <Text variant="bodyStrong" style={{ width: 100, textAlign: 'right' }}>{money(b.total)}</Text>
@@ -68,7 +69,7 @@ export function BillRow({ bill: b, selected, onToggle, first }: { bill: AdminBil
         <Text variant="bodyStrong" numberOfLines={1} style={{ flex: 1, fontFamily: monoFont }}>{b.invoice_no ?? `#${b.code}`}</Text>
         <Text variant="bodyStrong">{money(b.total)}</Text>
       </View>
-      <Text variant="small" tone="muted" numberOfLines={1}>{b.customer_name ?? 'Walk-in'} · {formatDateTime(b.created_at)}</Text>
+      <Text variant="small" tone="muted" numberOfLines={1}>{b.customer_name ?? t('admin.BusinessRecords.walk_in')} · {formatDateTime(b.created_at)}</Text>
       {status}
     </View>
   );
@@ -97,27 +98,27 @@ export function DeleteConfirm({ bills, typed, onTyped, onArchiveInstead, error }
   const invoices = bills.filter((b) => b.invoice_no).length;
   return (
     <View style={{ gap: 12 }}>
-      <Callout tone="danger" icon="trash-outline" title="Permanent: this can't be undone"
-        action={onArchiveInstead ? <Button title="Archive instead" icon="archive-outline" size="sm" variant="secondary" onPress={onArchiveInstead} /> : undefined}>
+      <Callout tone="danger" icon="trash-outline" title={t('admin.BusinessRecords.permanent_this_can_t_be_undone')}
+        action={onArchiveInstead ? <Button title={t('admin.BusinessRecords.archive_instead')} icon="archive-outline" size="sm" variant="secondary" onPress={onArchiveInstead} /> : undefined}>
         <Text variant="small">
-          {`The bill${bills.length === 1 ? '' : 's'}, items, payments and kitchen tickets are removed. Stock, loyalty points and offer usage are reversed first. A full copy is kept in the platform audit log.`}
+          {t('admin.BusinessRecords.the_bill_v_items_payments_and_kitchen', { v: bills.length === 1 ? '' : 's' })}
         </Text>
       </Callout>
-      <Callout tone="warning" icon="document-text-outline" title={invoices ? `${plural(invoices, 'tax invoice')} in this selection` : 'Archiving is preferred for GST'}>
+      <Callout tone="warning" icon="document-text-outline" title={invoices ? t('admin.BusinessRecords.plural_in_this_selection', { plural: plural(invoices, 'tax invoice') }) : t('admin.BusinessRecords.archiving_is_preferred_for_gst')}>
         {invoices
-          ? 'Deleting tax invoices leaves gaps in the GST invoice number series, which the business must explain at filing. Archive instead unless the owner insists.'
-          : 'Archived bills disappear from lists and reports but stay on record, and can be restored. Delete only when the owner really needs the data gone.'}
+          ? t('admin.BusinessRecords.deleting_tax_invoices_leaves_gaps_in_the')
+          : t('admin.BusinessRecords.archived_bills_disappear_from_lists_and')}
       </Callout>
-      <Input label='Type DELETE to confirm' required value={typed} onChangeText={(v) => onTyped(v.toUpperCase())} autoCapitalize="characters" autoCorrect={false}
-        maxLength={6} placeholder="DELETE" error={error} accessibilityLabel="Type DELETE to confirm" />
+      <Input label={t('common.type_delete_to_confirm')} required value={typed} onChangeText={(v) => onTyped(v.toUpperCase())} autoCapitalize="characters" autoCorrect={false}
+        maxLength={6} placeholder={t('common.delete')} error={error} accessibilityLabel={t('common.type_delete_to_confirm')} />
     </View>
   );
 }
 
 const ACTION_COPY: Record<RecordsAction, { title: string; button: string; icon: keyof typeof Ionicons.glyphMap; done: string }> = {
-  archive: { title: 'Archive bills', button: 'Archive', icon: 'archive-outline', done: 'archived' },
-  unarchive: { title: 'Restore archived bills', button: 'Restore', icon: 'arrow-undo-outline', done: 'restored' },
-  delete: { title: 'Delete bills permanently', button: 'Delete permanently', icon: 'trash-outline', done: 'deleted' },
+  archive: { get title() { return t('common.archive_bills'); }, button: 'Archive', icon: 'archive-outline', done: 'archived' },
+  unarchive: { get title() { return t('admin.BusinessRecords.restore_archived_bills'); }, button: 'Restore', icon: 'arrow-undo-outline', done: 'restored' },
+  delete: { get title() { return t('admin.BusinessRecords.delete_bills_permanently'); }, button: 'Delete permanently', icon: 'trash-outline', done: 'deleted' },
 };
 
 export function RecordsActionSheet({ businessId, businessName, bills, action: initial, onClose, onDone }: {
@@ -162,7 +163,7 @@ export function RecordsActionSheet({ businessId, businessName, bills, action: in
     <Sheet visible onClose={onClose} title={copy.title} subtitle={`${businessName} · ${billsSummary(targets)}`} width={640}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
           <Button title={copy.button} icon={copy.icon} variant={action === 'delete' ? 'danger' : 'primary'} onPress={submit} loading={saving}
             disabled={!online || !targets.length || (action === 'delete' && typed !== 'DELETE')} />
         </View>
@@ -170,17 +171,17 @@ export function RecordsActionSheet({ businessId, businessName, bills, action: in
       {formError ? <Callout tone="danger">{formError}</Callout> : null}
       {action === 'archive' ? (
         <Callout tone="info" icon="archive-outline">
-          {`Archived bills disappear from the business's lists and reports but stay on record and can be restored here.${running ? ` ${plural(running, 'running bill')} will be cancelled first (frees the table, stops the kitchen).` : ''}`}
+          {t('admin.BusinessRecords.archived_bills_disappear_from_the', { v: running ? t('admin.BusinessRecords.plural_will_be_cancelled_first_frees_the', { plural: plural(running, 'running bill') }) : '' })}
         </Callout>
       ) : null}
-      {action === 'unarchive' ? <Callout tone="info">The bills show again in the business's lists and reports.</Callout> : null}
+      {action === 'unarchive' ? <Callout tone="info">{t('admin.BusinessRecords.the_bills_show_again_in_the_business_s')}</Callout> : null}
       {action === 'delete' ? (
         <DeleteConfirm bills={targets} typed={typed} onTyped={setTyped} error={submitted ? errors.typed : undefined}
           onArchiveInstead={bills.some((b) => !b.archived) ? () => { setAction('archive'); setTyped(''); } : undefined} />
       ) : null}
-      {!targets.length ? <Callout tone="warning">None of the selected bills can be {copy.done}.</Callout> : null}
-      <Input label="Reason" required value={reason} onChangeText={setReason} maxLength={200} error={submitted ? errors.reason : undefined}
-        placeholder={action === 'delete' ? 'e.g. Owner request: test bills from training' : 'e.g. Duplicate bill entered by mistake'} />
+      {!targets.length ? <Callout tone="warning">{t('admin.BusinessRecords.none_of_the_selected_bills_can_be_done', { done: copy.done })}</Callout> : null}
+      <Input label={t('common.reason')} required value={reason} onChangeText={setReason} maxLength={200} error={submitted ? errors.reason : undefined}
+        placeholder={action === 'delete' ? t('admin.BusinessRecords.e_g_owner_request_test_bills_from_training') : t('admin.BusinessRecords.e_g_duplicate_bill_entered_by_mistake')} />
       <Card padded={false} style={{ overflow: 'hidden' }}>
         <ScrollView style={{ maxHeight: 260 }} nestedScrollEnabled>
           {targets.map((b, i) => <BillRow key={b.id} bill={b} first={i === 0} />)}
@@ -192,7 +193,7 @@ export function RecordsActionSheet({ businessId, businessName, bills, action: in
 
 type StatusFilter = 'all' | BillStatus;
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'All' }, { value: 'completed', label: 'Paid' }, { value: 'open', label: 'Running' }, { value: 'cancelled', label: 'Cancelled' },
+  { value: 'all', get label() { return t('common.all'); } }, { value: 'completed', get label() { return t('common.paid'); } }, { value: 'open', get label() { return t('common.running'); } }, { value: 'cancelled', get label() { return t('common.cancelled'); } },
 ];
 
 /** "Records" section of the business page. */
@@ -225,39 +226,39 @@ export function RecordsCard({ businessId, businessName, editable }: { businessId
     <Card style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text variant="h3" accessibilityRole="header">Records</Text>
-          <Text variant="small" tone="muted">The business can't delete bills itself. Archive (preferred) or permanently delete them here when the owner asks.</Text>
+          <Text variant="h3" accessibilityRole="header">{t('admin.BusinessRecords.records')}</Text>
+          <Text variant="small" tone="muted">{t('admin.BusinessRecords.the_business_can_t_delete_bills_itself')}</Text>
         </View>
       </View>
-      <Input value={query} onChangeText={setQuery} icon="search" placeholder="Bill number, invoice number or customer" autoCapitalize="none" autoCorrect={false}
-        maxLength={60} accessibilityLabel="Search bills"
-        right={query ? <Button icon="close" size="sm" variant="ghost" accessibilityLabel="Clear search" onPress={() => setQuery('')} /> : undefined} />
+      <Input value={query} onChangeText={setQuery} icon="search" placeholder={t('admin.BusinessRecords.bill_number_invoice_number_or_customer')} autoCapitalize="none" autoCorrect={false}
+        maxLength={60} accessibilityLabel={t('admin.BusinessRecords.search_bills')}
+        right={query ? <Button icon="close" size="sm" variant="ghost" accessibilityLabel={t('common.clear_search')} onPress={() => setQuery('')} /> : undefined} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>
         {STATUS_FILTERS.map((s) => <Chip key={s.value} label={s.label} selected={status === s.value} onPress={() => setStatus(s.value)} />)}
-        <Chip label="Include archived" icon={archived ? 'checkmark' : 'archive-outline'} selected={archived} onPress={() => setArchived((v) => !v)} />
+        <Chip label={t('admin.BusinessRecords.include_archived')} icon={archived ? 'checkmark' : 'archive-outline'} selected={archived} onPress={() => setArchived((v) => !v)} />
       </ScrollView>
 
       {editable && picked.length ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Text variant="smallStrong" style={{ flex: 1, minWidth: 160 }}>{billsSummary(picked)} selected</Text>
-          {picked.length > pickedArchived ? <Button title="Archive" icon="archive-outline" size="sm" variant="secondary" onPress={() => setActing('archive')} disabled={!online} /> : null}
-          {pickedArchived ? <Button title="Restore" icon="arrow-undo-outline" size="sm" variant="secondary" onPress={() => setActing('unarchive')} disabled={!online} /> : null}
-          <Button title={isPhone ? 'Delete' : 'Delete permanently'} icon="trash-outline" size="sm" variant="danger" onPress={() => setActing('delete')} disabled={!online} />
-          <Button title="Clear" size="sm" variant="ghost" onPress={() => setSelected(new Set())} />
+          <Text variant="smallStrong" style={{ flex: 1, minWidth: 160 }}>{billsSummary(picked)} {t('admin.BusinessRecords.selected')}</Text>
+          {picked.length > pickedArchived ? <Button title={t('admin.BusinessRecords.archive')} icon="archive-outline" size="sm" variant="secondary" onPress={() => setActing('archive')} disabled={!online} /> : null}
+          {pickedArchived ? <Button title={t('admin.BusinessRecords.restore')} icon="arrow-undo-outline" size="sm" variant="secondary" onPress={() => setActing('unarchive')} disabled={!online} /> : null}
+          <Button title={isPhone ? t('common.delete_2') : t('admin.BusinessRecords.delete_permanently')} icon="trash-outline" size="sm" variant="danger" onPress={() => setActing('delete')} disabled={!online} />
+          <Button title={t('common.clear')} size="sm" variant="ghost" onPress={() => setSelected(new Set())} />
         </View>
       ) : null}
 
-      {bills.loading && !bills.data ? <Loading label="Loading bills" /> : null}
+      {bills.loading && !bills.data ? <Loading label={t('admin.BusinessRecords.loading_bills')} /> : null}
       {bills.error && !bills.data ? <ErrorState message={bills.error} onRetry={bills.reload} /> : null}
       {bills.data && rows.length === 0 ? (
-        <EmptyState icon="receipt-outline" title={q || status !== 'all' ? 'No bills match' : 'No bills yet'} message={q ? 'Try a different number or name.' : undefined} />
+        <EmptyState icon="receipt-outline" title={q || status !== 'all' ? t('admin.BusinessRecords.no_bills_match') : t('admin.BusinessRecords.no_bills_yet')} message={q ? t('admin.BusinessRecords.try_a_different_number_or_name') : undefined} />
       ) : null}
       {rows.length ? (
         <Card padded={false} style={{ overflow: 'hidden' }}>
           {editable ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 4 }}>
-              <Checkbox checked={allPicked} label="Select all shown" onToggle={() => setSelected(allPicked ? new Set() : new Set(rows.map((b) => b.id)))} />
-              <Text variant="small" tone="muted">{allPicked ? 'All shown selected' : `Select all ${rows.length} shown`}</Text>
+              <Checkbox checked={allPicked} label={t('admin.BusinessRecords.select_all_shown')} onToggle={() => setSelected(allPicked ? new Set() : new Set(rows.map((b) => b.id)))} />
+              <Text variant="small" tone="muted">{allPicked ? t('admin.BusinessRecords.all_shown_selected') : t('admin.BusinessRecords.select_all_length_shown', { length: rows.length })}</Text>
             </View>
           ) : null}
           {editable ? <Divider /> : null}
@@ -266,7 +267,7 @@ export function RecordsCard({ businessId, businessName, editable }: { businessId
           ))}
         </Card>
       ) : null}
-      {rows.length >= 100 ? <Text variant="small" tone="subtle">Showing the latest 100. Search to find older bills.</Text> : null}
+      {rows.length >= 100 ? <Text variant="small" tone="subtle">{t('admin.BusinessRecords.showing_the_latest_100_search_to_find')}</Text> : null}
 
       {acting && picked.length ? (
         <RecordsActionSheet businessId={businessId} businessName={businessName} bills={picked} action={acting} onClose={() => setActing(null)}

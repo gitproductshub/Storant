@@ -3,6 +3,7 @@ import { Animated, Platform, ScrollView, StyleSheet, View, type DimensionValue, 
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Card, Text } from '@/components/ui';
+import { t } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -36,7 +37,7 @@ export function PanelError({ message, onRetry }: { message: string; onRetry: () 
     <View style={[styles.panelError, { backgroundColor: colors.dangerSoft, borderRadius: radius.md }]}>
       <Ionicons name="alert-circle-outline" size={18} color={colors.dangerText} />
       <Text variant="small" color={colors.dangerText} style={{ flex: 1 }}>{message}</Text>
-      <Button title="Retry" size="sm" variant="secondary" icon="refresh" onPress={onRetry} />
+      <Button title={t('common.retry')} size="sm" variant="secondary" icon="refresh" onPress={onRetry} />
     </View>
   );
 }

@@ -1,7 +1,7 @@
 /**
  * Renewal flow shared by the lock screen and Settings → Plan & billing:
  * pick a plan and duration → apply an offer (live quote) → pay by UPI / bank → "I've paid" with the UTR.
- * Tallyko checks the payment and switches the business on; the screens re-check GET /subscription until then.
+ * Storant checks the payment and switches the business on; the screens re-check GET /subscription until then.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -24,6 +24,8 @@ import { ChoiceChips, Callout, FieldRow, Hairline, copyText, monoFont } from '@/
 import { formatDate, money } from '@/lib/format';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { KIND_LABEL, METHOD_LABEL, REQUEST_STATUS, featureLabel, limitsText, monthsText, upiLink } from './format';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 // ---------------------------------------------------------------------------
 // Selection + live quote
@@ -83,7 +85,7 @@ function PlanCard({ plan, selected, current, onPress }: { plan: SubscriptionPlan
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
-      accessibilityLabel={`${plan.name} plan, ${money(plan.price_monthly, '₹', true)} a month`}
+      accessibilityLabel={t('subscription.RenewFlow.name_plan_money_a_month', { name: plan.name, money: money(plan.price_monthly, '₹', true) })}
       style={({ hovered }: any) => [
         styles.planCard,
         {
@@ -97,7 +99,7 @@ function PlanCard({ plan, selected, current, onPress }: { plan: SubscriptionPlan
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={20} color={selected ? colors.primary : colors.textSubtle} />
         <Text variant="h3" style={{ flex: 1 }} numberOfLines={1}>{plan.name}</Text>
-        {current ? <Badge label="Your plan" tone="primary" /> : null}
+        {current ? <Badge label={t('subscription.RenewFlow.your_plan')} tone="primary" /> : null}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
         <Text variant="moneyLarge">{money(plan.price_monthly, '₹', true)}</Text>
@@ -112,7 +114,7 @@ function PlanCard({ plan, selected, current, onPress }: { plan: SubscriptionPlan
             <Text variant="small" numberOfLines={1}>{featureLabel(f)}</Text>
           </View>
         ))}
-        {more > 0 ? <Text variant="small" tone="subtle">+ {more} more</Text> : null}
+        {more > 0 ? <Text variant="small" tone="subtle">{t('subscription.RenewFlow.more_more', { more })}</Text> : null}
       </View>
     </Pressable>
   );
@@ -127,7 +129,7 @@ function DurationTile({ label, price, perMonth, saving, months, selected, onPres
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
-      accessibilityLabel={`${label}, ${money(price, '₹', true)}${saving ? `, save ${money(saving, '₹', true)}` : ''}`}
+      accessibilityLabel={`${label}, ${money(price, '₹', true)}${saving ? t('subscription.RenewFlow.save_money', { money: money(saving, '₹', true) }) : ''}`}
       style={({ hovered }: any) => [
         styles.duration,
         {
@@ -140,8 +142,8 @@ function DurationTile({ label, price, perMonth, saving, months, selected, onPres
     >
       <Text variant="smallStrong" color={selected ? colors.primarySoftText : colors.text} numberOfLines={1}>{label}</Text>
       <Text variant="money">{money(price, '₹', true)}</Text>
-      <Text variant="caption" tone="muted">{months > 1 ? `${money(perMonth, '₹', true)}/month · ${monthsText(months)}` : '1 month'}</Text>
-      {saving > 0 ? <Badge label={`Save ${money(saving, '₹', true)}`} tone="success" style={{ marginTop: 2 }} /> : null}
+      <Text variant="caption" tone="muted">{months > 1 ? t('subscription.RenewFlow.money_month_monthstext', { money: money(perMonth, '₹', true), monthsText: monthsText(months) }) : t('subscription.RenewFlow.1_month')}</Text>
+      {saving > 0 ? <Badge label={t('subscription.RenewFlow.save_money_2', { money: money(saving, '₹', true) })} tone="success" style={{ marginTop: 2 }} /> : null}
     </Pressable>
   );
 }
@@ -158,10 +160,10 @@ function OfferRow({ offer, active, onApply }: { offer: SubscriptionOffer; active
         </View>
         <Text variant="small">{offer.description || offer.summary}</Text>
         <Text variant="caption" tone="subtle">
-          {offer.summary}{offer.ends_at ? ` · until ${formatDate(offer.ends_at)}` : ''}{offer.new_businesses_only ? ' · first paid subscription only' : ''}
+          {offer.summary}{offer.ends_at ? t('subscription.RenewFlow.until_formatdate', { formatDate: formatDate(offer.ends_at) }) : ''}{offer.new_businesses_only ? t('subscription.RenewFlow.first_paid_subscription_only') : ''}
         </Text>
       </View>
-      {active ? <Badge label="Applied" tone="success" icon="checkmark" /> : <Button title="Apply" size="sm" variant="secondary" onPress={onApply} />}
+      {active ? <Badge label={t('subscription.RenewFlow.applied')} tone="success" icon="checkmark" /> : <Button title={t('common.apply')} size="sm" variant="secondary" onPress={onApply} />}
     </View>
   );
 }
@@ -186,7 +188,7 @@ export function PaymentCard({ payment, amount, note }: { payment: PaymentDetails
     try {
       await Linking.openURL(link);
     } catch {
-      toast.warning('No UPI app found. Pay to the UPI ID shown instead.');
+      toast.warning(t('subscription.RenewFlow.no_upi_app_found_pay_to_the_upi_id_shown'));
     }
   };
 
@@ -196,44 +198,44 @@ export function PaymentCard({ payment, amount, note }: { payment: PaymentDetails
       {hasUpi ? (
         <View style={{ flexDirection: isPhone ? 'column' : 'row', gap: 16, alignItems: isPhone ? 'stretch' : 'center' }}>
           <View style={{ flex: 1, gap: 8, minWidth: 0 }}>
-            <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>Pay by UPI</Text>
+            <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>{t('subscription.RenewFlow.pay_by_upi')}</Text>
             <View style={[styles.copyBox, { borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surfaceSunken }]}>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text variant="bodyStrong" style={{ fontFamily: monoFont }} selectable numberOfLines={1}>{payment.upi_id}</Text>
                 {payment.payee_name ? <Text variant="small" tone="muted" numberOfLines={1}>{payment.payee_name}</Text> : null}
               </View>
-              <IconButton icon="copy-outline" accessibilityLabel="Copy UPI ID" onPress={() => void copyText(payment.upi_id, 'UPI ID')} />
+              <IconButton icon="copy-outline" accessibilityLabel={t('subscription.RenewFlow.copy_upi_id')} onPress={() => void copyText(payment.upi_id, 'UPI ID')} />
             </View>
-            {amount ? <Text variant="small">Amount: <Text variant="smallStrong">{money(amount)}</Text></Text> : null}
-            {isPhone ? <Button title={amount ? `Pay ${money(amount, '₹', true)} in a UPI app` : 'Open a UPI app'} icon="phone-portrait-outline" onPress={openUpi} full /> : null}
+            {amount ? <Text variant="small">{t('subscription.RenewFlow.amount')} <Text variant="smallStrong">{money(amount)}</Text></Text> : null}
+            {isPhone ? <Button title={amount ? t('subscription.RenewFlow.pay_money_in_a_upi_app', { money: money(amount, '₹', true) }) : t('subscription.RenewFlow.open_a_upi_app')} icon="phone-portrait-outline" onPress={openUpi} full /> : null}
           </View>
           {!isPhone ? (
             <View style={{ alignItems: 'center', gap: 6 }}>
               <View style={{ padding: 8, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border }}>
                 <QrCode value={link} size={132} />
               </View>
-              <Text variant="caption" tone="subtle">Scan with any UPI app</Text>
+              <Text variant="caption" tone="subtle">{t('subscription.RenewFlow.scan_with_any_upi_app')}</Text>
             </View>
           ) : null}
         </View>
       ) : null}
       {payment.bank_details?.trim() ? (
         <View style={{ gap: 8 }}>
-          <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>Bank transfer</Text>
+          <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>{t('common.bank_transfer')}</Text>
           <View style={[styles.copyBox, { borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surfaceSunken, alignItems: 'flex-start' }]}>
             <Text variant="small" selectable style={{ flex: 1, minWidth: 0, fontFamily: monoFont }}>{payment.bank_details}</Text>
-            <IconButton icon="copy-outline" accessibilityLabel="Copy bank details" onPress={() => void copyText(payment.bank_details, 'Bank details')} />
+            <IconButton icon="copy-outline" accessibilityLabel={t('subscription.RenewFlow.copy_bank_details')} onPress={() => void copyText(payment.bank_details, 'Bank details')} />
           </View>
         </View>
       ) : null}
       {!hasUpi && !payment.bank_details?.trim() ? (
-        <Callout tone="neutral">Contact Tallyko support below for payment details.</Callout>
+        <Callout tone="neutral">{t('subscription.RenewFlow.contact_brand_support_below_for_payment', { brand: brand.name })}</Callout>
       ) : null}
     </View>
   );
 }
 
-/** Phone and email of Tallyko billing support. */
+/** Phone and email of Storant billing support. */
 export function SupportLinks({ payment }: { payment: PaymentDetails | null | undefined }) {
   const phone = payment?.support_phone?.trim();
   const email = payment?.support_email?.trim();
@@ -242,12 +244,12 @@ export function SupportLinks({ payment }: { payment: PaymentDetails | null | und
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       {phone ? <Button title={phone} icon="call-outline" variant="secondary" size="sm" onPress={() => void open(`tel:${phone.replace(/\s+/g, '')}`)} /> : null}
-      {email ? <Button title={email} icon="mail-outline" variant="secondary" size="sm" onPress={() => void open(`mailto:${email}?subject=${encodeURIComponent('Tallyko subscription')}`)} /> : null}
+      {email ? <Button title={email} icon="mail-outline" variant="secondary" size="sm" onPress={() => void open(`mailto:${email}?subject=${encodeURIComponent(`${brand.name} subscription`)}`)} /> : null}
     </View>
   );
 }
 
-/** Payment claims the owner sent: pending, approved, or rejected with Tallyko's reason. */
+/** Payment claims the owner sent: pending, approved, or rejected with Storant's reason. */
 export function RequestsList({ requests, plans, limit = 5 }: { requests: PaymentRequest[]; plans: SubscriptionPlan[]; limit?: number }) {
   if (!requests.length) return null;
   const name = (key: string) => plans.find((p) => p.key === key)?.name ?? key;
@@ -265,13 +267,13 @@ export function RequestsList({ requests, plans, limit = 5 }: { requests: Payment
               <Text variant="money">{money(r.amount)}</Text>
             </View>
             <Text variant="small" tone="muted">
-              {METHOD_LABEL[r.method] ?? r.method} · Ref <Text variant="small" style={{ fontFamily: monoFont }} selectable>{r.reference}</Text>
-              {r.offer_code ? ` · Offer ${r.offer_code}` : ''} · Sent {formatDate(r.created_at)}
+              {METHOD_LABEL[r.method] ?? r.method} {t('subscription.RenewFlow.ref')} <Text variant="small" style={{ fontFamily: monoFont }} selectable>{r.reference}</Text>
+              {r.offer_code ? t('subscription.RenewFlow.offer_offer_code', { offer_code: r.offer_code }) : ''} {t('subscription.RenewFlow.sent_formatdate', { formatDate: formatDate(r.created_at) })}
             </Text>
             {r.status === 'rejected' ? (
-              <Callout tone="danger" title="Reason">{r.review_note || 'Tallyko could not match this payment. Check the reference number, or contact support.'}</Callout>
+              <Callout tone="danger" title={t('common.reason')}>{r.review_note || t('subscription.RenewFlow.brand_could_not_match_this_payment_check', { brand: brand.name })}</Callout>
             ) : r.review_note ? (
-              <Text variant="small" tone="muted">Note from Tallyko: {r.review_note}</Text>
+              <Text variant="small" tone="muted">{t('subscription.RenewFlow.note_from_brand', { brand: brand.name })} {r.review_note}</Text>
             ) : null}
           </View>
         );
@@ -282,7 +284,7 @@ export function RequestsList({ requests, plans, limit = 5 }: { requests: Payment
 
 /** Past and current subscription periods. */
 export function HistoryList({ history }: { history: SubscriptionPeriod[] }) {
-  if (!history.length) return <Text tone="muted">No subscription periods yet.</Text>;
+  if (!history.length) return <Text tone="muted">{t('subscription.RenewFlow.no_subscription_periods_yet')}</Text>;
   const now = Date.now();
   return (
     <View style={{ gap: 10 }}>
@@ -294,9 +296,9 @@ export function HistoryList({ history }: { history: SubscriptionPeriod[] }) {
           <View key={h.id} style={{ gap: 4 }}>
             {i > 0 ? <Hairline /> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: i > 0 ? 6 : 0 }}>
-              <Text variant="bodyStrong" style={{ flexShrink: 1 }}>{h.plan_name ?? 'Plan'}{h.months ? ` · ${monthsText(h.months)}` : ''}</Text>
+              <Text variant="bodyStrong" style={{ flexShrink: 1 }}>{h.plan_name ?? t('common.plan')}{h.months ? ` · ${monthsText(h.months)}` : ''}</Text>
               <Badge label={KIND_LABEL[h.kind] ?? h.kind} tone={h.kind === 'paid' ? 'primary' : h.kind === 'trial' ? 'info' : 'neutral'} />
-              {running ? <Badge label="Current" tone="success" /> : null}
+              {running ? <Badge label={t('common.current')} tone="success" /> : null}
               <View style={{ flex: 1 }} />
               <Text variant="money">{h.amount_paid ? money(h.amount_paid) : '—'}</Text>
             </View>
@@ -315,8 +317,8 @@ export function HistoryList({ history }: { history: SubscriptionPeriod[] }) {
 // ---------------------------------------------------------------------------
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: 'upi', label: 'UPI' }, { value: 'bank_transfer', label: 'Bank transfer' }, { value: 'card', label: 'Card' },
-  { value: 'cash', label: 'Cash' }, { value: 'cheque', label: 'Cheque' }, { value: 'other', label: 'Other' },
+  { value: 'upi', label: 'UPI' }, { value: 'bank_transfer', get label() { return t('common.bank_transfer'); } }, { value: 'card', get label() { return t('common.card'); } },
+  { value: 'cash', get label() { return t('common.cash'); } }, { value: 'cheque', get label() { return t('common.cheque'); } }, { value: 'other', get label() { return t('common.other'); } },
 ];
 
 function ClaimForm({ planKey, months, offerCode, quote, onSubmitted }: {
@@ -354,7 +356,7 @@ function ClaimForm({ planKey, months, offerCode, quote, onSubmitted }: {
       await subscriptionApi.claim({
         plan_key: planKey, months, offer_code: offerCode, amount: value, method, reference: reference.trim(), note: note.trim() || null,
       });
-      toast.success("Thanks! We'll confirm your payment shortly.");
+      toast.success(t('subscription.RenewFlow.thanks_we_ll_confirm_your_payment_shortly'));
       setReference('');
       setNote('');
       setSubmitted(false);
@@ -371,21 +373,21 @@ function ClaimForm({ planKey, months, offerCode, quote, onSubmitted }: {
   return (
     <View style={{ gap: 14 }}>
       <FieldRow>
-        <Input label="Amount paid" value={amount} prefix="₹" keyboardType="decimal-pad" maxLength={10}
+        <Input label={t('subscription.RenewFlow.amount_paid')} value={amount} prefix="₹" keyboardType="decimal-pad" maxLength={10}
           onChangeText={(v) => { setAmount(v); setAmountTouched(true); }}
           error={submitted ? errors.amount : undefined}
-          hint={mismatch ? `The price for this choice is ${money(quote!.amount)}.` : undefined} />
-        <Input label="UTR / reference number" value={reference} onChangeText={(v) => { setReference(v); setServerError(null); }}
-          autoCapitalize="characters" autoCorrect={false} maxLength={100} placeholder="e.g. 4092 8177 3112"
+          hint={mismatch ? t('subscription.RenewFlow.the_price_for_this_choice_is_money', { money: money(quote!.amount) }) : undefined} />
+        <Input label={t('subscription.RenewFlow.utr_reference_number')} value={reference} onChangeText={(v) => { setReference(v); setServerError(null); }}
+          autoCapitalize="characters" autoCorrect={false} maxLength={100} placeholder={t('subscription.RenewFlow.e_g_4092_8177_3112')}
           error={submitted ? errors.reference : undefined} required />
       </FieldRow>
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Paid by</Text>
-        <ChoiceChips value={method} options={METHODS} onChange={setMethod} accessibilityLabel="Payment method" />
+        <Text variant="smallStrong" tone="muted">{t('subscription.RenewFlow.paid_by')}</Text>
+        <ChoiceChips value={method} options={METHODS} onChange={setMethod} accessibilityLabel={t('subscription.RenewFlow.payment_method')} />
       </View>
-      <Input label="Note for Tallyko (optional)" value={note} onChangeText={setNote} maxLength={300} placeholder="e.g. Paid from PhonePe, name on account" />
+      <Input label={t('subscription.RenewFlow.note_for_brand_optional', { brand: brand.name })} value={note} onChangeText={setNote} maxLength={300} placeholder={t('subscription.RenewFlow.e_g_paid_from_phonepe_name_on_account')} />
       {serverError ? <Callout tone="danger">{serverError}</Callout> : null}
-      <Button title="I've paid — send for confirmation" icon="checkmark-done" onPress={submit} loading={saving} style={{ alignSelf: 'flex-start' }} />
+      <Button title={t('subscription.RenewFlow.i_ve_paid_send_for_confirmation')} icon="checkmark-done" onPress={submit} loading={saving} style={{ alignSelf: 'flex-start' }} />
     </View>
   );
 }
@@ -423,15 +425,15 @@ export function RenewFlow({ info, onSubmitted, allowTwoColumns = true }: {
   };
   const offerValid = !!code && !!quote && quote.offer_error == null && quote.offer?.code === code;
   const pending = info.requests.filter((r) => r.status === 'pending');
-  const note = useMemo(() => `Tallyko ${plan?.name ?? ''} ${monthsText(months)}`.trim(), [plan, months]);
+  const note = useMemo(() => `${brand.name} ${plan?.name ?? ''} ${monthsText(months)}`.trim(), [plan, months]);
 
   if (!plans.length || !plan) {
-    return <Callout tone="neutral">No plans are available right now. Contact Tallyko support to renew.</Callout>;
+    return <Callout tone="neutral">{t('subscription.RenewFlow.no_plans_are_available_right_now_contact', { brand: brand.name })}</Callout>;
   }
 
   const choose = (
     <Card style={{ gap: 18 }}>
-      <StepTitle n={1} title="Choose a plan" hint="You can change plans at any renewal." />
+      <StepTitle n={1} title={t('subscription.RenewFlow.choose_a_plan')} hint={t('subscription.RenewFlow.you_can_change_plans_at_any_renewal')} />
       <View style={{ flexDirection: isPhone ? 'column' : 'row', flexWrap: 'wrap', gap: 12 }} accessibilityRole="radiogroup">
         {plans.map((p) => (
           <View key={p.key} style={isPhone ? undefined : { flexGrow: 1, flexBasis: 220, minWidth: 0 }}>
@@ -440,7 +442,7 @@ export function RenewFlow({ info, onSubmitted, allowTwoColumns = true }: {
         ))}
       </View>
       <Hairline />
-      <StepTitle n={2} title="How long?" hint="Longer periods cost less per month." />
+      <StepTitle n={2} title={t('subscription.RenewFlow.how_long')} hint={t('subscription.RenewFlow.longer_periods_cost_less_per_month')} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} accessibilityRole="radiogroup">
         {plan.options.map((o) => (
           <View key={o.months} style={{ flexGrow: 1, flexBasis: isPhone ? '45%' : 150, minWidth: 0 }}>
@@ -450,7 +452,7 @@ export function RenewFlow({ info, onSubmitted, allowTwoColumns = true }: {
         ))}
       </View>
       <Hairline />
-      <StepTitle n={3} title="Offer code" hint="Optional. Codes are checked as you type." />
+      <StepTitle n={3} title={t('subscription.RenewFlow.offer_code')} hint={t('subscription.RenewFlow.optional_codes_are_checked_as_you_type')} />
       {info.offers.length ? (
         <View style={{ gap: 8 }}>
           {info.offers.map((o) => (
@@ -461,24 +463,24 @@ export function RenewFlow({ info, onSubmitted, allowTwoColumns = true }: {
       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Input value={codeInput} onChangeText={(v) => { setCodeInput(v.toUpperCase()); if (!v.trim()) setCode(''); }}
-            placeholder="Enter offer code" autoCapitalize="characters" autoCorrect={false} maxLength={40} icon="pricetag-outline"
-            onSubmitEditing={() => applyCode(codeInput)} accessibilityLabel="Offer code"
+            placeholder={t('subscription.RenewFlow.enter_offer_code')} autoCapitalize="characters" autoCorrect={false} maxLength={40} icon="pricetag-outline"
+            onSubmitEditing={() => applyCode(codeInput)} accessibilityLabel={t('subscription.RenewFlow.offer_code')}
             error={code && quote?.offer_error && !quoting ? quote.offer_error : undefined} />
         </View>
         {code && code === codeInput.trim() ? (
-          <Button title="Remove" variant="ghost" onPress={() => applyCode('')} />
+          <Button title={t('common.remove')} variant="ghost" onPress={() => applyCode('')} />
         ) : (
-          <Button title="Apply" variant="secondary" onPress={() => applyCode(codeInput)} disabled={!codeInput.trim()} />
+          <Button title={t('common.apply')} variant="secondary" onPress={() => applyCode(codeInput)} disabled={!codeInput.trim()} />
         )}
       </View>
       <View style={[styles.summary, { backgroundColor: colors.surfaceSunken }]}>
         {quoteError ? <Text variant="small" tone="danger">{quoteError}</Text> : null}
         <QuoteLine label={`${plan.name} · ${monthsText(months)}`} value={quote ? money(quote.list_price) : '…'} />
-        {quote && quote.discount > 0 ? <QuoteLine label={`Offer ${quote.offer?.code ?? ''}`} value={`− ${money(quote.discount)}`} tone="success" /> : null}
-        {quote && quote.extra_days > 0 ? <QuoteLine label="Extra days free" value={`+ ${quote.extra_days} days`} tone="success" /> : null}
+        {quote && quote.discount > 0 ? <QuoteLine label={t('subscription.RenewFlow.offer_v', { v: quote.offer?.code ?? '' })} value={`− ${money(quote.discount)}`} tone="success" /> : null}
+        {quote && quote.extra_days > 0 ? <QuoteLine label={t('subscription.RenewFlow.extra_days_free')} value={`+ ${quote.extra_days} days`} tone="success" /> : null}
         <Hairline />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <Text variant="bodyStrong">Amount to pay</Text>
+          <Text variant="bodyStrong">{t('subscription.RenewFlow.amount_to_pay')}</Text>
           <Text variant="moneyLarge" style={{ opacity: quoting ? 0.5 : 1 }}>{quote ? money(quote.amount) : '…'}</Text>
         </View>
       </View>
@@ -487,13 +489,13 @@ export function RenewFlow({ info, onSubmitted, allowTwoColumns = true }: {
 
   const pay = (
     <Card style={{ gap: 18 }}>
-      <StepTitle n={4} title="Pay" hint={quote ? `Pay ${money(quote.amount)} to Tallyko.` : undefined} />
+      <StepTitle n={4} title={t('common.pay')} hint={quote ? t('subscription.RenewFlow.pay_money_to_brand', { money: money(quote.amount), brand: brand.name }) : undefined} />
       <PaymentCard payment={info.payment} amount={quote?.amount ?? null} note={note} />
       <Hairline />
-      <StepTitle n={5} title="Tell us you've paid" hint="Tallyko checks the payment and switches your account on — usually within a few hours." />
+      <StepTitle n={5} title={t('subscription.RenewFlow.tell_us_you_ve_paid')} hint={t('subscription.RenewFlow.brand_checks_the_payment_and_switches', { brand: brand.name })} />
       {pending.length ? (
-        <Callout tone="info" title={`${pending.length} payment${pending.length === 1 ? '' : 's'} waiting for confirmation`}>
-          You don't need to send it again. Send another only if you made a new payment.
+        <Callout tone="info" title={t('subscription.RenewFlow.length_payment_v_waiting_for_confirmation', { length: pending.length, v: pending.length === 1 ? '' : 's' })}>
+          {t('subscription.RenewFlow.you_don_t_need_to_send_it_again_send')}
         </Callout>
       ) : null}
       <ClaimForm planKey={plan.key} months={months} offerCode={offerValid ? code : null} quote={quote} onSubmitted={onSubmitted} />

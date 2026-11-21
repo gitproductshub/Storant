@@ -9,6 +9,8 @@ import { useApi } from '@/hooks/useApi';
 import { ago, formatTime } from '@/lib/format';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Avatar, ChipScroller, Row, utcRange, type RangeKey, type StaffCtx } from './shared';
+import { brand } from '@/config/brand';
+import { t, currentLocale } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 type Period = RangeKey | 'all';
@@ -16,23 +18,23 @@ type Period = RangeKey | 'all';
 const PAGE = 50;
 
 const CATEGORIES: { value: string; label: string; icon: IconName }[] = [
-  { value: '', label: 'Everything', icon: 'list-outline' },
-  { value: 'order', label: 'Bills', icon: 'receipt-outline' },
-  { value: 'staff', label: 'Staff', icon: 'people-outline' },
-  { value: 'role', label: 'Roles', icon: 'shield-half-outline' },
-  { value: 'settings', label: 'Settings', icon: 'settings-outline' },
-  { value: 'modules', label: 'Modules', icon: 'apps-outline' },
+  { value: '', get label() { return t('settings.staff_ActivityTab.everything'); }, icon: 'list-outline' },
+  { value: 'order', get label() { return t('common.bills'); }, icon: 'receipt-outline' },
+  { value: 'staff', get label() { return t('common.staff'); }, icon: 'people-outline' },
+  { value: 'role', get label() { return t('settings.staff_ActivityTab.roles'); }, icon: 'shield-half-outline' },
+  { value: 'settings', get label() { return t('common.settings'); }, icon: 'settings-outline' },
+  { value: 'modules', get label() { return t('settings.staff_ActivityTab.modules'); }, icon: 'apps-outline' },
   { value: 'tax', label: 'GST', icon: 'calculator-outline' },
-  { value: 'offer', label: 'Offers', icon: 'pricetag-outline' },
-  { value: 'inventory', label: 'Stock', icon: 'cube-outline' },
-  { value: 'customer', label: 'Customers', icon: 'heart-outline' },
+  { value: 'offer', get label() { return t('common.offers'); }, icon: 'pricetag-outline' },
+  { value: 'inventory', get label() { return t('settings.staff_ActivityTab.stock'); }, icon: 'cube-outline' },
+  { value: 'customer', get label() { return t('common.customers'); }, icon: 'heart-outline' },
 ];
 
 const PERIODS: { value: Period; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: '7d', label: '7 days' },
-  { value: '30d', label: '30 days' },
-  { value: 'all', label: 'All' },
+  { value: 'today', get label() { return t('common.today'); } },
+  { value: '7d', get label() { return t('common.7_days'); } },
+  { value: '30d', get label() { return t('common.30_days'); } },
+  { value: 'all', get label() { return t('common.all'); } },
 ];
 
 function categoryOf(action: string) {
@@ -54,7 +56,7 @@ function dayLabel(iso: string): string {
   yesterday.setDate(today.getDate() - 1);
   if (d.toDateString() === today.toDateString()) return 'Today';
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+  return d.toLocaleDateString(currentLocale(), { weekday: 'short', day: 'numeric', month: 'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
 function detailLines(e: AuditEntry): string[] {
@@ -77,8 +79,8 @@ export function ActivityTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: nu
   if (!ctx.hasFeature('audit_log')) {
     return (
       <Card>
-        <EmptyState icon="lock-closed-outline" title="Activity log isn't in your plan"
-          message="See who cancelled bills, gave discounts or changed staff and settings. Contact Tallyko to upgrade your plan." />
+        <EmptyState icon="lock-closed-outline" title={t('settings.staff_ActivityTab.activity_log_isn_t_in_your_plan')}
+          message={t('settings.staff_ActivityTab.see_who_cancelled_bills_gave_discounts_or', { brand: brand.name })} />
       </Card>
     );
   }
@@ -144,9 +146,9 @@ function Activity({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number }) {
         </View>
         {canSeeStaff ? (
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <Button title={selectedStaff ? selectedStaff.full_name || selectedStaff.email : 'Everyone'} icon="person-outline" iconRight="chevron-down"
-              variant="secondary" size="sm" onPress={() => setPicking(true)} accessibilityLabel="Filter by staff member" />
-            {staffId ? <Button icon="close" size="sm" variant="ghost" onPress={() => setStaffId(null)} accessibilityLabel="Show everyone" /> : null}
+            <Button title={selectedStaff ? selectedStaff.full_name || selectedStaff.email : t('common.everyone')} icon="person-outline" iconRight="chevron-down"
+              variant="secondary" size="sm" onPress={() => setPicking(true)} accessibilityLabel={t('settings.staff_ActivityTab.filter_by_staff_member')} />
+            {staffId ? <Button icon="close" size="sm" variant="ghost" onPress={() => setStaffId(null)} accessibilityLabel={t('settings.staff_ActivityTab.show_everyone')} /> : null}
           </View>
         ) : null}
       </View>
@@ -156,19 +158,19 @@ function Activity({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number }) {
         ))}
       </ChipScroller>
 
-      {q.loading && !q.data ? <Loading label="Loading activity" /> : null}
+      {q.loading && !q.data ? <Loading label={t('settings.staff_ActivityTab.loading_activity')} /> : null}
       {q.error && !q.data ? <ErrorState message={q.error} onRetry={q.reload} /> : null}
 
       {q.data ? (
         items.length === 0 ? (
           <Card>
-            <EmptyState icon="time-outline" title="Nothing recorded"
-              message={filtered ? 'No activity matches these filters. Try another filter or a longer period.' : 'Cancelled bills, discounts, voided items and changes to staff, roles and settings show up here.'}
-              action={filtered ? { label: 'Clear filters', icon: 'close', onPress: () => { setCategory(''); setStaffId(null); } } : undefined} />
+            <EmptyState icon="time-outline" title={t('settings.staff_ActivityTab.nothing_recorded')}
+              message={filtered ? t('settings.staff_ActivityTab.no_activity_matches_these_filters_try') : t('settings.staff_ActivityTab.cancelled_bills_discounts_voided_items')}
+              action={filtered ? { label: t('common.clear_filters'), icon: 'close', onPress: () => { setCategory(''); setStaffId(null); } } : undefined} />
           </Card>
         ) : (
           <>
-            <Text variant="small" tone="muted">Showing {items.length} of {total}</Text>
+            <Text variant="small" tone="muted">{t('settings.staff_ActivityTab.showing_length_of', { length: items.length })} {total}</Text>
             {groups.map((g) => (
               <View key={g.day} style={{ gap: 8 }}>
                 <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>{g.day}</Text>
@@ -198,7 +200,7 @@ function Activity({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number }) {
                           {details.map((line) => <Text key={line} variant="small" tone="muted" numberOfLines={3}>{line}</Text>)}
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <Ionicons name="person-circle-outline" size={14} color={colors.textSubtle} />
-                            <Text variant="small" tone="muted">{e.actor_name || 'System'}</Text>
+                            <Text variant="small" tone="muted">{e.actor_name || t('common.system')}</Text>
                             {isPhone ? <Text variant="small" tone="subtle">· {formatTime(e.created_at)}</Text> : null}
                           </View>
                         </View>
@@ -209,7 +211,7 @@ function Activity({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number }) {
               </View>
             ))}
             {items.length < total ? (
-              <Button title={`Load ${Math.min(PAGE, total - items.length)} more`} variant="secondary" icon="chevron-down" onPress={loadMore} loading={loadingMore}
+              <Button title={t('settings.staff_ActivityTab.load_min_more', { min: Math.min(PAGE, total - items.length) })} variant="secondary" icon="chevron-down" onPress={loadMore} loading={loadingMore}
                 style={{ alignSelf: 'center' }} />
             ) : null}
           </>
@@ -250,8 +252,8 @@ function StaffPicker({ staff, loading, error, value, onPick, onClose }: {
     );
   };
   return (
-    <Sheet visible onClose={onClose} title="Filter by staff" width={460}>
-      {staff.length > 8 ? <Input value={search} onChangeText={setSearch} placeholder="Search staff" icon="search-outline" autoCapitalize="none" autoCorrect={false} /> : null}
+    <Sheet visible onClose={onClose} title={t('settings.staff_ActivityTab.filter_by_staff')} width={460}>
+      {staff.length > 8 ? <Input value={search} onChangeText={setSearch} placeholder={t('settings.staff_ActivityTab.search_staff')} icon="search-outline" autoCapitalize="none" autoCorrect={false} /> : null}
       {loading ? <Loading /> : null}
       {error && !staff.length ? <Text tone="danger">{error}</Text> : null}
       <View style={{ gap: 2 }}>

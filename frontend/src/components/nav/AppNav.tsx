@@ -3,7 +3,7 @@
  *  - Desktop (≥1100dp): full sidebar that collapses to an icon rail; the choice is remembered on this device.
  *  - Tablet: icon rail.
  *  - Phone: bottom bar with four items + "More".
- * Badges: new online orders, pending kitchen tickets, Tallyko's answers to the owner's requests.
+ * Badges: new online orders, pending kitchen tickets, Storant's answers to the owner's requests.
  * Desktop web: "g" then a letter jumps to a section, "?" lists every shortcut, "[" collapses the sidebar.
  * The subscription state ("Development access", "Free demo · 5 days left") sits quietly in the account area.
  */
@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
+import { ThemeToggle } from '@/theme/ThemeToggle';
+import { LanguageMenu } from '@/i18n/LanguageSwitcher';
 import { useAuth } from '@/store/auth';
 import { useAccessInfo } from '@/store/access';
 import { useData } from '@/store/data';
@@ -27,14 +29,12 @@ import { useNavPrefs } from './navPrefs';
 import { ShortcutsSheet, goKeyItems, useGoShortcuts } from './shortcuts';
 import { useAccessLine, useOwnerAnswers, useOwnerAnswersPoll } from './shellStatus';
 
-const GROUP_LABEL = { sell: 'Sell', manage: 'Manage', business: 'Business' } as const;
+const GROUP_LABEL = { get sell() { return t('nav.AppNav.sell'); }, get manage() { return t('nav.AppNav.manage'); }, get business() { return t('common.business'); } } as const;
 const RAIL_W = 76;
 const FULL_W = 244;
-/** The sidebar is dark in both themes; a faint white wash is its hover (no theme token for it yet). */
-const SIDEBAR_HOVER = 'rgba(255,255,255,0.06)';
-const SIDEBAR_LINE = 'rgba(255,255,255,0.08)';
 
 import { initials } from '@/lib/initials';
+import { t } from '@/i18n';
 export { initials };
 
 export function useNavItems() {
@@ -115,7 +115,7 @@ function SideNav({ active, items, rail, canCollapse, onHelp }: {
   const syncText = `${online ? 'Online' : 'Offline'}${pending ? ` · ${pending} to sync` : ''}`;
 
   return (
-    <View style={[styles.side, { backgroundColor: colors.sidebar, width: rail ? RAIL_W : FULL_W, paddingTop: insets.top + 14, paddingBottom: insets.bottom + 10 }]}
+    <View style={[styles.side, { backgroundColor: colors.sidebar, borderRightWidth: 1, borderRightColor: colors.sidebarBorder, width: rail ? RAIL_W : FULL_W, paddingTop: insets.top + 14, paddingBottom: insets.bottom + 10 }]}
       {...(Platform.OS === 'web' ? ({ role: 'navigation' } as object) : {})}>
       <View style={[styles.sideHeader, rail && styles.centerRow]}>
         <LogoMark size={rail ? 32 : 34} />
@@ -133,7 +133,7 @@ function SideNav({ active, items, rail, canCollapse, onHelp }: {
           if (!groupItems.length) return null;
           return (
             <View key={group} style={{ gap: 2, marginTop: gi === 0 ? 12 : rail ? 10 : 16 }}>
-              {rail ? (gi > 0 ? <View style={[styles.railDivider, { backgroundColor: SIDEBAR_LINE }]} /> : null)
+              {rail ? (gi > 0 ? <View style={[styles.railDivider, { backgroundColor: colors.sidebarLine }]} /> : null)
                 : <Text variant="caption" color={colors.sidebarMuted} style={styles.groupLabel}>{GROUP_LABEL[group].toUpperCase()}</Text>}
               {groupItems.map((item) => {
                 const isActive = item.route === active;
@@ -141,14 +141,14 @@ function SideNav({ active, items, rail, canCollapse, onHelp }: {
                 const color = isActive ? colors.sidebarActiveText : colors.sidebarText;
                 return (
                   <Pressable key={item.route} onPress={() => go(item)} accessibilityRole="link"
-                    accessibilityLabel={count ? `${item.label}, ${count} new` : item.label}
+                    accessibilityLabel={count ? t('nav.AppNav.label_count_new', { label: item.label, count }) : item.label}
                     accessibilityState={{ selected: isActive }}
                     // Rail: the label shows as a native tooltip on hover (web)
                     {...(Platform.OS === 'web' && rail ? ({ title: item.label } as object) : {})}
                     style={({ hovered }: any) => [
                       styles.sideItem,
                       rail ? styles.railItem : null,
-                      { backgroundColor: isActive ? colors.sidebarActive : hovered ? SIDEBAR_HOVER : 'transparent' },
+                      { backgroundColor: isActive ? colors.sidebarActive : hovered ? colors.sidebarHover : 'transparent' },
                       Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
                     ]}>
                     {isActive && !rail ? <View style={[styles.activeBar, { backgroundColor: colors.sidebarActiveText }]} /> : null}
@@ -170,7 +170,7 @@ function SideNav({ active, items, rail, canCollapse, onHelp }: {
       </ScrollView>
 
       {/* Account area: who, sync, subscription state (once, quietly), shortcuts, collapse, sign out */}
-      <View style={[styles.account, { borderTopColor: SIDEBAR_LINE }, rail && styles.accountRail]}>
+      <View style={[styles.account, { borderTopColor: colors.sidebarLine }, rail && styles.accountRail]}>
         {!rail && accessLine ? (
           <Pressable onPress={() => router.navigate('/settings/billing' as never)} accessibilityRole="link" accessibilityLabel={accessLine.label}
             style={[styles.accessRow, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
@@ -190,16 +190,20 @@ function SideNav({ active, items, rail, canCollapse, onHelp }: {
             </View>
           ) : null}
           {rail && accessLine?.status === 'development' ? (
-            <View accessibilityLabel="Development access" {...(Platform.OS === 'web' ? ({ title: 'Development access' } as object) : {})}>
+            <View accessibilityLabel={t('common.development_access')} {...(Platform.OS === 'web' ? ({ title: t('common.development_access') } as object) : {})}>
               <Ionicons name="construct-outline" size={16} color={colors.sidebarMuted} />
             </View>
           ) : null}
-          <ShellButton icon="log-out-outline" label="Sign out" onPress={() => void signOut()} />
+          <ShellButton icon="log-out-outline" label={t('common.sign_out')} onPress={() => void signOut()} />
+        </View>
+        <View style={[styles.prefs, rail && styles.prefsRail]}>
+          <LanguageMenu tone="sidebar" compact={rail} />
+          <ThemeToggle tone="sidebar" compact={rail} />
         </View>
         <View style={[styles.tools, rail && styles.toolsRail]}>
-          {onHelp ? <ShellButton icon="help-circle-outline" label="Keyboard shortcuts (?)" onPress={onHelp} small /> : null}
+          {onHelp ? <ShellButton icon="help-circle-outline" label={t('nav.AppNav.keyboard_shortcuts')} onPress={onHelp} small /> : null}
           {canCollapse ? (
-            <ShellButton icon={rail ? 'chevron-forward' : 'chevron-back'} label={rail ? 'Expand sidebar ([)' : 'Collapse sidebar ([)'} onPress={toggle} small />
+            <ShellButton icon={rail ? 'chevron-forward' : 'chevron-back'} label={rail ? t('nav.AppNav.expand_sidebar') : t('nav.AppNav.collapse_sidebar')} onPress={toggle} small />
           ) : null}
         </View>
       </View>
@@ -212,7 +216,7 @@ function ShellButton({ icon, label, onPress, small }: { icon: keyof typeof Ionic
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
       {...(Platform.OS === 'web' ? ({ title: label } as object) : {})}
-      style={({ hovered }: any) => [styles.shellBtn, small && styles.shellBtnSmall, hovered && { backgroundColor: SIDEBAR_HOVER },
+      style={({ hovered }: any) => [styles.shellBtn, small && styles.shellBtnSmall, hovered && { backgroundColor: colors.sidebarHover },
         Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
       <Ionicons name={icon} size={small ? 18 : 20} color={colors.sidebarMuted} />
     </Pressable>
@@ -229,7 +233,7 @@ function BottomNav({ active, items }: { active: string; items: NavItem[] }) {
   const entries = [
     ...bar.map((i) => ({ key: i.route, label: i.short ?? i.label, a11y: i.label, icon: i.icon, iconActive: i.iconActive, href: i.href,
       active: i.route === active, count: badges[i.route] ?? 0 })),
-    ...(more.length ? [{ key: 'more', label: 'More', a11y: 'More', icon: 'menu-outline' as const, iconActive: 'menu' as const, href: '/more', active: moreActive, count: moreBadge }] : []),
+    ...(more.length ? [{ key: 'more', label: t('common.more'), a11y: 'More', icon: 'menu-outline' as const, iconActive: 'menu' as const, href: '/more', active: moreActive, count: moreBadge }] : []),
   ];
 
   return (
@@ -237,7 +241,7 @@ function BottomNav({ active, items }: { active: string; items: NavItem[] }) {
       accessibilityRole="tablist">
       {entries.map((e) => (
         <Pressable key={e.key} onPress={() => router.navigate(e.href as never)} accessibilityRole="tab"
-          accessibilityLabel={e.count ? `${e.a11y}, ${e.count} new` : e.a11y}
+          accessibilityLabel={e.count ? t('nav.AppNav.a11y_count_new', { a11y: e.a11y, count: e.count }) : e.a11y}
           accessibilityState={{ selected: e.active }} style={styles.bottomItem}>
           <View style={[styles.bottomIcon, e.active && { backgroundColor: colors.primarySoft }]}>
             <Ionicons name={e.active ? e.iconActive : e.icon} size={22} color={e.active ? colors.primary : colors.textMuted} />
@@ -271,6 +275,8 @@ const styles = StyleSheet.create({
   whoRail: { flexDirection: 'column', paddingHorizontal: 0, gap: 6 },
   avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   presence: { position: 'absolute', right: -1, bottom: -1, width: 11, height: 11, borderRadius: 6, borderWidth: 2 },
+  prefs: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  prefsRail: { flexDirection: 'column', alignItems: 'center' },
   tools: { flexDirection: 'row', justifyContent: 'flex-end', gap: 2 },
   toolsRail: { flexDirection: 'column', alignItems: 'center' },
   shellBtn: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

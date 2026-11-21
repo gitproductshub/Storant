@@ -3,6 +3,7 @@
  * so people see a clear message next to the field instead of a server error after pressing Save.
  */
 import { ApiError } from '@/api/client';
+import { t } from '@/i18n';
 
 export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 export const FSSAI_PATTERN = /^[0-9]{14}$/;
@@ -38,11 +39,11 @@ export function gstinChecksumOk(gstin: string): boolean {
 export function validateGstin(value: string): { error?: string; hint?: string } {
   const v = value.trim().toUpperCase();
   if (!v) return {};
-  if (v.length !== 15) return { error: `GSTIN has 15 characters (you entered ${v.length}).` };
-  if (!GSTIN_PATTERN.test(v)) return { error: 'This does not look like a GSTIN. Format: 22AAAAA0000A1Z5.' };
+  if (v.length !== 15) return { error: t('settings.validation.gstin_has_15_characters_you_entered_length', { length: v.length }) };
+  if (!GSTIN_PATTERN.test(v)) return { error: t('settings.validation.this_does_not_look_like_a_gstin_format') };
   const state = GST_STATES[v.slice(0, 2)];
-  if (!gstinChecksumOk(v)) return { hint: 'The last character does not match the GSTIN check digit. Please double-check for a typo.' };
-  return { hint: state ? `Registered in ${state}` : undefined };
+  if (!gstinChecksumOk(v)) return { hint: t('settings.validation.the_last_character_does_not_match_the') };
+  return { hint: state ? t('settings.validation.registered_in_state', { state }) : undefined };
 }
 
 export function validateFssai(value: string): string | undefined {
@@ -86,17 +87,17 @@ export function validatePassword(value: string): string | undefined {
  */
 export function normaliseMobile(input: string): { value: string | null; error?: string } {
   const raw = input.trim();
-  if (!raw) return { value: null, error: 'Phone number is required.' };
+  if (!raw) return { value: null, error: t('settings.validation.phone_number_is_required') };
   const digits = raw.replace(/[^\d]/g, '');
   if (raw.startsWith('+') && !raw.startsWith('+91')) {
-    if (digits.length < 8 || digits.length > 15) return { value: null, error: 'Enter the full international number with country code.' };
+    if (digits.length < 8 || digits.length > 15) return { value: null, error: t('settings.validation.enter_the_full_international_number_with') };
     return { value: `+${digits}` };
   }
   let local = digits;
   if (local.length === 12 && local.startsWith('91')) local = local.slice(2);
   else if (local.length === 11 && local.startsWith('0')) local = local.slice(1);
-  if (local.length !== 10) return { value: null, error: `Indian mobile numbers have 10 digits (you entered ${local.length}).` };
-  if (!/^[6-9]/.test(local)) return { value: null, error: 'Indian mobile numbers start with 6, 7, 8 or 9.' };
+  if (local.length !== 10) return { value: null, error: t('settings.validation.indian_mobile_numbers_have_10_digits_you', { length: local.length }) };
+  if (!/^[6-9]/.test(local)) return { value: null, error: t('settings.validation.indian_mobile_numbers_start_with_6_7_8_or') };
   return { value: local };
 }
 

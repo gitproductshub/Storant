@@ -6,6 +6,7 @@ import { Badge, Button, IconButton, Input, Text, VegMark } from '@/components/ui
 import { Checkbox } from '../components';
 import { localKey, sanitizeMoney } from '../utils';
 import { LOW_CONFIDENCE, problemText, rowProblems, type ReviewRow, type ReviewVariant } from './review';
+import { t as tr } from '@/i18n';
 
 interface Props {
   row: ReviewRow;
@@ -23,7 +24,7 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
   const problems = rowProblems(row);
   const problem = row.include ? problemText(problems) : null;
   const low = row.confidence !== null && row.confidence < LOW_CONFIDENCE;
-  const label = row.name || `row ${index + 1}`;
+  const label = row.name || tr('catalog.scan_ReviewRowItem.row_v', { v: index + 1 });
   const accent = problem ? colors.danger : low && row.include ? colors.warning : 'transparent';
 
   const setVariants = (variants: ReviewVariant[]) => onChange(row.key, { variants });
@@ -50,10 +51,10 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
     <Input
       containerStyle={{ flex: wide ? 2 : 1 }}
       value={row.name}
-      placeholder="Item name"
+      placeholder={tr('catalog.scan_ReviewRowItem.item_name')}
       onChangeText={(t) => onChange(row.key, { name: t })}
       maxLength={120}
-      accessibilityLabel={`Name of ${label}`}
+      accessibilityLabel={tr('catalog.scan_ReviewRowItem.name_of_label', { label })}
       error={row.include && problems.includes('name') ? ' ' : null}
     />
   );
@@ -61,25 +62,25 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
     <Input
       containerStyle={{ flex: 1.2 }}
       value={row.category}
-      placeholder="Category"
+      placeholder={tr('common.category')}
       onChangeText={(t) => onChange(row.key, { category: t })}
       maxLength={60}
-      accessibilityLabel={`Category of ${label}`}
+      accessibilityLabel={tr('catalog.scan_ReviewRowItem.category_of_label', { label })}
     />
   );
   const priceInput = row.variants.length ? (
     <View style={[styles.optionsCell, { width: wide ? 130 : undefined, flex: wide ? undefined : 1, backgroundColor: colors.surfaceSunken, borderColor: colors.border }]}>
-      <Text variant="small" tone="muted" numberOfLines={1}>{row.variants.length} options</Text>
+      <Text variant="small" tone="muted" numberOfLines={1}>{row.variants.length} {tr('catalog.scan_ReviewRowItem.options')}</Text>
     </View>
   ) : (
     <Input
       containerStyle={{ width: wide ? 130 : undefined, flex: wide ? undefined : 1 }}
       value={row.price}
       prefix={symbol}
-      placeholder="Price"
+      placeholder={tr('common.price')}
       keyboardType="decimal-pad"
       onChangeText={(t) => onChange(row.key, { price: sanitizeMoney(t) })}
-      accessibilityLabel={`Price of ${label}`}
+      accessibilityLabel={tr('catalog.scan_ReviewRowItem.price_of_label', { label })}
       error={row.include && problems.includes('price') ? ' ' : null}
     />
   );
@@ -87,7 +88,7 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
     <Pressable
       onPress={cycleVeg}
       accessibilityRole="button"
-      accessibilityLabel={`Food type for ${label}: ${row.isVeg === null ? 'not set' : row.isVeg ? 'veg' : 'non-veg'}. Tap to change`}
+      accessibilityLabel={tr('catalog.scan_ReviewRowItem.food_type_for_label_v_tap_to_change', { label, v: row.isVeg === null ? tr('catalog.scan_ReviewRowItem.not_set') : row.isVeg ? 'veg' : 'non-veg' })}
       style={({ hovered }: any) => [styles.vegBtn, hovered && { backgroundColor: colors.surfaceSunken }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
     >
       {row.isVeg === null ? <View style={[styles.vegEmpty, { borderColor: colors.borderStrong }]} /> : <VegMark veg={row.isVeg} size={16} />}
@@ -97,12 +98,12 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
   const badges = (
     <View style={styles.badges}>
       {problem ? <Badge label={problem} tone="danger" icon="alert-circle" /> : null}
-      {row.existing ? <Badge label="Already on menu" tone="neutral" icon="copy-outline" /> : null}
-      {duplicate && !row.existing ? <Badge label="Repeated in this list" tone="warning" icon="copy-outline" /> : null}
-      {low ? <Badge label={`Check this · ${Math.round((row.confidence ?? 0) * 100)}% sure`} tone="warning" icon="eye-outline" /> : null}
-      {row.confidence === null ? <Badge label="Added by you" tone="info" /> : null}
+      {row.existing ? <Badge label={tr('catalog.scan_ReviewRowItem.already_on_menu')} tone="neutral" icon="copy-outline" /> : null}
+      {duplicate && !row.existing ? <Badge label={tr('catalog.scan_ReviewRowItem.repeated_in_this_list')} tone="warning" icon="copy-outline" /> : null}
+      {low ? <Badge label={tr('catalog.scan_ReviewRowItem.check_this_round_sure', { round: Math.round((row.confidence ?? 0) * 100) })} tone="warning" icon="eye-outline" /> : null}
+      {row.confidence === null ? <Badge label={tr('catalog.scan_ReviewRowItem.added_by_you')} tone="info" /> : null}
       {!row.variants.length ? (
-        <Button title="Add sizes" size="sm" variant="ghost" icon="add" onPress={addVariant} accessibilityLabel={`Add sizes to ${label}`} />
+        <Button title={tr('catalog.scan_ReviewRowItem.add_sizes')} size="sm" variant="ghost" icon="add" onPress={addVariant} accessibilityLabel={tr('catalog.scan_ReviewRowItem.add_sizes_to_label', { label })} />
       ) : null}
     </View>
   );
@@ -114,10 +115,10 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
           <Input
             containerStyle={{ width: wide ? 120 : 104 }}
             value={v.name}
-            placeholder="Size"
+            placeholder={tr('catalog.scan_ReviewRowItem.size')}
             onChangeText={(t) => updateVariant(v.key, { name: t })}
             maxLength={40}
-            accessibilityLabel={`Option ${i + 1} name for ${label}`}
+            accessibilityLabel={tr('catalog.scan_ReviewRowItem.option_v_name_for_label', { v: i + 1, label })}
             error={row.include && !v.name.trim() ? ' ' : null}
           />
           <Input
@@ -127,13 +128,13 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
             placeholder="0"
             keyboardType="decimal-pad"
             onChangeText={(t) => updateVariant(v.key, { price: sanitizeMoney(t) })}
-            accessibilityLabel={`Option ${i + 1} price for ${label}`}
+            accessibilityLabel={tr('catalog.scan_ReviewRowItem.option_v_price_for_label', { v: i + 1, label })}
             error={row.include && !v.price ? ' ' : null}
           />
-          <IconButton icon="close" size="sm" accessibilityLabel={`Remove option ${v.name || i + 1} from ${label}`} onPress={() => removeVariant(v.key)} />
+          <IconButton icon="close" size="sm" accessibilityLabel={tr('catalog.scan_ReviewRowItem.remove_option_v_from_label', { v: v.name || i + 1, label })} onPress={() => removeVariant(v.key)} />
         </View>
       ))}
-      <Button title="Option" icon="add" size="sm" variant="secondary" onPress={addVariant} disabled={row.variants.length >= 20} accessibilityLabel={`Add option to ${label}`} />
+      <Button title={tr('catalog.scan_ReviewRowItem.option')} icon="add" size="sm" variant="secondary" onPress={addVariant} disabled={row.variants.length >= 20} accessibilityLabel={tr('catalog.scan_ReviewRowItem.add_option_to_label', { label })} />
     </View>
   ) : null;
 
@@ -143,12 +144,12 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
       {wide ? (
         <>
           <View style={styles.line}>
-            <Checkbox checked={row.include} onChange={(v) => onChange(row.key, { include: v })} label={`Include ${label}`} />
+            <Checkbox checked={row.include} onChange={(v) => onChange(row.key, { include: v })} label={tr('catalog.scan_ReviewRowItem.include_label', { label })} />
             {vegToggle}
             {nameInput}
             {categoryInput}
             {priceInput}
-            <IconButton icon="trash-outline" accessibilityLabel={`Delete ${label}`} onPress={() => onRemove(row.key)} />
+            <IconButton icon="trash-outline" accessibilityLabel={tr('catalog.scan_ReviewRowItem.delete_label', { label })} onPress={() => onRemove(row.key)} />
           </View>
           <View style={{ paddingLeft: showVeg ? 92 : 48, gap: 8 }}>
             {variantEditor}
@@ -158,10 +159,10 @@ export const ReviewRowItem = memo(function ReviewRowItem({ row, index, wide, sym
       ) : (
         <View style={{ gap: 8 }}>
           <View style={styles.line}>
-            <Checkbox checked={row.include} onChange={(v) => onChange(row.key, { include: v })} label={`Include ${label}`} />
+            <Checkbox checked={row.include} onChange={(v) => onChange(row.key, { include: v })} label={tr('catalog.scan_ReviewRowItem.include_label', { label })} />
             {vegToggle}
             {nameInput}
-            <IconButton icon="trash-outline" accessibilityLabel={`Delete ${label}`} onPress={() => onRemove(row.key)} />
+            <IconButton icon="trash-outline" accessibilityLabel={tr('catalog.scan_ReviewRowItem.delete_label', { label })} onPress={() => onRemove(row.key)} />
           </View>
           <View style={[styles.line, { paddingLeft: 4 }]}>
             {categoryInput}
@@ -182,8 +183,8 @@ export function ReviewHeader({ showVeg }: { showVeg: boolean }) {
       <Ionicons name="checkbox-outline" size={14} color={colors.textSubtle} style={{ width: 44, textAlign: 'center' }} />
       {showVeg ? <Text variant="caption" tone="subtle" style={{ width: 36, textAlign: 'center' }}>VEG</Text> : null}
       <Text variant="caption" tone="subtle" style={{ flex: 2 }}>ITEM</Text>
-      <Text variant="caption" tone="subtle" style={{ flex: 1.2 }}>CATEGORY</Text>
-      <Text variant="caption" tone="subtle" style={{ width: 130 }}>PRICE</Text>
+      <Text variant="caption" tone="subtle" style={{ flex: 1.2 }}>{tr('catalog.scan_ReviewRowItem.category_2')}</Text>
+      <Text variant="caption" tone="subtle" style={{ width: 130 }}>{tr('catalog.scan_ReviewRowItem.price_2')}</Text>
       <View style={{ width: 44 }} />
     </View>
   );

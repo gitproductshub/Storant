@@ -16,6 +16,8 @@ import { kitchenDefault, plural } from '../utils';
 import { MAX_PHOTOS, PickError, buildMenuForm, pickPhotos, preparePhoto, releasePhoto, type MenuPhoto, type PickSource } from './photos';
 import { blankRow, existingNameSet, rowsFromScan, toImportItems, type ReviewRow } from './review';
 import { ReviewStep, type ImportOptions } from './ReviewStep';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 type Step = 'pick' | 'reading' | 'review' | 'done';
 interface ScanError { title: string; message: string; icon: keyof typeof Ionicons.glyphMap }
@@ -24,8 +26,8 @@ export function MenuScanScreen() {
   const role = useRole();
   if (!can(role, 'manage')) {
     return (
-      <Screen title="Scan menu photo">
-        <NoAccess title="Only owners and managers can import a menu" message="Ask your owner or manager to scan the menu." />
+      <Screen title={tr('catalog.scan_MenuScanScreen.scan_menu_photo')}>
+        <NoAccess title={tr('catalog.scan_MenuScanScreen.only_owners_and_managers_can_import_a_menu')} message={tr('catalog.scan_MenuScanScreen.ask_your_owner_or_manager_to_scan_the_menu')} />
       </Screen>
     );
   }
@@ -77,7 +79,7 @@ function MenuScanFlow() {
     if (!unsaved) return undefined;
     const sub = navigation.addListener('beforeRemove' as any, (e: any) => {
       e.preventDefault();
-      void confirmTop({ title: 'Leave without importing?', message: 'The items you reviewed will be lost.', confirmLabel: 'Leave', danger: true })
+      void confirmTop({ title: tr('catalog.scan_MenuScanScreen.leave_without_importing'), message: tr('catalog.scan_MenuScanScreen.the_items_you_reviewed_will_be_lost'), confirmLabel: tr('catalog.scan_MenuScanScreen.leave'), danger: true })
         .then((ok) => { if (ok) navigation.dispatch(e.data.action); });
     });
     return sub;
@@ -86,7 +88,7 @@ function MenuScanFlow() {
   const addPhotos = async (source: PickSource) => {
     setError(null);
     const remaining = MAX_PHOTOS - photos.length;
-    if (remaining <= 0) return toast.info(`You can add up to ${MAX_PHOTOS} photos at a time.`);
+    if (remaining <= 0) return toast.info(tr('catalog.scan_MenuScanScreen.you_can_add_up_to_max_photos_photos_at_a', { MAX_PHOTOS }));
     try {
       const assets = await pickPhotos(source, remaining);
       if (!assets.length) return;
@@ -98,7 +100,7 @@ function MenuScanFlow() {
       }
       setPhotos((list) => [...list, ...prepared].slice(0, MAX_PHOTOS));
     } catch (e) {
-      if (e instanceof PickError) setError({ title: 'Permission needed', message: e.message, icon: 'lock-closed-outline' });
+      if (e instanceof PickError) setError({ title: tr('catalog.scan_MenuScanScreen.permission_needed'), message: e.message, icon: 'lock-closed-outline' });
       else toast.error(errorMessage(e, 'Could not open the photo.'));
     } finally {
       setPreparing(0);
@@ -114,7 +116,7 @@ function MenuScanFlow() {
   const read = async () => {
     if (!photos.length || photos.some((p) => p.error)) return;
     if (!online) {
-      setError({ title: 'You are offline', message: 'Reading a menu photo needs an internet connection. Connect to the internet and try again — or add items by hand.', icon: 'cloud-offline-outline' });
+      setError({ title: tr('catalog.scan_MenuScanScreen.you_are_offline'), message: tr('catalog.scan_MenuScanScreen.reading_a_menu_photo_needs_an_internet'), icon: 'cloud-offline-outline' });
       return;
     }
     setError(null);
@@ -127,8 +129,8 @@ function MenuScanFlow() {
       setScan(res);
       if (!res.items.length) {
         setError({
-          title: 'No menu items found',
-          message: 'We could not find item names with prices in these photos. Try a sharper, well-lit photo taken straight on with the whole page in frame. Printed English menus work best — handwritten or Hindi text is not read yet.',
+          title: tr('catalog.scan_MenuScanScreen.no_menu_items_found'),
+          message: tr('catalog.scan_MenuScanScreen.we_could_not_find_item_names_with_prices'),
           icon: 'search-outline',
         });
         setStep('pick');
@@ -146,7 +148,7 @@ function MenuScanFlow() {
   const cancelRead = () => {
     runId.current += 1;
     setStep('pick');
-    toast.info('Stopped reading the menu.');
+    toast.info(tr('catalog.scan_MenuScanScreen.stopped_reading_the_menu'));
   };
 
   const typeInstead = () => {
@@ -206,9 +208,9 @@ function MenuScanFlow() {
 
   return (
     <Screen
-      title="Scan menu photo"
+      title={tr('catalog.scan_MenuScanScreen.scan_menu_photo')}
       subtitle={subtitle}
-      actions={<Button title={isPhone ? undefined : 'Back to menu'} icon="arrow-back" variant="secondary" onPress={back} accessibilityLabel="Back to menu" />}
+      actions={<Button title={isPhone ? undefined : tr('catalog.scan_MenuScanScreen.back_to_menu')} icon="arrow-back" variant="secondary" onPress={back} accessibilityLabel={tr('catalog.scan_MenuScanScreen.back_to_menu')} />}
       toolbar={<Steps step={step} />}
       scroll={step !== 'review'}
       contentStyle={step === 'review' ? { flex: 1 } : undefined}
@@ -218,31 +220,31 @@ function MenuScanFlow() {
         <View style={[styles.pickGrid, !isWide && { flexDirection: 'column' }]}>
           <View style={{ flex: isWide ? 1.6 : undefined, gap: 16, alignSelf: 'stretch' }}>
             {!online ? (
-              <Notice icon="cloud-offline-outline" tone="warning" title="No internet connection" message="Reading a menu photo needs internet. You can still choose photos now." />
+              <Notice icon="cloud-offline-outline" tone="warning" title={tr('catalog.scan_MenuScanScreen.no_internet_connection')} message={tr('catalog.scan_MenuScanScreen.reading_a_menu_photo_needs_internet_you')} />
             ) : null}
             {error ? (
               <Notice icon={error.icon} tone="danger" title={error.title} message={error.message}
                 action={<View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                  {photos.length ? <Button title="Try again" icon="refresh" size="sm" onPress={read} /> : null}
-                  <Button title="Type items instead" size="sm" variant="secondary" onPress={typeInstead} />
+                  {photos.length ? <Button title={tr('common.try_again')} icon="refresh" size="sm" onPress={read} /> : null}
+                  <Button title={tr('catalog.scan_MenuScanScreen.type_items_instead')} size="sm" variant="secondary" onPress={typeInstead} />
                 </View>} />
             ) : null}
             <Card style={{ gap: 14 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text variant="h3" style={{ flex: 1 }}>Menu photos</Text>
+                <Text variant="h3" style={{ flex: 1 }}>{tr('catalog.scan_MenuScanScreen.menu_photos')}</Text>
                 <Text variant="smallStrong" tone="muted">{photos.length} / {MAX_PHOTOS}</Text>
               </View>
               <View style={styles.thumbs}>
                 {photos.map((p, i) => (
                   <View key={p.key} style={[styles.thumb, { borderColor: p.error ? colors.danger : colors.border, backgroundColor: colors.surfaceSunken }]}>
-                    <Image source={{ uri: p.previewUri }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityLabel={`Menu photo ${i + 1}`} />
+                    <Image source={{ uri: p.previewUri }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityLabel={tr('catalog.scan_MenuScanScreen.menu_photo_v', { v: i + 1 })} />
                     {p.error ? null : (
                       <View style={[styles.thumbNum, { backgroundColor: colors.overlay }]}>
-                        <Text variant="caption" color={colors.sidebarText}>Page {i + 1}</Text>
+                        <Text variant="caption" color={colors.onMedia}>{tr('catalog.scan_MenuScanScreen.page')} {i + 1}</Text>
                       </View>
                     )}
                     <View style={styles.thumbRemove}>
-                      <IconButton icon="close" size="sm" variant="secondary" accessibilityLabel={`Remove photo ${i + 1}`} onPress={() => removePhoto(p.key)} />
+                      <IconButton icon="close" size="sm" variant="secondary" accessibilityLabel={tr('catalog.scan_MenuScanScreen.remove_photo_v', { v: i + 1 })} onPress={() => removePhoto(p.key)} />
                     </View>
                     {p.error ? (
                       <View style={[styles.thumbError, { backgroundColor: colors.dangerSoft }]}>
@@ -254,29 +256,29 @@ function MenuScanFlow() {
                 {preparing > 0 ? (
                   <View style={[styles.thumb, styles.addTile, { borderColor: colors.border }]}>
                     <Ionicons name="hourglass-outline" size={22} color={colors.textSubtle} />
-                    <Text variant="small" tone="muted">Preparing…</Text>
+                    <Text variant="small" tone="muted">{tr('catalog.scan_MenuScanScreen.preparing')}</Text>
                   </View>
                 ) : null}
                 {photos.length < MAX_PHOTOS && !preparing ? (
                   <>
                     {Platform.OS !== 'web' ? (
-                      <AddTile icon="camera" label="Take photo" onPress={() => void addPhotos('camera')} primary />
+                      <AddTile icon="camera" label={tr('catalog.scan_MenuScanScreen.take_photo')} onPress={() => void addPhotos('camera')} primary />
                     ) : null}
-                    <AddTile icon="images-outline" label={Platform.OS === 'web' ? 'Choose photos' : 'From gallery'} onPress={() => void addPhotos('library')} primary={Platform.OS === 'web'} />
+                    <AddTile icon="images-outline" label={Platform.OS === 'web' ? tr('catalog.scan_MenuScanScreen.choose_photos') : tr('catalog.scan_MenuScanScreen.from_gallery')} onPress={() => void addPhotos('library')} primary={Platform.OS === 'web'} />
                   </>
                 ) : null}
               </View>
               {photos.some((p) => p.error) ? (
-                <Text variant="smallStrong" tone="danger">Remove the photo marked in red to continue.</Text>
+                <Text variant="smallStrong" tone="danger">{tr('catalog.scan_MenuScanScreen.remove_the_photo_marked_in_red_to_continue')}</Text>
               ) : (
-                <Text variant="small" tone="subtle">One photo per page · JPEG, PNG, WEBP or HEIC · up to {MAX_PHOTOS} photos</Text>
+                <Text variant="small" tone="subtle">{tr('catalog.scan_MenuScanScreen.one_photo_per_page_jpeg_png_webp_or_heic', { MAX_PHOTOS })}</Text>
               )}
             </Card>
             <View style={[styles.cta, isPhone && { flexDirection: 'column-reverse', alignItems: 'stretch' }]}>
-              <Button title="Type items instead" variant="ghost" onPress={typeInstead} />
+              <Button title={tr('catalog.scan_MenuScanScreen.type_items_instead')} variant="ghost" onPress={typeInstead} />
               {isPhone ? null : <View style={{ flex: 1 }} />}
               <Button
-                title={photos.length ? `Read menu (${plural(photos.length, 'photo')})` : 'Read menu'}
+                title={photos.length ? tr('catalog.scan_MenuScanScreen.read_menu_plural', { plural: plural(photos.length, 'photo') }) : tr('catalog.scan_MenuScanScreen.read_menu')}
                 icon="sparkles"
                 size="lg"
                 onPress={read}
@@ -306,28 +308,28 @@ function MenuScanFlow() {
 
 function describeError(e: unknown): ScanError {
   if (e instanceof ApiError) {
-    if (e.network && e.code === 'TIMEOUT') return { title: 'This took too long', message: 'The menu could not be read in time. Try fewer photos at once, or a smaller / clearer photo.', icon: 'time-outline' };
-    if (e.network) return { title: 'Cannot reach Tallyko', message: 'Reading a menu photo needs an internet connection. Check your connection and try again.', icon: 'cloud-offline-outline' };
-    if (e.status === 429) return { title: 'Too many scans', message: 'You have scanned several times in the last minute. Please wait a minute, then try again.', icon: 'hourglass-outline' };
-    if (e.status === 400 || e.status === 413 || e.status === 422) return { title: 'This photo could not be used', message: e.message || 'Use clear JPEG, PNG, WEBP or HEIC photos under 10 MB.', icon: 'image-outline' };
-    if (e.status === 401 || e.status === 403) return { title: 'Not allowed', message: e.message, icon: 'lock-closed-outline' };
-    return { title: 'Could not read the menu', message: e.message || 'Something went wrong. Please try again.', icon: 'alert-circle-outline' };
+    if (e.network && e.code === 'TIMEOUT') return { title: tr('catalog.scan_MenuScanScreen.this_took_too_long'), message: tr('catalog.scan_MenuScanScreen.the_menu_could_not_be_read_in_time_try'), icon: 'time-outline' };
+    if (e.network) return { title: tr('catalog.scan_MenuScanScreen.cannot_reach_brand', { brand: brand.name }), message: tr('catalog.scan_MenuScanScreen.reading_a_menu_photo_needs_an_internet_2'), icon: 'cloud-offline-outline' };
+    if (e.status === 429) return { title: tr('catalog.scan_MenuScanScreen.too_many_scans'), message: tr('catalog.scan_MenuScanScreen.you_have_scanned_several_times_in_the'), icon: 'hourglass-outline' };
+    if (e.status === 400 || e.status === 413 || e.status === 422) return { title: tr('catalog.scan_MenuScanScreen.this_photo_could_not_be_used'), message: e.message || tr('catalog.scan_MenuScanScreen.use_clear_jpeg_png_webp_or_heic_photos'), icon: 'image-outline' };
+    if (e.status === 401 || e.status === 403) return { title: tr('catalog.scan_MenuScanScreen.not_allowed'), message: e.message, icon: 'lock-closed-outline' };
+    return { title: tr('catalog.scan_MenuScanScreen.could_not_read_the_menu'), message: e.message || tr('catalog.scan_MenuScanScreen.something_went_wrong_please_try_again'), icon: 'alert-circle-outline' };
   }
-  return { title: 'Could not read the menu', message: errorMessage(e), icon: 'alert-circle-outline' };
+  return { title: tr('catalog.scan_MenuScanScreen.could_not_read_the_menu'), message: errorMessage(e), icon: 'alert-circle-outline' };
 }
 
 function Steps({ step }: { step: Step }) {
   const { colors } = useTheme();
   const { isPhone } = useLayout();
   const list: { key: Step; label: string }[] = [
-    { key: 'pick', label: 'Photos' },
-    { key: 'reading', label: 'Reading' },
-    { key: 'review', label: 'Review' },
-    { key: 'done', label: 'Done' },
+    { key: 'pick', label: tr('catalog.scan_MenuScanScreen.photos') },
+    { key: 'reading', label: tr('catalog.scan_MenuScanScreen.reading') },
+    { key: 'review', label: tr('catalog.scan_MenuScanScreen.review') },
+    { key: 'done', label: tr('common.done') },
   ];
   const current = list.findIndex((s) => s.key === step);
   return (
-    <View style={styles.steps} accessibilityRole="progressbar" accessibilityLabel={`Step ${current + 1} of 4: ${list[current]?.label}`}>
+    <View style={styles.steps} accessibilityRole="progressbar" accessibilityLabel={tr('catalog.scan_MenuScanScreen.step_v_of_4_label', { v: current + 1, label: list[current]?.label })}>
       {list.map((s, i) => {
         const done = i < current || step === 'done';
         const active = i === current;
@@ -373,16 +375,16 @@ function AddTile({ icon, label, onPress, primary }: { icon: keyof typeof Ionicon
 function Tips({ wide }: { wide: boolean }) {
   const { colors } = useTheme();
   const tips: { icon: keyof typeof Ionicons.glyphMap; title: string; text: string }[] = [
-    { icon: 'scan-outline', title: 'Whole page in frame', text: 'All four edges visible, one page per photo.' },
-    { icon: 'sunny-outline', title: 'Good, even light', text: 'No shadows or glare from laminated menus — avoid the flash.' },
-    { icon: 'phone-portrait-outline', title: 'Flat and straight', text: 'Hold the phone parallel to the menu, not at an angle.' },
-    { icon: 'text-outline', title: 'Printed English works best', text: 'Handwritten or Hindi-only text is not read yet — add those by hand.' },
+    { icon: 'scan-outline', title: tr('catalog.scan_MenuScanScreen.whole_page_in_frame'), text: tr('catalog.scan_MenuScanScreen.all_four_edges_visible_one_page_per_photo') },
+    { icon: 'sunny-outline', title: tr('catalog.scan_MenuScanScreen.good_even_light'), text: tr('catalog.scan_MenuScanScreen.no_shadows_or_glare_from_laminated_menus') },
+    { icon: 'phone-portrait-outline', title: tr('catalog.scan_MenuScanScreen.flat_and_straight'), text: tr('catalog.scan_MenuScanScreen.hold_the_phone_parallel_to_the_menu_not') },
+    { icon: 'text-outline', title: tr('catalog.scan_MenuScanScreen.printed_english_works_best'), text: tr('catalog.scan_MenuScanScreen.handwritten_or_hindi_only_text_is_not') },
   ];
   return (
     <Card style={{ flex: wide ? 1 : undefined, gap: 14, alignSelf: wide ? 'flex-start' : 'stretch' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Ionicons name="bulb-outline" size={18} color={colors.accentText} />
-        <Text variant="h3">Tips for a perfect scan</Text>
+        <Text variant="h3">{tr('catalog.scan_MenuScanScreen.tips_for_a_perfect_scan')}</Text>
       </View>
       {tips.map((t) => (
         <View key={t.title} style={{ flexDirection: 'row', gap: 12 }}>
@@ -397,7 +399,7 @@ function Tips({ wide }: { wide: boolean }) {
       ))}
       <View style={[styles.privacy, { backgroundColor: colors.surfaceSunken }]}>
         <Ionicons name="shield-checkmark-outline" size={16} color={colors.textMuted} />
-        <Text variant="small" tone="muted" style={{ flex: 1 }}>Photos are read on Tallyko’s server and not stored. Nothing is added until you press Import.</Text>
+        <Text variant="small" tone="muted" style={{ flex: 1 }}>{tr('catalog.scan_MenuScanScreen.photos_are_read_on_brand_s_server_and_not', { brand: brand.name })}</Text>
       </View>
     </Card>
   );
@@ -422,15 +424,15 @@ function Reading({ count, photos, onCancel }: { count: number; photos: MenuPhoto
           <Image key={p.key} source={{ uri: p.previewUri }} style={[styles.readingThumb, { borderColor: colors.border, transform: [{ rotate: `${(i - (photos.length - 1) / 2) * 5}deg` }] }]} />
         ))}
       </View>
-      <Text variant="h2" align="center">Reading your menu…</Text>
+      <Text variant="h2" align="center">{tr('catalog.scan_MenuScanScreen.reading_your_menu')}</Text>
       <Text tone="muted" align="center" accessibilityLiveRegion="polite">{stage}</Text>
       <View style={[styles.bar, { backgroundColor: colors.surfaceSunken }]} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}>
         <View style={[styles.barFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: colors.primary }]} />
       </View>
       <Text variant="small" tone="subtle" align="center">
-        {elapsed > expected * 1.6 ? 'Taking longer than usual — large or detailed menus can take up to a minute.' : `${plural(count, 'photo')} · usually 5–30 seconds`}
+        {elapsed > expected * 1.6 ? tr('catalog.scan_MenuScanScreen.taking_longer_than_usual_large_or') : tr('catalog.scan_MenuScanScreen.plural_usually_5_30_seconds', { plural: plural(count, 'photo') })}
       </Text>
-      <Button title="Cancel" variant="secondary" onPress={onCancel} />
+      <Button title={tr('common.cancel')} variant="secondary" onPress={onCancel} />
     </Card>
   );
 }
@@ -443,21 +445,21 @@ function Done({ result, onMenu, onAgain }: { result: { created: number; skipped:
       <View style={[styles.doneIcon, { backgroundColor: result.created ? colors.successSoft : colors.warningSoft }]}>
         <Ionicons name={result.created ? 'checkmark-circle' : 'information-circle'} size={44} color={result.created ? colors.success : colors.warning} />
       </View>
-      <Text variant="display" align="center">{result.created ? `${plural(result.created, 'item')} added` : 'Nothing new to add'}</Text>
+      <Text variant="display" align="center">{result.created ? tr('catalog.scan_MenuScanScreen.plural_added', { plural: plural(result.created, 'item') }) : tr('catalog.scan_MenuScanScreen.nothing_new_to_add')}</Text>
       <Text tone="muted" align="center" style={{ maxWidth: 480 }}>
         {result.created
-          ? 'They are on your billing screen now. Fine-tune any item — GST, stock tracking, barcodes, descriptions — from Menu & items.'
-          : 'Every item you ticked is already on your menu.'}
+          ? tr('catalog.scan_MenuScanScreen.they_are_on_your_billing_screen_now_fine')
+          : tr('catalog.scan_MenuScanScreen.every_item_you_ticked_is_already_on_your')}
       </Text>
       {result.skipped.length ? (
         <View style={[styles.skipped, { backgroundColor: colors.surfaceSunken }]}>
-          <Text variant="smallStrong" tone="muted">{plural(result.skipped.length, 'item')} skipped — already on your menu</Text>
+          <Text variant="smallStrong" tone="muted">{plural(result.skipped.length, 'item')} {tr('catalog.scan_MenuScanScreen.skipped_already_on_your_menu')}</Text>
           <Text variant="small" tone="subtle" numberOfLines={4}>{result.skipped.join(', ')}</Text>
         </View>
       ) : null}
       <View style={[{ flexDirection: 'row', gap: 12, marginTop: 8 }, isPhone && { flexDirection: 'column', alignSelf: 'stretch' }]}>
-        <Button title="Go to menu" icon="fast-food-outline" size="lg" onPress={onMenu} full={isPhone} />
-        <Button title="Scan another menu" icon="camera-outline" size="lg" variant="secondary" onPress={onAgain} full={isPhone} />
+        <Button title={tr('catalog.scan_MenuScanScreen.go_to_menu')} icon="fast-food-outline" size="lg" onPress={onMenu} full={isPhone} />
+        <Button title={tr('catalog.scan_MenuScanScreen.scan_another_menu')} icon="camera-outline" size="lg" variant="secondary" onPress={onAgain} full={isPhone} />
       </View>
     </Card>
   );

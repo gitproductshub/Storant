@@ -4,6 +4,8 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'ex
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, Loading, Sheet, Text } from '@/components/ui';
 import { barcodeError } from './utils';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 /**
  * Scan a product barcode with the device camera. Also offers manual entry, since USB/Bluetooth
@@ -44,18 +46,18 @@ export function BarcodeScanSheet({ visible, onClose, onScanned }: {
 
   let body: React.ReactNode;
   if (available === null || !permission) {
-    body = <Loading label="Starting camera…" />;
+    body = <Loading label={t('catalog.BarcodeScanSheet.starting_camera')} />;
   } else if (!available) {
-    body = <Notice text="No camera was found on this device. Type the code below, or plug in a USB barcode scanner and scan into the field." />;
+    body = <Notice text={t('catalog.BarcodeScanSheet.no_camera_was_found_on_this_device_type_x')} />;
   } else if (!permission.granted) {
     body = (
       <View style={[styles.frame, { backgroundColor: colors.surfaceSunken, gap: 12, padding: 20 }]}>
-        <Text variant="h3" align="center">Allow camera access</Text>
-        <Text tone="muted" align="center">Tallyko uses the camera only to read the barcode printed on the product.</Text>
+        <Text variant="h3" align="center">{t('catalog.BarcodeScanSheet.allow_camera_access')}</Text>
+        <Text tone="muted" align="center">{brand.name} {t('catalog.BarcodeScanSheet.uses_the_camera_only_to_read_the_barcode')}</Text>
         {permission.canAskAgain || Platform.OS === 'web' ? (
-          <Button title="Allow camera" icon="camera-outline" onPress={() => void requestPermission()} />
+          <Button title={t('catalog.BarcodeScanSheet.allow_camera')} icon="camera-outline" onPress={() => void requestPermission()} />
         ) : (
-          <Text tone="warning" align="center">Camera permission is turned off. Enable it for Tallyko in your device settings.</Text>
+          <Text tone="warning" align="center">{t('catalog.BarcodeScanSheet.camera_permission_is_turned_off_enable_it', { brand: brand.name })}</Text>
         )}
       </View>
     );
@@ -63,7 +65,7 @@ export function BarcodeScanSheet({ visible, onClose, onScanned }: {
     body = <Notice text={cameraError} />;
   } else {
     body = (
-      <View style={[styles.frame, { backgroundColor: colors.sidebar }]}>
+      <View style={[styles.frame, { backgroundColor: colors.mediaBg }]}>
         {visible ? (
           <CameraView
             style={StyleSheet.absoluteFill}
@@ -75,20 +77,20 @@ export function BarcodeScanSheet({ visible, onClose, onScanned }: {
         ) : null}
         <View pointerEvents="none" style={styles.reticleWrap}>
           <View style={[styles.reticle, { borderColor: colors.accent }]} />
-          <Text variant="smallStrong" color={colors.sidebarText} style={styles.reticleText}>Point at the barcode</Text>
+          <Text variant="smallStrong" color={colors.onMedia} style={styles.reticleText}>{t('catalog.BarcodeScanSheet.point_at_the_barcode')}</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Scan barcode" subtitle="Hold the code steady inside the frame" width={520}>
+    <Sheet visible={visible} onClose={onClose} title={t('catalog.BarcodeScanSheet.scan_barcode')} subtitle={t('catalog.BarcodeScanSheet.hold_the_code_steady_inside_the_frame')} width={520}>
       {body}
       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
         <Input
           containerStyle={{ flex: 1 }}
-          label="Or type / scan the code"
-          placeholder="e.g. 8901234567890"
+          label={t('catalog.BarcodeScanSheet.or_type_scan_the_code')}
+          placeholder={t('catalog.BarcodeScanSheet.e_g_8901234567890')}
           value={manual}
           onChangeText={setManual}
           onSubmitEditing={submitManual}
@@ -98,7 +100,7 @@ export function BarcodeScanSheet({ visible, onClose, onScanned }: {
           maxLength={48}
           icon="barcode-outline"
         />
-        <Button title="Use" onPress={submitManual} disabled={!manual.trim() || !!manualError} style={{ marginTop: 24 }} />
+        <Button title={t('catalog.BarcodeScanSheet.use')} onPress={submitManual} disabled={!manual.trim() || !!manualError} style={{ marginTop: 24 }} />
       </View>
     </Sheet>
   );

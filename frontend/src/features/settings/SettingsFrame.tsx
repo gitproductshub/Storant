@@ -18,10 +18,13 @@ import { useAuth } from '@/store/auth';
 import { useAccessInfo } from '@/store/access';
 import { sectionsFor, type SettingsKey, type SettingsSection } from './sections';
 import { matchSections, searchSettings, type SettingsTopic } from './search';
+import { t as tr } from '@/i18n';
+import { ThemeToggle } from '@/theme/ThemeToggle';
+import { LanguageMenu } from '@/i18n/LanguageSwitcher';
 
 export async function confirmDiscard(dirty: boolean): Promise<boolean> {
   if (!dirty) return true;
-  return confirm({ title: 'Discard unsaved changes?', message: 'You changed some settings but did not save them.', confirmLabel: 'Discard', danger: true });
+  return confirm({ title: tr('common.discard_unsaved_changes'), message: tr('settings.SettingsFrame.you_changed_some_settings_but_did_not'), confirmLabel: tr('common.discard'), danger: true });
 }
 
 export function goBackToSettings() {
@@ -48,8 +51,8 @@ export function SettingsSearch({ query, onQuery, sections, onOpen, compact, inpu
         ref={inputRef}
         value={query}
         onChangeText={onQuery}
-        placeholder="Search settings"
-        accessibilityLabel="Search settings"
+        placeholder={tr('settings.SettingsFrame.search_settings')}
+        accessibilityLabel={tr('settings.SettingsFrame.search_settings')}
         icon="search"
         autoCapitalize="none"
         autoCorrect={false}
@@ -57,7 +60,7 @@ export function SettingsSearch({ query, onQuery, sections, onOpen, compact, inpu
         onSubmitEditing={() => { if (results[0]) onOpen(results[0].href); }}
         onKeyPress={(e: any) => { if (Platform.OS === 'web' && e.nativeEvent?.key === 'Escape' && query) { e.preventDefault?.(); onQuery(''); } }}
         right={query ? (
-          <Pressable onPress={() => onQuery('')} accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={8} style={{ paddingRight: 10 }}>
+          <Pressable onPress={() => onQuery('')} accessibilityRole="button" accessibilityLabel={tr('common.clear_search')} hitSlop={8} style={{ paddingRight: 10 }}>
             <Ionicons name="close-circle" size={18} color={colors.textSubtle} />
           </Pressable>
         ) : !compact ? <View style={{ paddingRight: 10 }}><ShortcutHint keys="Ctrl+K" /></View> : undefined}
@@ -70,12 +73,12 @@ export function SettingsSearch({ query, onQuery, sections, onOpen, compact, inpu
 function TopicList({ topics, onOpen, query }: { topics: SettingsTopic[]; onOpen: (href: string) => void; query: string }) {
   const { colors, radius } = useTheme();
   if (!topics.length) {
-    return <Text variant="small" tone="muted" style={{ paddingHorizontal: 8, paddingVertical: 6 }}>{`Nothing matches “${query.trim()}”. Try gst, upi, printer or staff.`}</Text>;
+    return <Text variant="small" tone="muted" style={{ paddingHorizontal: 8, paddingVertical: 6 }}>{tr('settings.SettingsFrame.nothing_matches_trim_try_gst_upi_printer', { trim: query.trim() })}</Text>;
   }
   return (
     <View accessibilityRole="list" style={{ gap: 2 }}>
       {topics.map((t, i) => (
-        <Pressable key={`${t.href}-${t.title}`} onPress={() => onOpen(t.href)} accessibilityRole="link" accessibilityLabel={`${t.title}, in ${t.hint}`}
+        <Pressable key={`${t.href}-${t.title}`} onPress={() => onOpen(t.href)} accessibilityRole="link" accessibilityLabel={tr('settings.SettingsFrame.title_in_hint', { title: t.title, hint: t.hint })}
           style={({ hovered }: any) => [styles.topic, { borderRadius: radius.md, backgroundColor: hovered || i === 0 ? colors.surfaceSunken : 'transparent' },
             Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
           <Ionicons name={t.icon ?? 'settings-outline'} size={16} color={colors.textMuted} />
@@ -111,12 +114,12 @@ export function SettingsFrame({ active, title, subtitle, actions, children, foot
   const header = (
     <View style={[styles.header, { paddingHorizontal: pad, paddingTop: (isPhone ? insets.top : 0) + (isPhone ? 10 : 20) }]}>
       <View style={[styles.headerInner, { maxWidth }]}>
-        {showBack ? <IconButton icon="arrow-back" accessibilityLabel="Back to settings" onPress={back} style={{ marginLeft: -8 }} /> : null}
+        {showBack ? <IconButton icon="arrow-back" accessibilityLabel={tr('settings.SettingsFrame.back_to_settings')} onPress={back} style={{ marginLeft: -8 }} /> : null}
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text variant={isPhone ? 'h1' : 'display'} numberOfLines={1} accessibilityRole="header">{title}</Text>
           {subtitle ? <Text tone="muted" numberOfLines={isPhone ? 2 : 3}>{subtitle}</Text> : null}
         </View>
-        {actions ? <View style={styles.actions}>{actions}</View> : null}
+        {actions || !isWide ? <View style={styles.actions}>{actions}{!isWide ? <><LanguageMenu compact /><ThemeToggle compact /></> : null}</View> : null}
       </View>
     </View>
   );
@@ -187,7 +190,7 @@ function SectionNav({ active, dirty, width }: { active: SettingsKey; dirty: bool
   return (
     <View style={[styles.nav, { width, borderRightColor: colors.border, backgroundColor: colors.surfaceAlt }]}>
       <View style={{ paddingHorizontal: 12, paddingTop: 20, paddingBottom: 10, gap: 10 }}>
-        <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase', paddingHorizontal: 4 }}>Settings</Text>
+        <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase', paddingHorizontal: 4 }}>{tr('common.settings')}</Text>
         <SettingsSearch query={query} onQuery={setQuery} sections={sections} onOpen={(href) => void open(href)} inputRef={inputRef} />
       </View>
       {query.trim() ? null : (

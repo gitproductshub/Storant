@@ -9,24 +9,26 @@ import { money } from '@/lib/format';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout, ChoiceChips } from '../components';
 import { Avatar, RANGE_OPTIONS, RoleBadge, Row, TableHead, cellStyle, localRange, roleName, type Column, type RangeKey, type StaffCtx } from './shared';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 type SortKey = 'sales' | 'orders' | 'covers' | 'collected';
 const SORTS: { value: SortKey; label: string }[] = [
-  { value: 'sales', label: 'Sales' },
-  { value: 'orders', label: 'Orders' },
-  { value: 'covers', label: 'Covers' },
-  { value: 'collected', label: 'Collected' },
+  { value: 'sales', get label() { return tr('settings.staff_PerformanceTab.sales'); } },
+  { value: 'orders', get label() { return tr('common.orders'); } },
+  { value: 'covers', get label() { return tr('settings.staff_PerformanceTab.covers'); } },
+  { value: 'collected', get label() { return tr('settings.staff_PerformanceTab.collected'); } },
 ];
 
-const RANGE_TEXT: Record<RangeKey, string> = { today: 'today', '7d': 'in the last 7 days', '30d': 'in the last 30 days' };
+const RANGE_TEXT: Record<RangeKey, string> = { today: 'today', get '7d'() { return tr('settings.staff_PerformanceTab.in_the_last_7_days'); }, get '30d'() { return tr('settings.staff_PerformanceTab.in_the_last_30_days'); } };
 
 export function PerformanceTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number }) {
   const inPlan = ctx.hasFeature('advanced_reports');
   if (!inPlan) {
     return (
       <Card>
-        <EmptyState icon="lock-closed-outline" title="Staff performance isn't in your plan"
-          message="Waiter and cashier performance is part of Staff, item & wastage reports. Contact Tallyko to upgrade your plan." />
+        <EmptyState icon="lock-closed-outline" title={tr('settings.staff_PerformanceTab.staff_performance_isn_t_in_your_plan')}
+          message={tr('settings.staff_PerformanceTab.waiter_and_cashier_performance_is_part_of', { brand: brand.name })} />
       </Card>
     );
   }
@@ -53,15 +55,15 @@ function Performance({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number })
 
   const columns: Column[] = [
     { key: 'rank', label: '#', width: 28 },
-    { key: 'name', label: 'Staff', flex: 2.2 },
-    { key: 'orders', label: 'Orders', flex: 0.8, align: 'right' },
-    { key: 'sales', label: 'Sales', flex: 1.4, align: 'right' },
-    { key: 'avg', label: 'Avg bill', flex: 1, align: 'right' },
-    ...(wide ? [{ key: 'tables', label: 'Tables', flex: 0.8, align: 'right' } as Column] : []),
-    { key: 'covers', label: 'Covers', flex: 0.8, align: 'right' },
-    ...(wide ? [{ key: 'settled', label: 'Settled', flex: 0.8, align: 'right' } as Column] : []),
-    { key: 'collected', label: 'Collected', flex: 1.2, align: 'right' },
-    { key: 'cancelled', label: 'Cancelled', flex: 0.9, align: 'right' },
+    { key: 'name', label: tr('common.staff'), flex: 2.2 },
+    { key: 'orders', label: tr('common.orders'), flex: 0.8, align: 'right' },
+    { key: 'sales', label: tr('settings.staff_PerformanceTab.sales'), flex: 1.4, align: 'right' },
+    { key: 'avg', label: tr('settings.staff_PerformanceTab.avg_bill'), flex: 1, align: 'right' },
+    ...(wide ? [{ key: 'tables', label: tr('common.tables'), flex: 0.8, align: 'right' } as Column] : []),
+    { key: 'covers', label: tr('settings.staff_PerformanceTab.covers'), flex: 0.8, align: 'right' },
+    ...(wide ? [{ key: 'settled', label: tr('settings.staff_PerformanceTab.settled'), flex: 0.8, align: 'right' } as Column] : []),
+    { key: 'collected', label: tr('settings.staff_PerformanceTab.collected'), flex: 1.2, align: 'right' },
+    { key: 'cancelled', label: tr('common.cancelled'), flex: 0.9, align: 'right' },
   ];
   const col = (key: string) => columns.find((c) => c.key === key)!;
 
@@ -76,7 +78,7 @@ function Performance({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number })
   );
 
   const rank = (i: number) => i === 0 && top > 0
-    ? <Ionicons name="trophy" size={18} color={colors.accent} accessibilityLabel="Top" />
+    ? <Ionicons name="trophy" size={18} color={colors.accent} accessibilityLabel={tr('settings.staff_PerformanceTab.top')} />
     : <Text variant="smallStrong" tone="subtle">{i + 1}</Text>;
 
   const bar = (value: number) => (
@@ -92,27 +94,27 @@ function Performance({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number })
           <Segmented size="sm" value={range} options={RANGE_OPTIONS} onChange={setRange} />
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Text variant="small" tone="muted">Rank by</Text>
-          <ChoiceChips value={sort} options={SORTS} onChange={setSort} accessibilityLabel="Rank by" />
+          <Text variant="small" tone="muted">{tr('settings.staff_PerformanceTab.rank_by')}</Text>
+          <ChoiceChips value={sort} options={SORTS} onChange={setSort} accessibilityLabel={tr('settings.staff_PerformanceTab.rank_by')} />
         </View>
       </View>
 
-      {q.loading && !q.data ? <Loading label="Loading performance" /> : null}
+      {q.loading && !q.data ? <Loading label={tr('settings.staff_PerformanceTab.loading_performance')} /> : null}
       {q.error && !q.data ? <ErrorState message={q.error} onRetry={q.reload} /> : null}
 
       {q.data ? (
         <>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            <Stat label="Sales taken" value={money(totals.sales, '₹', true)} icon="trending-up-outline" hint={`${totals.orders} order${totals.orders === 1 ? '' : 's'}`} />
-            <Stat label="Average bill" value={money(totals.orders ? totals.sales / totals.orders : 0, '₹', true)} icon="receipt-outline" hint={totals.covers ? `${totals.covers} covers` : undefined} />
-            <Stat label="Collected" value={money(totals.collected, '₹', true)} icon="wallet-outline" hint={`${totals.settled} bill${totals.settled === 1 ? '' : 's'} settled`} />
-            <Stat label="Cancelled" value={String(totals.cancelled)} icon="close-circle-outline" tone={totals.cancelled ? 'danger' : 'default'} hint="bills" />
+            <Stat label={tr('settings.staff_PerformanceTab.sales_taken')} value={money(totals.sales, '₹', true)} icon="trending-up-outline" hint={tr('settings.staff_PerformanceTab.orders_order_v', { orders: totals.orders, v: totals.orders === 1 ? '' : 's' })} />
+            <Stat label={tr('settings.staff_PerformanceTab.average_bill')} value={money(totals.orders ? totals.sales / totals.orders : 0, '₹', true)} icon="receipt-outline" hint={totals.covers ? tr('settings.staff_PerformanceTab.covers_covers', { covers: totals.covers }) : undefined} />
+            <Stat label={tr('settings.staff_PerformanceTab.collected')} value={money(totals.collected, '₹', true)} icon="wallet-outline" hint={tr('settings.staff_PerformanceTab.settled_bill_v_settled', { settled: totals.settled, v: totals.settled === 1 ? '' : 's' })} />
+            <Stat label={tr('common.cancelled')} value={String(totals.cancelled)} icon="close-circle-outline" tone={totals.cancelled ? 'danger' : 'default'} hint={tr('settings.staff_PerformanceTab.bills')} />
           </View>
 
           {rows.length === 0 ? (
             <Card>
-              <EmptyState icon="podium-outline" title={`No completed bills ${RANGE_TEXT[range]}`}
-                message="Staff appear here once they take or settle bills. Orders on a waiter's assigned tables count towards that waiter." />
+              <EmptyState icon="podium-outline" title={tr('settings.staff_PerformanceTab.no_completed_bills_v', { v: RANGE_TEXT[range] })}
+                message={tr('settings.staff_PerformanceTab.staff_appear_here_once_they_take_or')} />
             </Card>
           ) : (
             <Card padded={false} style={{ overflow: 'hidden' }}>
@@ -129,12 +131,12 @@ function Performance({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number })
                       </View>
                     </View>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 6 }}>
-                      <Metric label="Orders" value={String(r.orders)} />
-                      <Metric label="Avg bill" value={money(r.average_bill, '₹', true)} />
-                      <Metric label="Covers" value={String(r.covers)} />
-                      <Metric label="Tables" value={String(r.tables_served)} />
-                      <Metric label="Settled" value={`${r.bills_settled} · ${money(r.collected, '₹', true)}`} />
-                      <Metric label="Cancelled" value={String(r.cancelled)} danger={r.cancelled > 0} />
+                      <Metric label={tr('common.orders')} value={String(r.orders)} />
+                      <Metric label={tr('settings.staff_PerformanceTab.avg_bill')} value={money(r.average_bill, '₹', true)} />
+                      <Metric label={tr('settings.staff_PerformanceTab.covers')} value={String(r.covers)} />
+                      <Metric label={tr('common.tables')} value={String(r.tables_served)} />
+                      <Metric label={tr('settings.staff_PerformanceTab.settled')} value={`${r.bills_settled} · ${money(r.collected, '₹', true)}`} />
+                      <Metric label={tr('common.cancelled')} value={String(r.cancelled)} danger={r.cancelled > 0} />
                     </View>
                   </View>
                 </Row>
@@ -164,7 +166,7 @@ function Performance({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number })
             </Card>
           )}
           <Callout tone="neutral" icon="information-circle-outline">
-            Sales, orders and covers count completed bills by the staff member who took the order. Collected counts bills they settled. Cancelled counts their orders that were cancelled.
+            {tr('settings.staff_PerformanceTab.sales_orders_and_covers_count_completed')}
           </Callout>
         </>
       ) : null}

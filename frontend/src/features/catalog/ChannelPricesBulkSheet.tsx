@@ -15,6 +15,7 @@ import {
   bulkMarkup, channelQuote, channelShortName, entryOf, formatPct, isOnChannel, markupPrice, withChannelPrice,
 } from './channelPricing';
 import { plural } from './utils';
+import { t as tr } from '@/i18n';
 
 type Mode = 'markup' | 'clear';
 
@@ -119,64 +120,64 @@ export function ChannelPricesBulkSheet({ visible, onClose, channels, initialCode
     onProducts(saved);
     setBusy(false);
     if (failed.length) {
-      toast.error(`${plural(failed.length, 'item')} not saved (${failed[0].name}: ${failed[0].error}). Try again.`);
+      toast.error(tr('catalog.ChannelPricesBulkSheet.plural_not_saved_name_error_try_again', { plural: plural(failed.length, 'item'), name: failed[0].name, error: failed[0].error }));
       return;
     }
     toast.success(mode === 'clear'
-      ? `${plural(saved.length, 'item')} now use ${name}'s mark-up`
-      : `Set ${name} prices for ${plural(saved.length, 'item')}`);
+      ? tr('catalog.ChannelPricesBulkSheet.plural_now_use_name_s_mark_up', { plural: plural(saved.length, 'item'), name })
+      : tr('catalog.ChannelPricesBulkSheet.set_name_prices_for_plural', { name, plural: plural(saved.length, 'item') }));
     onClose();
   };
 
   const footer = (
     <View style={styles.footer}>
       <Text variant="small" tone="muted" style={{ flex: 1, minWidth: 140 }}>
-        {busy ? `Saving ${progress} of ${toApply.length}…` : toApply.length ? `${plural(toApply.length, 'item')} will change` : 'Nothing to change for the selected items'}
+        {busy ? tr('catalog.ChannelPricesBulkSheet.saving_progress_of_length', { progress, length: toApply.length }) : toApply.length ? tr('catalog.ChannelPricesBulkSheet.plural_will_change', { plural: plural(toApply.length, 'item') }) : tr('catalog.ChannelPricesBulkSheet.nothing_to_change_for_the_selected_items')}
       </Text>
-      {isPhone ? null : <Button title="Cancel" variant="secondary" onPress={onClose} disabled={busy} />}
-      <Button title={mode === 'clear' ? 'Clear app prices' : `Set ${name} prices`} icon="checkmark" onPress={apply} loading={busy}
+      {isPhone ? null : <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={busy} />}
+      <Button title={mode === 'clear' ? tr('catalog.ChannelPricesBulkSheet.clear_app_prices') : tr('catalog.ChannelPricesBulkSheet.set_name_prices', { name })} icon="checkmark" onPress={apply} loading={busy}
         disabled={busy || !toApply.length || !!pctError} />
     </View>
   );
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Set app prices" subtitle="Give items their own price on a delivery app or online channel"
+    <Sheet visible={visible} onClose={onClose} title={tr('catalog.ChannelPricesBulkSheet.set_app_prices')} subtitle={tr('catalog.ChannelPricesBulkSheet.give_items_their_own_price_on_a_delivery')}
       width={760} footer={footer} scroll={false} dismissable={!busy}>
       <View style={{ gap: 14, flexShrink: 1, minHeight: 0 }}>
-        <Field label="Channel">
+        <Field label={tr('common.channel')}>
           <View style={styles.wrap}>
             {channels.map((c) => <Chip key={c.code} label={channelShortName(c)} selected={c.code === code} onPress={() => pickChannel(c.code)} />)}
           </View>
         </Field>
         <Segmented<Mode> value={mode} onChange={pickMode} options={[
-          { value: 'markup', label: isPhone ? '+% over counter' : 'Add % over counter price', icon: 'trending-up-outline' },
-          { value: 'clear', label: isPhone ? 'Clear prices' : 'Clear own prices', icon: 'refresh-outline' },
+          { value: 'markup', label: isPhone ? tr('catalog.ChannelPricesBulkSheet.over_counter') : tr('catalog.ChannelPricesBulkSheet.add_over_counter_price'), icon: 'trending-up-outline' },
+          { value: 'clear', label: isPhone ? tr('catalog.ChannelPricesBulkSheet.clear_prices') : tr('catalog.ChannelPricesBulkSheet.clear_own_prices'), icon: 'refresh-outline' },
         ]} />
         {mode === 'markup' ? (
           <View style={[styles.pair, isPhone && { flexDirection: 'column', alignItems: 'stretch' }]}>
-            <Input label="Increase" containerStyle={{ width: isPhone ? undefined : 160 }} value={pct} keyboardType="numbers-and-punctuation" maxLength={6}
+            <Input label={tr('catalog.ChannelPricesBulkSheet.increase')} containerStyle={{ width: isPhone ? undefined : 160 }} value={pct} keyboardType="numbers-and-punctuation" maxLength={6}
               onChangeText={(t) => setPct(t.replace(/[^\d.-]/g, ''))} error={pctError} right={<Text tone="muted" style={{ paddingRight: 12 }}>%</Text>}
-              accessibilityLabel="Percent over the counter price" />
+              accessibilityLabel={tr('catalog.ChannelPricesBulkSheet.percent_over_the_counter_price')} />
             <View style={{ flex: 1 }}>
-              <SwitchRow title="Round to whole rupees" subtitle={`e.g. ${money(249, symbol, true)} + ${pctError ? '10' : pct}% → ${money(bulkMarkup(249, pctError ? 10 : pctNum, round), symbol, round)}`}
+              <SwitchRow title={tr('catalog.ChannelPricesBulkSheet.round_to_whole_rupees')} subtitle={tr('catalog.ChannelPricesBulkSheet.e_g_money_v_money2', { money: money(249, symbol, true), v: pctError ? '10' : pct, money2: money(bulkMarkup(249, pctError ? 10 : pctNum, round), symbol, round) })}
                 value={round} onValueChange={setRound} />
             </View>
           </View>
         ) : (
           <Text variant="small" tone="muted">
-            Selected items go back to {name}’s {channel && Number(channel.price_adjust_pct) ? `${formatPct(channel.price_adjust_pct)} mark-up` : 'counter price (no mark-up)'}. Hidden / shown on {name} stays as it is.
+            {tr('catalog.ChannelPricesBulkSheet.selected_items_go_back_to_name_s', { name })} {channel && Number(channel.price_adjust_pct) ? tr('catalog.ChannelPricesBulkSheet.formatpct_mark_up', { formatPct: formatPct(channel.price_adjust_pct) }) : tr('catalog.ChannelPricesBulkSheet.counter_price_no_mark_up')}{tr('catalog.ChannelPricesBulkSheet.hidden_shown_on_name_stays_as_it_is', { name })}
           </Text>
         )}
         <Text variant="small" tone="subtle">
-          {mode === 'markup' ? `Items that already have their own ${name} price start unticked, so they aren’t overwritten. ` : ''}Items with options keep each option’s extra cost on top.
+          {mode === 'markup' ? tr('catalog.ChannelPricesBulkSheet.items_that_already_have_their_own_name', { name }) : ''}{tr('catalog.ChannelPricesBulkSheet.items_with_options_keep_each_option_s')}
         </Text>
 
         <View style={[styles.list, { borderColor: colors.border }]}>
           <View style={[styles.listHead, { backgroundColor: colors.surfaceAlt, borderBottomColor: colors.border }]}>
-            <Checkbox checked={allOn} indeterminate={!allOn && selected.size > 0} label="Select all items"
+            <Checkbox checked={allOn} indeterminate={!allOn && selected.size > 0} label={tr('catalog.ChannelPricesBulkSheet.select_all_items')}
               onChange={(v) => setSelected(v ? new Set(products.map((p) => p.id)) : new Set())} />
-            <Text variant="smallStrong" tone="muted" style={{ flex: 1 }}>{selected.size} of {plural(products.length, 'item')} selected</Text>
-            <Text variant="caption" tone="subtle">{name.toUpperCase()} PRICE</Text>
+            <Text variant="smallStrong" tone="muted" style={{ flex: 1 }}>{selected.size} {tr('catalog.ChannelPricesBulkSheet.of_plural_selected', { plural: plural(products.length, 'item') })}</Text>
+            <Text variant="caption" tone="subtle">{name.toUpperCase()} {tr('catalog.ChannelPricesBulkSheet.price')}</Text>
           </View>
           <FlatList
             data={plans}
@@ -188,13 +189,13 @@ export function ChannelPricesBulkSheet({ visible, onClose, channels, initialCode
               const cat = item.product.category_id ? categoryName.get(item.product.category_id) : null;
               return (
                 <View style={[styles.item, { borderBottomColor: colors.divider }]}>
-                  <Checkbox checked={on} onChange={(v) => toggle(item.product.id, v)} label={`Include ${item.product.name}`} />
+                  <Checkbox checked={on} onChange={(v) => toggle(item.product.id, v)} label={tr('catalog.ChannelPricesBulkSheet.include_name', { name: item.product.name })} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text variant="body" numberOfLines={1}>{item.product.name}</Text>
                     <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                       <Text variant="caption" tone="subtle" numberOfLines={1}>{[cat, `counter ${money(item.product.base_price, symbol)}`].filter(Boolean).join(' · ')}</Text>
-                      {hidden ? <Badge label={`Not on ${name}`} tone="warning" /> : null}
-                      {channel && typeof entryOf(item.product.channel_prices, channel.code).price === 'number' ? <Badge label="Own price" tone="primary" /> : null}
+                      {hidden ? <Badge label={tr('catalog.ChannelPricesBulkSheet.not_on_name', { name })} tone="warning" /> : null}
+                      {channel && typeof entryOf(item.product.channel_prices, channel.code).price === 'number' ? <Badge label={tr('catalog.ChannelPricesBulkSheet.own_price')} tone="primary" /> : null}
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>

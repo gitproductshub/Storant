@@ -14,6 +14,7 @@ import {
 } from './channelPricing';
 import { money } from '@/lib/format';
 import { moneyInput, parseMoney, sanitizeMoney } from './utils';
+import { t as tr } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -58,14 +59,14 @@ export function ChannelPricesSection({ channels, draft, onChange, counterPrice, 
   const { colors } = useTheme();
   if (!channels.length) return null;
   return (
-    <FormSection title="Prices on delivery apps & online" icon="bicycle-outline" subtitle={summary(channels, draft, symbol)}
-      right={<Button title={open ? 'Hide' : 'Edit'} size="sm" variant="ghost" iconRight={open ? 'chevron-up' : 'chevron-down'} onPress={onToggle}
-        accessibilityLabel={`${open ? 'Hide' : 'Edit'} prices on delivery apps`} />}>
+    <FormSection title={tr('catalog.ChannelPricesSection.prices_on_delivery_apps_online')} icon="bicycle-outline" subtitle={summary(channels, draft, symbol)}
+      right={<Button title={open ? tr('common.hide') : tr('common.edit')} size="sm" variant="ghost" iconRight={open ? 'chevron-up' : 'chevron-down'} onPress={onToggle}
+        accessibilityLabel={tr('catalog.ChannelPricesSection.v_prices_on_delivery_apps', { v: open ? tr('common.hide') : tr('common.edit') })} />}>
       {open ? (
         <View style={{ gap: 10 }}>
           <Text variant="small" tone="muted">
-            Leave a price empty to use the app’s mark-up over your counter price (set in Settings › Sales channels).
-            {hasVariants ? ' Options / sizes keep their extra cost on top of the app price.' : ''}
+            {tr('catalog.ChannelPricesSection.leave_a_price_empty_to_use_the_app_s_mark')}
+            {hasVariants ? tr('catalog.ChannelPricesSection.options_sizes_keep_their_extra_cost_on') : ''}
           </Text>
           {channels.map((c) => {
             const entry = draftEntry(draft, c.code);
@@ -75,9 +76,9 @@ export function ChannelPricesSection({ channels, draft, onChange, counterPrice, 
             const canMatchCounter = entry.available && counterPrice !== null && (typed !== null ? typed !== counterPrice : pct !== 0);
             const toggle = (
               <View style={styles.switchWrap}>
-                <Text variant="small" tone="muted">{compact ? 'On menu' : 'On this menu'}</Text>
+                <Text variant="small" tone="muted">{compact ? tr('catalog.ChannelPricesSection.on_menu') : tr('catalog.ChannelPricesSection.on_this_menu')}</Text>
                 <Switch value={entry.available} onValueChange={(v) => onChange(c.code, { available: v })}
-                  accessibilityLabel={`${c.name}: on this menu`} trackColor={{ true: colors.primary, false: colors.borderStrong }} />
+                  accessibilityLabel={tr('catalog.ChannelPricesSection.name_on_this_menu', { name: c.name })} trackColor={{ true: colors.primary, false: colors.borderStrong }} />
               </View>
             );
             const info = (
@@ -87,7 +88,7 @@ export function ChannelPricesSection({ channels, draft, onChange, counterPrice, 
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text variant="bodyStrong" numberOfLines={1}>{name}</Text>
-                  <Text variant="caption" tone="subtle" numberOfLines={1}>{pct ? `${formatPct(pct)} mark-up` : 'No mark-up'}</Text>
+                  <Text variant="caption" tone="subtle" numberOfLines={1}>{pct ? tr('catalog.ChannelPricesSection.formatpct_mark_up', { formatPct: formatPct(pct) }) : tr('catalog.ChannelPricesSection.no_mark_up')}</Text>
                 </View>
               </View>
             );
@@ -101,20 +102,20 @@ export function ChannelPricesSection({ channels, draft, onChange, counterPrice, 
                   onChangeText={(t) => onChange(c.code, { price: sanitizeMoney(t) })}
                   placeholder={markupPlaceholder(counterPrice, c, symbol)}
                   error={errors[c.code]}
-                  accessibilityLabel={`${hasVariants ? 'Base price' : 'Price'} on ${c.name}`}
+                  accessibilityLabel={tr('catalog.ChannelPricesSection.v_on_name', { v: hasVariants ? tr('catalog.ChannelPricesSection.base_price') : tr('common.price'), name: c.name })}
                   right={entry.price ? (
-                    <IconButton icon="close-circle" accessibilityLabel={`Use ${name}'s mark-up instead`} onPress={() => onChange(c.code, { price: '' })} />
+                    <IconButton icon="close-circle" accessibilityLabel={tr('catalog.ChannelPricesSection.use_name_s_mark_up_instead', { name })} onPress={() => onChange(c.code, { price: '' })} />
                   ) : undefined}
                 />
                 {canMatchCounter ? (
-                  <Button title="Same as counter" size="sm" variant="ghost" onPress={() => onChange(c.code, { price: moneyInput(counterPrice) })}
-                    accessibilityLabel={`Set the ${c.name} price to the counter price`} />
+                  <Button title={tr('common.same_as_counter')} size="sm" variant="ghost" onPress={() => onChange(c.code, { price: moneyInput(counterPrice) })}
+                    accessibilityLabel={tr('catalog.ChannelPricesSection.set_the_name_price_to_the_counter_price', { name: c.name })} />
                 ) : null}
               </View>
             ) : (
               <View style={[styles.priceCol, { minHeight: 46 }]}>
                 <Ionicons name="eye-off-outline" size={16} color={colors.textSubtle} />
-                <Text variant="small" tone="muted" style={{ flex: 1 }}>Hidden from {name}. Orders from {name} can’t include it.</Text>
+                <Text variant="small" tone="muted" style={{ flex: 1 }}>{tr('catalog.ChannelPricesSection.hidden_from_name_orders_from_name_can_t', { name })}</Text>
               </View>
             );
             return (

@@ -17,22 +17,23 @@ import {
   allowedPayments, balanceDue, billRoundOff, canOpenUpiApp, cleanUtr, itemStatus, paymentState, pickPayment, price, tableName, tableStage, utrError,
   type PlacedOrder, type TableStage,
 } from './model';
+import { t } from '@/i18n';
 
 const POLL_MS = 10_000;
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const STAGE_TEXT: Record<TableStage, { title: string; icon: IconName }> = {
-  waiting: { title: 'Waiting for the restaurant to confirm', icon: 'hourglass-outline' },
-  kitchen: { title: 'In the kitchen', icon: 'flame-outline' },
-  served: { title: 'Enjoy your meal!', icon: 'restaurant-outline' },
-  done: { title: 'Paid — thank you!', icon: 'checkmark-done' },
-  cancelled: { title: 'Order cancelled', icon: 'close' },
+  waiting: { get title() { return t('public.store_TableOrderTracker.waiting_for_the_restaurant_to_confirm'); }, icon: 'hourglass-outline' },
+  kitchen: { get title() { return t('common.in_the_kitchen'); }, icon: 'flame-outline' },
+  served: { get title() { return t('public.store_TableOrderTracker.enjoy_your_meal'); }, icon: 'restaurant-outline' },
+  done: { get title() { return t('public.store_TableOrderTracker.paid_thank_you'); }, icon: 'checkmark-done' },
+  cancelled: { get title() { return t('public.store_TableOrderTracker.order_cancelled'); }, icon: 'close' },
 };
 
 const PROGRESS: { key: TableStage; label: string }[] = [
-  { key: 'waiting', label: 'Sent' },
-  { key: 'kitchen', label: 'In kitchen' },
-  { key: 'served', label: 'Served' },
+  { key: 'waiting', get label() { return t('common.sent'); } },
+  { key: 'kitchen', get label() { return t('public.store_TableOrderTracker.in_kitchen'); } },
+  { key: 'served', get label() { return t('common.served'); } },
 ];
 
 function isHidden(): boolean {
@@ -129,7 +130,7 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
       await Linking.openURL(data.upi_link);
       setClaimOpen(true);
     } catch {
-      toast.warning(upiId ? `Couldn't open a UPI app. Pay ${price(due, symbol)} to ${upiId}.` : "Couldn't open a UPI app.");
+      toast.warning(upiId ? t('public.store_TableOrderTracker.couldn_t_open_a_upi_app_pay_price_to_upiid', { price: price(due, symbol), upiId }) : t('public.store_TableOrderTracker.couldn_t_open_a_upi_app'));
       setClaimOpen(true);
     }
   };
@@ -144,7 +145,7 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
       if (!mounted.current) return;
       apply(o);
       setClaimOpen(false);
-      toast.success('Thanks! The staff will confirm your payment.');
+      toast.success(t('public.store_TableOrderTracker.thanks_the_staff_will_confirm_your_payment'));
     } catch (e) {
       if (!mounted.current) return;
       if (e instanceof ApiError && e.status === 409) {
@@ -162,14 +163,14 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
       : stage === 'waiting' ? [colors.warningSoft, colors.warningText] : [colors.primarySoft, colors.primary];
 
   const subtitle = stage === 'cancelled'
-    ? `${businessName} couldn't take this order. Please ask the staff — if you already paid, they'll sort it out.`
+    ? t('public.store_TableOrderTracker.businessname_couldn_t_take_this_order', { businessName })
     : stage === 'waiting'
-      ? 'The staff will check your order in a moment. It goes to the kitchen right after.'
+      ? t('public.store_TableOrderTracker.the_staff_will_check_your_order_in_a')
       : stage === 'kitchen'
-        ? `Your food is being prepared. We'll bring it to ${where}.`
+        ? t('public.store_TableOrderTracker.your_food_is_being_prepared_we_ll_bring', { where })
         : stage === 'served'
-          ? 'Everything has been served. Want something else? Tap “Order more”.'
-          : `Thanks for dining at ${businessName}.`;
+          ? t('public.store_TableOrderTracker.everything_has_been_served_want_something')
+          : t('public.store_TableOrderTracker.thanks_for_dining_at_businessname', { businessName });
 
   const progressIndex = stage === 'waiting' ? 0 : stage === 'kitchen' ? 1 : 2;
 
@@ -184,18 +185,18 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
         <Text tone="muted" align="center" style={{ maxWidth: 420 }}>{subtitle}</Text>
         <View style={[styles.codeBox, { backgroundColor: colors.surfaceSunken, borderRadius: radius.lg }]}>
           <View style={{ alignItems: 'center' }}>
-            <Text variant="caption" tone="subtle" style={styles.upper}>Bill</Text>
-            <Text variant="h2" selectable accessibilityLabel={`Bill number ${code}`}>#{code}</Text>
+            <Text variant="caption" tone="subtle" style={styles.upper}>{t('common.bill')}</Text>
+            <Text variant="h2" selectable accessibilityLabel={t('public.store_TableOrderTracker.bill_number_code', { code })}>#{code}</Text>
           </View>
           <View style={[styles.vr, { backgroundColor: colors.border }]} />
           <View style={{ alignItems: 'center' }}>
-            <Text variant="caption" tone="subtle" style={styles.upper}>Table</Text>
+            <Text variant="caption" tone="subtle" style={styles.upper}>{t('public.store_TableOrderTracker.table')}</Text>
             <Text variant="h2">{(order.tableLabel ?? '').replace(/^table\s*/i, '') || '—'}</Text>
           </View>
         </View>
-        {data?.bill_label ? <Text variant="small" tone="subtle">Bill for {data.bill_label}</Text> : null}
+        {data?.bill_label ? <Text variant="small" tone="subtle">{t('public.store_TableOrderTracker.bill_for')} {data.bill_label}</Text> : null}
         {stage !== 'cancelled' && stage !== 'done' ? (
-          <View style={styles.progress} accessibilityLabel={`Progress: ${PROGRESS[progressIndex].label}`}>
+          <View style={styles.progress} accessibilityLabel={t('public.store_TableOrderTracker.progress_label', { label: PROGRESS[progressIndex].label })}>
             {PROGRESS.map((p, i) => {
               const done = i <= progressIndex;
               return (
@@ -218,8 +219,8 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
                 <Ionicons name="checkmark" size={22} color={colors.success} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text variant="h3" tone="success">Paid ✓</Text>
-                <Text variant="small" tone="muted">{price(total, symbol)} received. Thank you!</Text>
+                <Text variant="h3" tone="success">{t('public.store_TableOrderTracker.paid')}</Text>
+                <Text variant="small" tone="muted">{price(total, symbol)} {t('public.store_TableOrderTracker.received_thank_you')}</Text>
               </View>
             </View>
           ) : pay === 'claimed' ? (
@@ -228,47 +229,46 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
                 <ActivityIndicator color={colors.warningText} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text variant="h3">Payment being confirmed…</Text>
+                <Text variant="h3">{t('public.store_TableOrderTracker.payment_being_confirmed')}</Text>
                 <Text variant="small" tone="muted">
-                  You paid {price(data.payment_claim?.amount ?? due, symbol)} by UPI{data.payment_claim?.reference ? ` (ref ${data.payment_claim.reference})` : ''}.
-                  {' '}The staff are checking it in their UPI app.
+                  {t('public.store_TableOrderTracker.you_paid_price_by_upi', { price: price(data.payment_claim?.amount ?? due, symbol) })}{data.payment_claim?.reference ? t('public.store_TableOrderTracker.ref_reference', { reference: data.payment_claim.reference }) : ''}{t('public.store_TableOrderTracker.the_staff_are_checking_it_in_their_upi_app')}
                 </Text>
               </View>
             </View>
           ) : method === 'upi' && data.upi_link ? (
             <View style={{ gap: 12 }}>
               <View>
-                <Text variant="h3">Pay {price(due, symbol)} by UPI</Text>
+                <Text variant="h3">{t('public.store_TableOrderTracker.pay_price_by_upi', { price: price(due, symbol) })}</Text>
                 <Text variant="small" tone="muted">
-                  To {data.payment_options?.payee_name || businessName}{upiId ? ` · ${upiId}` : ''}. GPay, PhonePe, Paytm or any UPI app.
+                  {t('common.to')} {data.payment_options?.payee_name || businessName}{upiId ? ` · ${upiId}` : ''}{t('public.store_TableOrderTracker.gpay_phonepe_paytm_or_any_upi_app')}
                 </Text>
               </View>
               {mobile ? (
-                <Button title={`Pay ${price(due, symbol)} by UPI`} size="lg" full icon="phone-portrait-outline" onPress={openUpi} />
+                <Button title={t('public.store_TableOrderTracker.pay_price_by_upi', { price: price(due, symbol) })} size="lg" full icon="phone-portrait-outline" onPress={openUpi} />
               ) : (
                 <View style={{ alignItems: 'center', gap: 8 }}>
                   <View style={[styles.qrFrame, { borderColor: colors.border, borderRadius: radius.lg }]}>
                     <QrCode value={data.upi_link} size={200} margin={3} />
                   </View>
-                  <Text variant="small" tone="muted" align="center">Scan with any UPI app on your phone to pay {price(due, symbol)}.</Text>
+                  <Text variant="small" tone="muted" align="center">{t('public.store_TableOrderTracker.scan_with_any_upi_app_on_your_phone_to', { price: price(due, symbol) })}</Text>
                 </View>
               )}
               {claimOpen ? (
                 <View style={{ gap: 10 }}>
-                  <Input label="UPI reference / UTR (optional)" value={utr} onChangeText={(v) => { setUtr(cleanUtr(v)); setClaimError(null); }}
-                    placeholder="12-digit number from your UPI app" keyboardType="default" autoCapitalize="characters" maxLength={40}
-                    hint="Helps the staff find your payment faster." icon="receipt-outline" />
+                  <Input label={t('public.store_TableOrderTracker.upi_reference_utr_optional')} value={utr} onChangeText={(v) => { setUtr(cleanUtr(v)); setClaimError(null); }}
+                    placeholder={t('public.store_TableOrderTracker.12_digit_number_from_your_upi_app')} keyboardType="default" autoCapitalize="characters" maxLength={40}
+                    hint={t('public.store_TableOrderTracker.helps_the_staff_find_your_payment_faster')} icon="receipt-outline" />
                   {claimError ? <Notice tone="danger">{claimError}</Notice> : null}
                   <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <Button title="Cancel" variant="secondary" onPress={() => setClaimOpen(false)} disabled={claiming} />
-                    <Button title="Confirm I've paid" icon="checkmark" onPress={claim} loading={claiming} style={{ flex: 1 }} />
+                    <Button title={t('common.cancel')} variant="secondary" onPress={() => setClaimOpen(false)} disabled={claiming} />
+                    <Button title={t('public.store_TableOrderTracker.confirm_i_ve_paid')} icon="checkmark" onPress={claim} loading={claiming} style={{ flex: 1 }} />
                   </View>
                 </View>
               ) : (
-                <Button title="I've paid" variant="secondary" size="lg" full icon="checkmark-circle-outline" onPress={() => setClaimOpen(true)} />
+                <Button title={t('public.store_TableOrderTracker.i_ve_paid')} variant="secondary" size="lg" full icon="checkmark-circle-outline" onPress={() => setClaimOpen(true)} />
               )}
               {allowed.includes('counter') ? (
-                <LinkButton label="Pay at the counter instead" onPress={() => choose('counter')} />
+                <LinkButton label={t('public.store_TableOrderTracker.pay_at_the_counter_instead')} onPress={() => choose('counter')} />
               ) : null}
             </View>
           ) : (
@@ -278,11 +278,11 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
                   <Ionicons name="cash-outline" size={22} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text variant="h3">Please pay at the counter</Text>
-                  <Text variant="small" tone="muted">Show bill #{code} to the cashier, or ask your waiter for the bill. {price(due, symbol)} to pay.</Text>
+                  <Text variant="h3">{t('public.store_TableOrderTracker.please_pay_at_the_counter')}</Text>
+                  <Text variant="small" tone="muted">{t('public.store_TableOrderTracker.show_bill_code_to_the_cashier_or_ask_your', { code, price: price(due, symbol) })}</Text>
                 </View>
               </View>
-              {allowed.includes('upi') && data.upi_link ? <LinkButton label="Pay now by UPI instead" onPress={() => choose('upi')} /> : null}
+              {allowed.includes('upi') && data.upi_link ? <LinkButton label={t('public.store_TableOrderTracker.pay_now_by_upi_instead')} onPress={() => choose('upi')} /> : null}
             </View>
           )}
         </Card>
@@ -290,7 +290,7 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
 
       {/* Items */}
       <Card style={{ gap: 4 }}>
-        <Text variant="h3" style={{ marginBottom: 6 }}>Your items</Text>
+        <Text variant="h3" style={{ marginBottom: 6 }}>{t('public.store_TableOrderTracker.your_items')}</Text>
         {(data?.items ?? []).map((item, i) => {
           const s = itemStatus(item.status, status);
           return (
@@ -304,20 +304,20 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
             </View>
           );
         })}
-        {!data ? <Text tone="subtle" variant="small">{failing ? "Couldn't load your items yet." : 'Loading your items…'}</Text> : null}
+        {!data ? <Text tone="subtle" variant="small">{failing ? t('public.store_TableOrderTracker.couldn_t_load_your_items_yet') : t('public.store_TableOrderTracker.loading_your_items')}</Text> : null}
         {data ? (
           <View style={{ gap: 6, paddingTop: 10 }}>
             {data.subtotal !== undefined && (data.tax_amount || data.discount_amount || Math.abs(roundOff) >= 0.005) ? (
               <>
-                <Row label="Item total" value={price(data.subtotal, symbol)} />
-                {data.discount_amount ? <Row label="Discount" value={`− ${price(data.discount_amount, symbol)}`} /> : null}
+                <Row label={t('public.store_TableOrderTracker.item_total')} value={price(data.subtotal, symbol)} />
+                {data.discount_amount ? <Row label={t('common.discount')} value={`− ${price(data.discount_amount, symbol)}`} /> : null}
                 {data.tax_amount ? <Row label="GST" value={price(data.tax_amount, symbol)} /> : null}
-                {Math.abs(roundOff) >= 0.005 ? <Row label="Round off" value={`${roundOff < 0 ? '− ' : ''}${price(Math.abs(roundOff), symbol)}`} /> : null}
+                {Math.abs(roundOff) >= 0.005 ? <Row label={t('common.round_off')} value={`${roundOff < 0 ? '− ' : ''}${price(Math.abs(roundOff), symbol)}`} /> : null}
               </>
             ) : null}
-            <Row label="Bill total" value={price(total, symbol)} strong />
-            {pay !== 'paid' && due > 0 && Math.abs(due - total) > 0.005 ? <Row label="Paid so far" value={price(total - due, symbol)} /> : null}
-            {pay !== 'paid' && due > 0 ? <Row label="Balance to pay" value={price(due, symbol)} strong /> : null}
+            <Row label={t('public.store_TableOrderTracker.bill_total')} value={price(total, symbol)} strong />
+            {pay !== 'paid' && due > 0 && Math.abs(due - total) > 0.005 ? <Row label={t('public.store_TableOrderTracker.paid_so_far')} value={price(total - due, symbol)} /> : null}
+            {pay !== 'paid' && due > 0 ? <Row label={t('public.store_TableOrderTracker.balance_to_pay')} value={price(due, symbol)} strong /> : null}
           </View>
         ) : null}
       </Card>
@@ -325,17 +325,17 @@ export function TableOrderTracker({ tenantId, order, symbol, businessName, phone
       <View style={styles.meta}>
         <Ionicons name={failing ? 'cloud-offline-outline' : 'sync-outline'} size={14} color={failing ? colors.warningText : colors.textSubtle} />
         <Text variant="small" tone={failing ? 'warning' : 'subtle'}>
-          {failing ? "Can't reach the restaurant right now — we'll keep trying."
-            : final ? `Last updated ${updatedAt ? formatTime(updatedAt.toISOString()) : ''}`
-              : `Updates every few seconds${updatedAt ? ` · checked ${formatTime(updatedAt.toISOString())}` : ''}`}
+          {failing ? t('public.store_TableOrderTracker.can_t_reach_the_restaurant_right_now_we')
+            : final ? t('public.store_TableOrderTracker.last_updated_v', { v: updatedAt ? formatTime(updatedAt.toISOString()) : '' })
+              : t('public.store_TableOrderTracker.updates_every_few_seconds_v', { v: updatedAt ? t('public.store_TableOrderTracker.checked_formattime', { formatTime: formatTime(updatedAt.toISOString()) }) : '' })}
         </Text>
       </View>
 
       <View style={styles.actions}>
-        <Button title={final ? 'Start a new order' : 'Order more'} icon="add-circle-outline" size="lg" onPress={onOrderMore} style={{ flexGrow: 1 }} />
-        {!final ? <Button title="Refresh" variant="secondary" size="lg" icon="refresh" onPress={() => void load()} loading={checking} /> : null}
+        <Button title={final ? t('public.store_TableOrderTracker.start_a_new_order') : t('public.store_TableOrderTracker.order_more')} icon="add-circle-outline" size="lg" onPress={onOrderMore} style={{ flexGrow: 1 }} />
+        {!final ? <Button title={t('common.refresh')} variant="secondary" size="lg" icon="refresh" onPress={() => void load()} loading={checking} /> : null}
         {phone ? (
-          <Button title="Call" variant="secondary" size="lg" icon="call-outline" accessibilityLabel={`Call ${businessName}`}
+          <Button title={t('public.store_TableOrderTracker.call')} variant="secondary" size="lg" icon="call-outline" accessibilityLabel={t('public.store_TableOrderTracker.call_businessname', { businessName })}
             onPress={() => void Linking.openURL(`tel:${phone.replace(/\s/g, '')}`).catch(() => {})} />
         ) : null}
       </View>

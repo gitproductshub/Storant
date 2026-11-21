@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Card, Chip, EmptyState, Text } from '@/components/ui';
+import { t } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -133,7 +134,7 @@ export function NoAccess({ title, message }: { title: string; message: string })
       icon="lock-closed-outline"
       title={title}
       message={message}
-      action={{ label: 'Go to billing', icon: 'receipt-outline', onPress: () => router.navigate('/pos' as Href) }}
+      action={{ label: t('catalog.components.go_to_billing'), icon: 'receipt-outline', onPress: () => router.navigate('/pos' as Href) }}
     />
   );
 }

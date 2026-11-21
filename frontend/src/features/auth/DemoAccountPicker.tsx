@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Badge, Text, type BadgeTone } from '@/components/ui';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, ROLE_LABEL, demoLoginsEnabled, type DemoAccount, type DemoRole } from './demoAccounts';
+import { t } from '@/i18n';
 
 const ROLE_TONE: Record<DemoRole, BadgeTone> = { super_admin: 'danger', support: 'info', owner: 'primary', manager: 'info', cashier: 'success', waiter: 'accent', kitchen: 'danger' };
 const ROLE_ICON: Record<DemoRole, keyof typeof Ionicons.glyphMap> = {
@@ -26,12 +27,12 @@ export function DemoAccountPicker({ onPick, disabled }: { onPick: (email: string
 
   return (
     <View style={{ gap: 6, zIndex: 10 }}>
-      <Text variant="smallStrong" tone="muted">Demo account</Text>
+      <Text variant="smallStrong" tone="muted">{t('auth.DemoAccountPicker.demo_account')}</Text>
       <Pressable
         onPress={() => setOpen((o) => !o)}
         disabled={disabled}
         accessibilityRole="combobox"
-        accessibilityLabel="Choose a demo account"
+        accessibilityLabel={t('auth.DemoAccountPicker.choose_a_demo_account')}
         accessibilityState={{ expanded: open }}
         style={[styles.trigger, { borderColor: open ? colors.focus : colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
           Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}
@@ -41,7 +42,7 @@ export function DemoAccountPicker({ onPick, disabled }: { onPick: (email: string
           {picked ? (
             <Text variant="bodyStrong" numberOfLines={1}>{picked.name} · {ROLE_LABEL[picked.role]}</Text>
           ) : (
-            <Text tone="subtle" numberOfLines={1}>Use a demo account…</Text>
+            <Text tone="subtle" numberOfLines={1}>{t('auth.DemoAccountPicker.use_a_demo_account')}</Text>
           )}
         </View>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSubtle} />
@@ -79,7 +80,7 @@ export function DemoAccountPicker({ onPick, disabled }: { onPick: (email: string
         </ScrollView>
       ) : null}
       <Text variant="small" tone="subtle">
-        Demo only. All demo accounts use the password <Text variant="smallStrong" tone="muted">{DEMO_PASSWORD}</Text>. Run the demo seed first if sign-in fails.
+        {t('auth.DemoAccountPicker.demo_only_all_demo_accounts_use_the')} <Text variant="smallStrong" tone="muted">{DEMO_PASSWORD}</Text>{t('auth.DemoAccountPicker.run_the_demo_seed_first_if_sign_in_fails')}
       </Text>
     </View>
   );

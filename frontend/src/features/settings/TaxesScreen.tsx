@@ -24,14 +24,16 @@ import { AddClassSheet } from './taxes/AddClassSheet';
 import { AssignSheet } from './taxes/AssignSheet';
 import { ClassDetailSheet } from './taxes/ClassDetailSheet';
 import { RatePill, formatEffective, useCanManageTaxes, useOnline } from './taxes/shared';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 const REGISTRATION: { key: GstRegistration; title: string; bill: string; detail: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'regular', title: 'Regular GST', bill: 'Tax invoice', icon: 'receipt-outline',
-    detail: 'Bills are tax invoices with your GSTIN and CGST + SGST shown for each rate. Choose this if you have a regular GST registration.' },
-  { key: 'composition', title: 'Composition scheme', bill: 'Bill of supply', icon: 'document-text-outline',
-    detail: 'Bills are a "Bill of supply" with no GST added. You pay a fixed % of turnover yourself and cannot collect GST from customers.' },
-  { key: 'unregistered', title: 'Not registered', bill: 'Bill without GST', icon: 'remove-circle-outline',
-    detail: 'For businesses below the GST turnover limit. Bills show no GSTIN and no GST.' },
+  { key: 'regular', get title() { return t('settings.TaxesScreen.regular_gst'); }, bill: 'Tax invoice', icon: 'receipt-outline',
+    get detail() { return t('settings.TaxesScreen.bills_are_tax_invoices_with_your_gstin'); } },
+  { key: 'composition', get title() { return t('settings.TaxesScreen.composition_scheme'); }, bill: 'Bill of supply', icon: 'document-text-outline',
+    get detail() { return t('settings.TaxesScreen.bills_are_a_bill_of_supply_with_no_gst'); } },
+  { key: 'unregistered', get title() { return t('settings.TaxesScreen.not_registered'); }, bill: 'Bill without GST', icon: 'remove-circle-outline',
+    get detail() { return t('settings.TaxesScreen.for_businesses_below_the_gst_turnover'); } },
 ];
 
 export default function TaxesScreen() {
@@ -60,16 +62,16 @@ export default function TaxesScreen() {
   useEffect(() => { if (data) rememberTaxOverview(data); }, [data]);
 
   const frame = (children: React.ReactNode) => (
-    <SettingsFrame active="taxes" title="GST & taxes" subtitle="How GST is charged on your bills, and what happens when the government changes a rate."
+    <SettingsFrame active="taxes" title={t('common.gst_taxes')} subtitle={t('settings.TaxesScreen.how_gst_is_charged_on_your_bills_and_what')}
       refreshing={refreshing} onRefresh={reload} maxWidth={1040}
-      actions={data && canEdit ? <Button title={isPhone ? undefined : 'Add tax class'} icon="add" onPress={() => setAdding(true)} disabled={!online} accessibilityLabel="Add tax class" /> : undefined}>
+      actions={data && canEdit ? <Button title={isPhone ? undefined : t('settings.TaxesScreen.add_tax_class')} icon="add" onPress={() => setAdding(true)} disabled={!online} accessibilityLabel={t('settings.TaxesScreen.add_tax_class')} /> : undefined}>
       {children}
     </SettingsFrame>
   );
 
-  if (loading && !data) return frame(<Loading label="Loading tax settings" />);
+  if (loading && !data) return frame(<Loading label={t('settings.TaxesScreen.loading_tax_settings')} />);
   if (!data) {
-    return frame(<ErrorState message={error ?? 'Could not load tax settings.'} onRetry={reload} />);
+    return frame(<ErrorState message={error ?? t('settings.TaxesScreen.could_not_load_tax_settings')} onRetry={reload} />);
   }
 
   /** Settings changes go through PUT /settings and are mirrored into the tax overview + offline cache. */
@@ -81,7 +83,7 @@ export default function TaxesScreen() {
       setData((d) => (d ? { ...d, ...patch, classes: patch.default_tax_class_id !== undefined ? d.classes.map((c) => ({ ...c, is_default: c.id === patch.default_tax_class_id })) : d.classes } : d));
       toast.success(okMessage);
     } catch (e) {
-      toast.error(isOffline(e) ? "You're offline. Try again when you're connected." : errorMessage(e));
+      toast.error(isOffline(e) ? t('settings.TaxesScreen.you_re_offline_try_again_when_you_re') : errorMessage(e));
     } finally {
       setBusy(null);
     }
@@ -91,11 +93,11 @@ export default function TaxesScreen() {
     if (next === data.registration || !editable) return;
     const info = REGISTRATION.find((r) => r.key === next)!;
     const ok = await confirmTop({
-      title: `Switch to ${info.title}?`,
+      title: t('settings.TaxesScreen.switch_to_title', { title: info.title }),
       message: next === 'regular'
-        ? 'New bills will be tax invoices with GST charged at each item\'s rate. Make sure your GSTIN is filled in under Business.'
-        : `New bills will be a "${info.bill}" with no GST added. Bills already issued don't change.`,
-      confirmLabel: 'Switch',
+        ? t('settings.TaxesScreen.new_bills_will_be_tax_invoices_with_gst')
+        : t('settings.TaxesScreen.new_bills_will_be_a_bill_with_no_gst', { bill: info.bill }),
+      confirmLabel: t('settings.TaxesScreen.switch'),
     });
     if (!ok) return;
     await saveSetting('registration', { gst_registration: next }, { registration: next }, `Bills are now: ${info.bill}`);
@@ -116,21 +118,21 @@ export default function TaxesScreen() {
       {frame(
         <>
           {!canEdit ? (
-            <Callout tone="neutral" icon="lock-closed-outline" title="View only">
-              Only the owner or a manager with settings access can change tax settings.
+            <Callout tone="neutral" icon="lock-closed-outline" title={t('settings.TaxesScreen.view_only')}>
+              {t('settings.TaxesScreen.only_the_owner_or_a_manager_with_settings')}
             </Callout>
           ) : !online ? (
-            <Callout tone="warning" icon="cloud-offline-outline" title="You're offline">
-              Tax settings can be viewed but not changed until you're back online. Billing keeps using the rates already on this device.
+            <Callout tone="warning" icon="cloud-offline-outline" title={t('common.you_re_offline')}>
+              {t('settings.TaxesScreen.tax_settings_can_be_viewed_but_not')}
             </Callout>
           ) : null}
 
-          <Callout tone="info" icon="shield-checkmark-outline" title="Past bills never change">
-            Each bill keeps the GST rate that applied when it was made. Rate changes you schedule here only affect bills made on or after their start date.
+          <Callout tone="info" icon="shield-checkmark-outline" title={t('settings.TaxesScreen.past_bills_never_change')}>
+            {t('settings.TaxesScreen.each_bill_keeps_the_gst_rate_that_applied')}
           </Callout>
 
           {upcoming.length ? (
-            <Callout tone="warning" icon="time-outline" title={`${upcoming.length} upcoming rate change${upcoming.length === 1 ? '' : 's'}`}>
+            <Callout tone="warning" icon="time-outline" title={t('settings.TaxesScreen.length_upcoming_rate_change_v', { length: upcoming.length, v: upcoming.length === 1 ? '' : 's' })}>
               <View style={{ gap: 2 }}>
                 {upcoming.slice(0, 5).map(({ c, r }) => (
                   <Text key={r.id} variant="small">
@@ -142,7 +144,7 @@ export default function TaxesScreen() {
           ) : null}
 
           {/* Registration */}
-          <FormSection title="GST registration" description="Decides what kind of bill you print and whether GST is added.">
+          <FormSection title={t('settings.TaxesScreen.gst_registration')} description={t('settings.TaxesScreen.decides_what_kind_of_bill_you_print_and')}>
             <View style={{ flexDirection: twoCol ? 'row' : 'column', gap: 10 }}>
               {REGISTRATION.map((r) => {
                 const selected = data.registration === r.key;
@@ -165,26 +167,26 @@ export default function TaxesScreen() {
                 );
               })}
             </View>
-            {busy === 'registration' ? <Text variant="small" tone="muted">Saving…</Text> : null}
+            {busy === 'registration' ? <Text variant="small" tone="muted">{t('settings.TaxesScreen.saving')}</Text> : null}
             {missingGstin ? (
-              <Callout tone="warning" title="GSTIN missing"
-                action={<Button title="Add GSTIN" size="sm" variant="secondary" icon="arrow-forward" onPress={() => router.navigate('/settings/business?section=tax' as Href)} />}>
-                A tax invoice must show your GSTIN. Add it in Business settings.
+              <Callout tone="warning" title={t('settings.TaxesScreen.gstin_missing')}
+                action={<Button title={t('settings.TaxesScreen.add_gstin')} size="sm" variant="secondary" icon="arrow-forward" onPress={() => router.navigate('/settings/business?section=tax' as Href)} />}>
+                {t('settings.TaxesScreen.a_tax_invoice_must_show_your_gstin_add_it')}
               </Callout>
             ) : null}
             {!chargesGst ? (
-              <Callout tone="neutral">Your tax classes are kept, but no GST is charged while you are not on regular GST.</Callout>
+              <Callout tone="neutral">{t('settings.TaxesScreen.your_tax_classes_are_kept_but_no_gst_is')}</Callout>
             ) : null}
           </FormSection>
 
           {/* Prices & default */}
-          <FormSection title="Prices & default rate" description="How menu prices relate to GST, and the class used for items that don't have one.">
-            <SettingSwitch title="Menu prices include GST" value={data.prices_include_tax} disabled={!editable || busy !== null}
+          <FormSection title={t('settings.TaxesScreen.prices_default_rate')} description={t('settings.TaxesScreen.how_menu_prices_relate_to_gst_and_the')}>
+            <SettingSwitch title={t('settings.TaxesScreen.menu_prices_include_gst')} value={data.prices_include_tax} disabled={!editable || busy !== null}
               onValueChange={(v) => saveSetting('prices', { prices_include_tax: v }, { prices_include_tax: v }, v ? 'Prices now include GST' : 'GST is now added on top of prices')}
               subtitle={pricesSubtitle} />
             <Hairline />
             <View style={{ gap: 8 }}>
-              <Text variant="smallStrong" tone="muted">Default tax class</Text>
+              <Text variant="smallStrong" tone="muted">{t('settings.TaxesScreen.default_tax_class')}</Text>
               {editable ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityRole="radiogroup">
                   {active.map((c) => {
@@ -203,14 +205,14 @@ export default function TaxesScreen() {
                   })}
                 </View>
               ) : (
-                <Text variant="bodyStrong">{defaultClass ? `${defaultClass.name} · ${formatRate(defaultClass.current_rate)}%` : 'Not set'}</Text>
+                <Text variant="bodyStrong">{defaultClass ? `${defaultClass.name} · ${formatRate(defaultClass.current_rate)}%` : t('common.not_set')}</Text>
               )}
-              <Text variant="small" tone="subtle">Items without their own tax class use this one. Changing it changes the tax on those items' new bills.</Text>
+              <Text variant="small" tone="subtle">{t('settings.TaxesScreen.items_without_their_own_tax_class_use')}</Text>
             </View>
             {data.products_without_class > 0 ? (
-              <Callout tone="warning" icon="pricetags-outline" title={`${data.products_without_class} item${data.products_without_class === 1 ? ' has' : 's have'} no tax class`}
-                action={editable && active.length ? <Button title="Assign classes" size="sm" variant="secondary" icon="git-merge-outline" onPress={() => setAssigning({})} /> : undefined}>
-                {`They use the default class${defaultClass ? ` (${defaultClass.name}, ${formatRate(defaultClass.current_rate)}%)` : ''}, or an old per-item rate if one was set. Assign a class so the right GST is charged when rates change.`}
+              <Callout tone="warning" icon="pricetags-outline" title={t('settings.TaxesScreen.products_without_class_item_v_no_tax_class', { products_without_class: data.products_without_class, v: data.products_without_class === 1 ? t('settings.TaxesScreen.has') : t('settings.TaxesScreen.s_have') })}
+                action={editable && active.length ? <Button title={t('settings.TaxesScreen.assign_classes')} size="sm" variant="secondary" icon="git-merge-outline" onPress={() => setAssigning({})} /> : undefined}>
+                {t('settings.TaxesScreen.they_use_the_default_class_v_or_an_old', { v: defaultClass ? ` (${defaultClass.name}, ${formatRate(defaultClass.current_rate)}%)` : '' })}
               </Callout>
             ) : null}
           </FormSection>
@@ -219,11 +221,11 @@ export default function TaxesScreen() {
           <View style={{ gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <View style={{ flex: 1, minWidth: 220, gap: 2 }}>
-                <Text variant="h3" accessibilityRole="header">Tax classes</Text>
-                <Text variant="small" tone="muted">Groups of items taxed the same way. Tap a class to see its rate history or schedule a change.</Text>
+                <Text variant="h3" accessibilityRole="header">{t('settings.TaxesScreen.tax_classes')}</Text>
+                <Text variant="small" tone="muted">{t('settings.TaxesScreen.groups_of_items_taxed_the_same_way_tap_a')}</Text>
               </View>
               {editable && active.length ? (
-                <Button title="Assign to items" variant="secondary" icon="git-merge-outline" size="sm" onPress={() => setAssigning({})} />
+                <Button title={t('settings.TaxesScreen.assign_to_items')} variant="secondary" icon="git-merge-outline" size="sm" onPress={() => setAssigning({})} />
               ) : null}
             </View>
             {classes.length ? (
@@ -236,8 +238,8 @@ export default function TaxesScreen() {
               </View>
             ) : (
               <Card>
-                <EmptyState icon="calculator-outline" title="No tax classes yet" message="Add one from the GST library to start charging the right GST."
-                  action={editable ? { label: 'Add tax class', icon: 'add', onPress: () => setAdding(true) } : undefined} />
+                <EmptyState icon="calculator-outline" title={t('settings.TaxesScreen.no_tax_classes_yet')} message={t('settings.TaxesScreen.add_one_from_the_gst_library_to_start')}
+                  action={editable ? { label: t('settings.TaxesScreen.add_tax_class'), icon: 'add', onPress: () => setAdding(true) } : undefined} />
               </Card>
             )}
           </View>
@@ -265,7 +267,7 @@ function ClassCard({ taxClass: c, onPress }: { taxClass: TaxClass; onPress: () =
       <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <Text variant="bodyStrong" numberOfLines={2}>{c.name}</Text>
-          <Text variant="small" tone="muted">{c.current_rate === null ? 'No rate yet' : describeComponents(c.current_components, c.current_rate)}</Text>
+          <Text variant="small" tone="muted">{c.current_rate === null ? t('settings.TaxesScreen.no_rate_yet') : describeComponents(c.current_components, c.current_rate)}</Text>
           <Text variant="small" tone="subtle">
             {[`${c.products} item${c.products === 1 ? '' : 's'}`, c.hsn_sac ? `HSN/SAC ${c.hsn_sac}` : null].filter(Boolean).join(' · ')}
           </Text>
@@ -273,10 +275,10 @@ function ClassCard({ taxClass: c, onPress }: { taxClass: TaxClass; onPress: () =
         <RatePill rate={c.current_rate} muted={!c.is_active} />
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {c.is_default ? <Badge label="Default" tone="primary" icon="star" /> : null}
-        {next ? <Badge label={`Upcoming change on ${formatEffective(next.effective_from, false)} (${formatRate(next.total_rate)}%)`} tone="warning" icon="time-outline" /> : null}
-        {c.follow_preset ? <Badge label="Follows Tallyko GST library" tone="info" icon="sync" /> : null}
-        {!c.is_active ? <Badge label="Turned off" tone="neutral" /> : null}
+        {c.is_default ? <Badge label={t('settings.TaxesScreen.default')} tone="primary" icon="star" /> : null}
+        {next ? <Badge label={t('settings.TaxesScreen.upcoming_change_on_formateffective', { formatEffective: formatEffective(next.effective_from, false), formatRate: formatRate(next.total_rate) })} tone="warning" icon="time-outline" /> : null}
+        {c.follow_preset ? <Badge label={t('settings.TaxesScreen.follows_brand_gst_library', { brand: brand.name })} tone="info" icon="sync" /> : null}
+        {!c.is_active ? <Badge label={t('settings.TaxesScreen.turned_off')} tone="neutral" /> : null}
       </View>
     </Card>
   );

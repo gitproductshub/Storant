@@ -18,6 +18,9 @@ import { SettingsFrame } from './SettingsFrame';
 import { Callout, FieldRow, FormSection } from './components';
 import { ROLE_LABEL } from './sections';
 import { validatePassword } from './validation';
+import { brand } from '@/config/brand';
+import { LanguageSegmented } from '@/i18n/LanguageSwitcher';
+import { t } from '@/i18n';
 
 function useUnsynced() {
   const tenantId = useAuth((s) => s.session?.tenantId);
@@ -48,8 +51,8 @@ export default function AccountScreen() {
     try {
       await syncNow();
       const left = useOutbox.getState().queue.filter((q) => q.tenantId === session?.tenantId && !q.failed).length;
-      if (left) toast.warning(`${left} bill${left === 1 ? '' : 's'} still waiting. Check the internet connection.`);
-      else toast.success('Everything is synced');
+      if (left) toast.warning(t('settings.AccountScreen.left_bill_v_still_waiting_check_the', { left, v: left === 1 ? '' : 's' }));
+      else toast.success(t('settings.AccountScreen.everything_is_synced'));
     } finally {
       setSyncing(false);
     }
@@ -57,11 +60,11 @@ export default function AccountScreen() {
 
   const signOut = async () => {
     const ok = await confirm({
-      title: 'Sign out?',
+      title: t('settings.AccountScreen.sign_out'),
       message: unsynced.total
-        ? `${unsynced.total} bill${unsynced.total === 1 ? ' has' : 's have'} not reached the server yet. They stay saved on this device and sync after the next sign-in here, but it is safest to sync before signing out.`
-        : 'You will need your email and password to sign in again.',
-      confirmLabel: 'Sign out',
+        ? t('settings.AccountScreen.total_bill_v_not_reached_the_server_yet', { total: unsynced.total, v: unsynced.total === 1 ? t('settings.AccountScreen.has') : t('settings.AccountScreen.s_have') })
+        : t('settings.AccountScreen.you_will_need_your_email_and_password_to'),
+      confirmLabel: t('common.sign_out'),
       danger: unsynced.total > 0,
     });
     if (!ok) return;
@@ -75,7 +78,7 @@ export default function AccountScreen() {
   };
 
   return (
-    <SettingsFrame active="account" title="Account" subtitle="Your login on this device.">
+    <SettingsFrame active="account" title={t('common.account')} subtitle={t('settings.AccountScreen.your_login_on_this_device')}>
       <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
         <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="h2" color={colors.primarySoftText}>{name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join('') || '?'}</Text>
@@ -95,42 +98,46 @@ export default function AccountScreen() {
 
       <DevicesSection refreshKey={devicesKey} />
 
-      <FormSection title="Appearance" description="Applies to this device.">
+      <FormSection title={t('settings.AccountScreen.language')} description={t('settings.AccountScreen.applies_to_this_device_receipts_and')}>
+        <LanguageSegmented />
+      </FormSection>
+
+      <FormSection title={t('settings.AccountScreen.appearance')} description={t('settings.AccountScreen.applies_to_this_device')}>
         <Segmented value={theme} onChange={(v) => setPrefs({ theme: v })}
-          options={[{ value: 'system', label: 'System', icon: 'phone-portrait-outline' }, { value: 'light', label: 'Light', icon: 'sunny-outline' }, { value: 'dark', label: 'Dark', icon: 'moon-outline' }]} />
-        <Text variant="small" tone="subtle">System follows your device's light/dark setting.</Text>
+          options={[{ value: 'system', label: t('common.system'), icon: 'desktop-outline' }, { value: 'light', label: t('settings.AccountScreen.light'), icon: 'sunny-outline' }, { value: 'dark', label: t('settings.AccountScreen.dark'), icon: 'moon-outline' }]} />
+        <Text variant="small" tone="subtle">{t('settings.AccountScreen.system_follows_your_device_s_light_dark')}</Text>
       </FormSection>
 
       {Platform.OS !== 'web' || process.env.EXPO_PUBLIC_ALLOW_SERVER_CHANGE ? (
-        <FormSection title="Server" description="The Tallyko server this app talks to. Change it only if whoever set up Tallyko asks you to.">
+        <FormSection title={t('settings.AccountScreen.server')} description={t('settings.AccountScreen.the_brand_server_this_app_talks_to_change', { brand: brand.name })}>
           <ServerField />
         </FormSection>
       ) : null}
 
-      <FormSection title="Sign out" description="Signs out of this device only.">
+      <FormSection title={t('common.sign_out')} description={t('settings.AccountScreen.signs_out_of_this_device_only')}>
         {unsynced.total ? (
-          <Callout tone="warning" title={`${unsynced.total} bill${unsynced.total === 1 ? '' : 's'} not synced yet`}
-            action={<Button title="Sync now" size="sm" icon="sync" variant="secondary" onPress={sync} loading={syncing} />}>
+          <Callout tone="warning" title={t('settings.AccountScreen.total_bill_v_not_synced_yet', { total: unsynced.total, v: unsynced.total === 1 ? '' : 's' })}
+            action={<Button title={t('settings.AccountScreen.sync_now')} size="sm" icon="sync" variant="secondary" onPress={sync} loading={syncing} />}>
             {unsynced.failed
-              ? `${unsynced.failed} need attention in Orders. The rest will upload when the internet is back. They are kept on this device if you sign out.`
-              : 'They will upload when the internet is back. They are kept on this device if you sign out, but sync first to be safe.'}
+              ? t('settings.AccountScreen.failed_need_attention_in_orders_the_rest', { failed: unsynced.failed })
+              : t('settings.AccountScreen.they_will_upload_when_the_internet_is')}
           </Callout>
         ) : null}
-        <Button title="Sign out" icon="log-out-outline" variant="secondary" onPress={signOut} loading={signingOut} style={{ alignSelf: 'flex-start' }} />
+        <Button title={t('common.sign_out')} icon="log-out-outline" variant="secondary" onPress={signOut} loading={signingOut} style={{ alignSelf: 'flex-start' }} />
       </FormSection>
 
-      <FormSection title="Privacy" description="What Tallyko stores and why.">
-        <ListRow title="Privacy policy" subtitle="How your data and your customers' data is handled" icon="shield-checkmark-outline"
+      <FormSection title={t('settings.AccountScreen.privacy')} description={t('settings.AccountScreen.what_brand_stores_and_why', { brand: brand.name })}>
+        <ListRow title={t('common.privacy_policy')} subtitle={t('settings.AccountScreen.how_your_data_and_your_customers_data_is')} icon="shield-checkmark-outline"
           onPress={() => router.push('/privacy' as Href)} />
       </FormSection>
 
-      <FormSection title="Delete account" description="Permanently remove your login. This cannot be undone.">
+      <FormSection title={t('settings.AccountScreen.delete_account')} description={t('settings.AccountScreen.permanently_remove_your_login_this_cannot')}>
         <Text tone="muted">
           {role === 'owner'
-            ? `You are the owner, so deleting your account also closes ${businessName || 'this business'} for everyone.`
-            : 'Your login is removed. The business and its records are not affected.'}
+            ? t('settings.AccountScreen.you_are_the_owner_so_deleting_your', { v: businessName || t('settings.AccountScreen.this_business') })
+            : t('settings.AccountScreen.your_login_is_removed_the_business_and')}
         </Text>
-        <Button title="Delete my account…" icon="trash-outline" variant="dangerOutline" onPress={() => setDeleteOpen(true)} style={{ alignSelf: 'flex-start' }} />
+        <Button title={t('settings.AccountScreen.delete_my_account')} icon="trash-outline" variant="dangerOutline" onPress={() => setDeleteOpen(true)} style={{ alignSelf: 'flex-start' }} />
       </FormSection>
 
       {deleteOpen ? <DeleteAccountSheet businessName={businessName} owner={role === 'owner'} unsynced={unsynced.total} onClose={() => setDeleteOpen(false)} /> : null}
@@ -160,7 +167,7 @@ function ChangePassword({ onChanged }: { onChanged?: () => void }) {
     setSaving(true);
     try {
       await authApi.changePassword(current, next);
-      toast.success('Password changed. Other devices were signed out.');
+      toast.success(t('settings.AccountScreen.password_changed_other_devices_were'));
       onChanged?.();
       setCurrent('');
       setNext('');
@@ -176,19 +183,19 @@ function ChangePassword({ onChanged }: { onChanged?: () => void }) {
 
   const dirty = !!(current || next || again);
   return (
-    <FormSection title="Password" description="Use at least 8 characters that are hard to guess. Don't reuse the password of your email.">
-      <Input label="Current password" value={current} onChangeText={(v) => { setCurrent(v); setCurrentError(null); }} secureTextEntry
+    <FormSection title={t('common.password')} description={t('settings.AccountScreen.use_at_least_8_characters_that_are_hard')}>
+      <Input label={t('settings.AccountScreen.current_password')} value={current} onChangeText={(v) => { setCurrent(v); setCurrentError(null); }} secureTextEntry
         autoComplete="current-password" textContentType="password" error={currentError ?? (submitted ? errors.current : undefined)} />
       <FieldRow>
-        <Input label="New password" value={next} onChangeText={setNext} secureTextEntry autoComplete="new-password" textContentType="newPassword"
+        <Input label={t('settings.AccountScreen.new_password')} value={next} onChangeText={setNext} secureTextEntry autoComplete="new-password" textContentType="newPassword"
           error={submitted || (next.length > 0 && next.length < 8 && again.length > 0) ? errors.next : undefined} maxLength={64}
-          hint={next ? `${next.length} characters` : undefined} />
-        <Input label="Confirm new password" value={again} onChangeText={setAgain} secureTextEntry autoComplete="new-password" textContentType="newPassword"
+          hint={next ? t('settings.AccountScreen.length_characters', { length: next.length }) : undefined} />
+        <Input label={t('settings.AccountScreen.confirm_new_password')} value={again} onChangeText={setAgain} secureTextEntry autoComplete="new-password" textContentType="newPassword"
           error={submitted || (again.length >= next.length && again.length > 0) ? errors.again : undefined} maxLength={64} onSubmitEditing={save} />
       </FieldRow>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Button title="Change password" icon="key-outline" onPress={save} loading={saving} disabled={!dirty} />
-        {dirty ? <Button title="Clear" variant="ghost" onPress={() => { setCurrent(''); setNext(''); setAgain(''); setSubmitted(false); setCurrentError(null); }} /> : null}
+        <Button title={t('settings.AccountScreen.change_password')} icon="key-outline" onPress={save} loading={saving} disabled={!dirty} />
+        {dirty ? <Button title={t('common.clear')} variant="ghost" onPress={() => { setCurrent(''); setNext(''); setAgain(''); setSubmitted(false); setCurrentError(null); }} /> : null}
       </View>
     </FormSection>
   );
@@ -209,47 +216,47 @@ function DeleteAccountSheet({ businessName, owner, unsynced, onClose }: { busine
       const result = await authApi.deleteAccount(password);
       await useAuth.getState().logout();
       useData.getState().reset();
-      toast.success(result?.business_closed ? 'Your account was deleted and the business closed' : 'Your account was deleted');
+      toast.success(result?.business_closed ? t('settings.AccountScreen.your_account_was_deleted_and_the_business') : t('settings.AccountScreen.your_account_was_deleted'));
       router.replace('/login' as Href);
     } catch (e) {
-      setError(e instanceof ApiError && e.status === 400 ? 'Password is incorrect.' : errorMessage(e));
+      setError(e instanceof ApiError && e.status === 400 ? t('settings.AccountScreen.password_is_incorrect') : errorMessage(e));
       setDeleting(false);
     }
   };
 
   return (
-    <Sheet visible onClose={deleting ? () => {} : onClose} dismissable={!deleting} title="Delete your account" width={520}
+    <Sheet visible onClose={deleting ? () => {} : onClose} dismissable={!deleting} title={t('settings.AccountScreen.delete_your_account')} width={520}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={deleting} />
-          <Button title={owner ? 'Delete account and close business' : 'Delete my account'} variant="danger" icon="trash-outline" onPress={remove} loading={deleting} disabled={!ready} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={deleting} />
+          <Button title={owner ? t('settings.AccountScreen.delete_account_and_close_business') : t('settings.AccountScreen.delete_my_account_2')} variant="danger" icon="trash-outline" onPress={remove} loading={deleting} disabled={!ready} />
         </View>
       }>
       {owner ? (
-        <Callout tone="danger" title={`This closes ${businessName || 'your business'}`}>
+        <Callout tone="danger" title={t('settings.AccountScreen.this_closes_v', { v: businessName || t('settings.AccountScreen.your_business') })}>
           <View style={{ gap: 4 }}>
-            <Text variant="small">• Every staff login stops working and your online store goes offline.</Text>
-            <Text variant="small">• Customer names, phone numbers, emails and notes are erased.</Text>
-            <Text variant="small">• Your name, email and phone are erased.</Text>
-            <Text variant="small">• Invoices and sales records are kept, anonymised, because GST law requires businesses to keep them.</Text>
+            <Text variant="small">{t('settings.AccountScreen.every_staff_login_stops_working_and_your')}</Text>
+            <Text variant="small">{t('settings.AccountScreen.customer_names_phone_numbers_emails_and')}</Text>
+            <Text variant="small">{t('settings.AccountScreen.your_name_email_and_phone_are_erased')}</Text>
+            <Text variant="small">{t('settings.AccountScreen.invoices_and_sales_records_are_kept')}</Text>
           </View>
         </Callout>
       ) : (
-        <Callout tone="warning" title="Your login will be removed">
+        <Callout tone="warning" title={t('settings.AccountScreen.your_login_will_be_removed')}>
           <View style={{ gap: 4 }}>
-            <Text variant="small">• You can't sign in to {businessName || 'this business'} again.</Text>
-            <Text variant="small">• Your name, email and phone are erased.</Text>
-            <Text variant="small">• Bills you created stay in the business's records, as GST law requires.</Text>
+            <Text variant="small">{t('settings.AccountScreen.you_can_t_sign_in_to')} {businessName || t('settings.AccountScreen.this_business')} {t('settings.AccountScreen.again')}</Text>
+            <Text variant="small">{t('settings.AccountScreen.your_name_email_and_phone_are_erased')}</Text>
+            <Text variant="small">{t('settings.AccountScreen.bills_you_created_stay_in_the_business_s')}</Text>
           </View>
         </Callout>
       )}
       {unsynced ? (
-        <Callout tone="warning">{`${unsynced} bill${unsynced === 1 ? ' on this device has' : 's on this device have'} not been synced and will be lost. Cancel and sync first if you need them.`}</Callout>
+        <Callout tone="warning">{t('settings.AccountScreen.unsynced_bill_v_not_been_synced_and_will', { unsynced, v: unsynced === 1 ? t('settings.AccountScreen.on_this_device_has') : t('settings.AccountScreen.s_on_this_device_have') })}</Callout>
       ) : null}
-      <Input label="Your password" value={password} onChangeText={(v) => { setPassword(v); setError(null); }} secureTextEntry autoComplete="current-password" error={error} />
-      <Input label='Type DELETE to confirm' value={typed} onChangeText={setTyped} autoCapitalize="characters" autoCorrect={false} placeholder="DELETE"
-        hint="This can't be undone." onSubmitEditing={remove} />
-      <Text variant="small" tone="subtle">Read more in the privacy policy, or ask your shop owner if you only want to leave the business.</Text>
+      <Input label={t('settings.AccountScreen.your_password')} value={password} onChangeText={(v) => { setPassword(v); setError(null); }} secureTextEntry autoComplete="current-password" error={error} />
+      <Input label={t('common.type_delete_to_confirm')} value={typed} onChangeText={setTyped} autoCapitalize="characters" autoCorrect={false} placeholder={t('common.delete')}
+        hint={t('settings.AccountScreen.this_can_t_be_undone')} onSubmitEditing={remove} />
+      <Text variant="small" tone="subtle">{t('settings.AccountScreen.read_more_in_the_privacy_policy_or_ask')}</Text>
     </Sheet>
   );
 }

@@ -5,6 +5,8 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/components/ui';
 import { PublicPage } from './PublicPage';
 import { Bullets, Rich } from './RichText';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 const LAST_UPDATED = '23 October 2026';
 
@@ -13,15 +15,15 @@ interface Section { id: string; title: string; blocks: Block[] }
 
 const SECTIONS: Section[] = [
   {
-    id: 'who', title: '1. Who we are',
+    id: 'who', get title() { return t('public.PrivacyScreen.1_who_we_are'); },
     blocks: [
-      'Tallyko is a point-of-sale (billing) app for restaurants, cafés, cloud kitchens and retail shops. It is provided by [[Your company name]], [[registered address]] ("we", "us").',
-      'This policy explains what information Tallyko handles, why, and the choices you have. It covers the Tallyko apps for Android and iOS, the web app, and the ordering pages that shops share with their customers.',
-      'If a business runs Tallyko on its own server (using the "Server address" option at sign-in), that business — not us — operates that server and is responsible for the data stored on it.',
+      `${brand.name} is a point-of-sale (billing) app for restaurants, cafés, cloud kitchens and retail shops. It is provided by [[Your company name]], [[registered address]] ("we", "us").`,
+      `This policy explains what information ${brand.name} handles, why, and the choices you have. It covers the ${brand.name} apps for Android and iOS, the web app, and the ordering pages that shops share with their customers.`,
+      `If a business runs ${brand.name} on its own server (using the "Server address" option at sign-in), that business — not us — operates that server and is responsible for the data stored on it.`,
     ],
   },
   {
-    id: 'collect', title: '2. Information we collect',
+    id: 'collect', get title() { return t('public.PrivacyScreen.2_information_we_collect'); },
     blocks: [
       { sub: 'Business owners and staff' },
       { list: [
@@ -48,7 +50,7 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: 'use', title: '3. How we use information',
+    id: 'use', get title() { return t('public.PrivacyScreen.3_how_we_use_information'); },
     blocks: [
       { list: [
         'To provide the service: sign-in, billing, printing receipts and kitchen tickets, table and order management, stock, reports and online ordering.',
@@ -61,7 +63,7 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: 'basis', title: '4. Legal basis and roles (India — DPDP Act, 2023)',
+    id: 'basis', get title() { return t('public.PrivacyScreen.4_legal_basis_and_roles_india_dpdp_act'); },
     blocks: [
       'We process personal data under India\'s Digital Personal Data Protection Act, 2023 on the basis of the consent you give when you create an account or place an order, and for legitimate uses the Act allows, such as complying with law.',
       'For **owner and staff accounts**, we decide how that data is used and act as the Data Fiduciary.',
@@ -69,7 +71,7 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: 'share', title: '5. Who we share information with',
+    id: 'share', get title() { return t('public.PrivacyScreen.5_who_we_share_information_with'); },
     blocks: [
       { list: [
         '**The shop you order from** receives your order details.',
@@ -81,7 +83,7 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: 'retention', title: '6. How long we keep information',
+    id: 'retention', get title() { return t('public.PrivacyScreen.6_how_long_we_keep_information'); },
     blocks: [
       { list: [
         'Account and business data is kept while the account is active.',
@@ -93,7 +95,7 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: 'security', title: '7. How we protect information',
+    id: 'security', get title() { return t('public.PrivacyScreen.7_how_we_protect_information'); },
     blocks: [
       { list: [
         'All connections to our servers use encryption in transit (HTTPS).',
@@ -105,39 +107,39 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: 'rights', title: '8. Your rights and deleting your account',
+    id: 'rights', get title() { return t('public.PrivacyScreen.8_your_rights_and_deleting_your_account'); },
     blocks: [
       'You can ask us for a summary of the personal data we hold about you, ask us to correct or complete it, ask us to erase it, withdraw your consent, and nominate someone to exercise these rights for you. You can also raise a grievance with us, and if you are not satisfied, with the Data Protection Board of India.',
       'You can **delete your account** in the app under **Settings → Account → Delete account**, or on the web at {{/delete-account|our account deletion page}}. If you cannot sign in, email [[support@your-domain]] from the address on your account.',
     ],
   },
   {
-    id: 'permissions', title: '9. App permissions',
+    id: 'permissions', get title() { return t('public.PrivacyScreen.9_app_permissions'); },
     blocks: [
       'The app asks for a permission only when you use the feature that needs it. You can turn each one off in your device settings; only that feature stops working.',
       { list: [
         '**Camera:** to scan product barcodes and photograph a printed menu for import.',
         '**Photos:** to choose a menu photo you already have. The system photo picker shares only the photo you pick.',
         '**Bluetooth (nearby devices):** to find and connect to receipt and kitchen printers. It is not used to determine your location.',
-        '**Local network:** to reach printers, or a Tallyko server, on your shop\'s Wi-Fi.',
+        `**Local network:** to reach printers, or a ${brand.name} server, on your shop's Wi-Fi.`,
       ] },
-      'Tallyko does not request access to your microphone, location, contacts or calendar.',
+      `${brand.name} does not request access to your microphone, location, contacts or calendar.`,
     ],
   },
   {
-    id: 'children', title: '10. Children',
+    id: 'children', get title() { return t('public.PrivacyScreen.10_children'); },
     blocks: [
-      'Tallyko is a business tool and is not directed at anyone under 18. We do not knowingly create accounts for children. If you believe a child has given us personal data, contact us and we will delete it.',
+      `${brand.name} is a business tool and is not directed at anyone under 18. We do not knowingly create accounts for children. If you believe a child has given us personal data, contact us and we will delete it.`,
     ],
   },
   {
-    id: 'changes', title: '11. Changes to this policy',
+    id: 'changes', get title() { return t('public.PrivacyScreen.11_changes_to_this_policy'); },
     blocks: [
       'We may update this policy as the service or the law changes. We will change the "Last updated" date above and, for significant changes, tell account holders in the app or by email before the change takes effect.',
     ],
   },
   {
-    id: 'contact', title: '12. Contact and grievance officer',
+    id: 'contact', get title() { return t('public.PrivacyScreen.12_contact_and_grievance_officer'); },
     blocks: [
       'Questions, requests or complaints about privacy:',
       { list: [
@@ -151,10 +153,10 @@ const SECTIONS: Section[] = [
 ];
 
 const HIGHLIGHTS: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
-  { icon: 'eye-off-outline', title: 'No ads or tracking', body: 'No advertising IDs or third-party analytics.' },
-  { icon: 'ban-outline', title: 'We never sell data', body: 'Your business data is yours.' },
-  { icon: 'lock-closed-outline', title: 'Encrypted & isolated', body: 'HTTPS, hashed passwords, per-business isolation.' },
-  { icon: 'trash-outline', title: 'Delete any time', body: 'In the app or on the web.' },
+  { icon: 'eye-off-outline', get title() { return t('public.PrivacyScreen.no_ads_or_tracking'); }, get body() { return t('public.PrivacyScreen.no_advertising_ids_or_third_party'); } },
+  { icon: 'ban-outline', get title() { return t('public.PrivacyScreen.we_never_sell_data'); }, get body() { return t('public.PrivacyScreen.your_business_data_is_yours'); } },
+  { icon: 'lock-closed-outline', get title() { return t('public.PrivacyScreen.encrypted_isolated'); }, get body() { return t('public.PrivacyScreen.https_hashed_passwords_per_business'); } },
+  { icon: 'trash-outline', get title() { return t('public.PrivacyScreen.delete_any_time'); }, get body() { return t('public.PrivacyScreen.in_the_app_or_on_the_web'); } },
 ];
 
 function jumpTo(id: string) {
@@ -170,11 +172,11 @@ export default function PrivacyScreen() {
   const { isPhone } = useLayout();
 
   return (
-    <PublicPage title="Privacy policy · Tallyko">
+    <PublicPage title={t('common.privacy_policy')}>
       <View style={{ gap: 8 }}>
-        <Text variant="caption" tone="primary" style={{ textTransform: 'uppercase' }}>Legal</Text>
-        <Text variant="display" accessibilityRole="header">Privacy policy</Text>
-        <Text tone="muted">Last updated {LAST_UPDATED}</Text>
+        <Text variant="caption" tone="primary" style={{ textTransform: 'uppercase' }}>{t('public.PrivacyScreen.legal')}</Text>
+        <Text variant="display" accessibilityRole="header">{t('common.privacy_policy')}</Text>
+        <Text tone="muted">{t('public.PrivacyScreen.last_updated')} {LAST_UPDATED}</Text>
       </View>
 
       <View style={[styles.highlights, { marginTop: 24 }]}>
@@ -193,7 +195,7 @@ export default function PrivacyScreen() {
 
       {Platform.OS === 'web' ? (
         <View style={[styles.toc, { borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt }]}>
-          <Text variant="smallStrong" tone="muted">On this page</Text>
+          <Text variant="smallStrong" tone="muted">{t('public.PrivacyScreen.on_this_page')}</Text>
           <View style={styles.tocList}>
             {SECTIONS.map((s) => (
               <Pressable key={s.id} onPress={() => jumpTo(s.id)} accessibilityRole="link" style={[{ width: isPhone ? '100%' : '48%', paddingVertical: 4 }, { cursor: 'pointer' } as any]}>
@@ -218,7 +220,7 @@ export default function PrivacyScreen() {
       <View style={[styles.placeholderNote, { backgroundColor: colors.accentSoft, borderRadius: radius.md }]}>
         <Ionicons name="create-outline" size={18} color={colors.accentText} />
         <Text variant="small" color={colors.accentText} style={{ flex: 1 }}>
-          Highlighted text marks details the operator of this Tallyko service must fill in before publishing this policy.
+          {t('public.PrivacyScreen.highlighted_text_marks_details_the', { brand: brand.name })}
         </Text>
       </View>
     </PublicPage>

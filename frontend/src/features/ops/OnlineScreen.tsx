@@ -22,13 +22,15 @@ import { useData } from '@/store/data';
 import { useBadges } from '@/store/badges';
 import { usePrefs } from '@/store/prefs';
 import { kotFromOrder, printBill, printErrorMessage, printKitchenTicket } from '@/lib/billing';
-import { ORDER_TYPE_LABEL, formatTime, money } from '@/lib/format';
+import { formatTime, money } from '@/lib/format';
+import { ORDER_TYPE_UI } from '@/lib/uiLabels';
 import { AGGREGATOR_CODES, ChannelTile, Grid, Notice, channelLabel } from './common';
 import { PaymentClaimBanner, payChoice } from './PaymentClaim';
 import { ageTone, freshIds, minutesBetween, pruneMarks, type AgeThresholds } from './floorLogic';
 import { useFloorAges } from './useFloorAges';
 import { playAlert, useDevicePref, useLivePoll, useNow } from '@/hooks/live';
 import { AgeChip, GroupTitle, LiveStatus, ageColors } from './parts';
+import { t } from '@/i18n';
 
 const POLL_MS = 5_000;
 const NEW_GLOW_MS = 60_000;
@@ -70,7 +72,7 @@ export default function OnlineScreen() {
       const at = Date.now();
       setGlow((g) => ({ ...pruneMarks(g, at, NEW_GLOW_MS), ...Object.fromEntries(fresh.map((id) => [id, at])) }));
       if (sound) playAlert('online');
-      toast.info(fresh.length === 1 ? 'New online order' : `${fresh.length} new online orders`);
+      toast.info(fresh.length === 1 ? t('ops.OnlineScreen.new_online_order') : t('ops.OnlineScreen.length_new_online_orders', { length: fresh.length }));
       void useBadges.getState().refresh();
     }
     seen.current = new Set([...(seen.current ?? []), ...ids]);
@@ -95,43 +97,43 @@ export default function OnlineScreen() {
   const waitingLong = incoming.filter((o) => ageTone(minutesBetween(o.created_at, now), ages.online) !== 'ok').length;
 
   const filters = [
-    { key: 'all', label: 'All', count: incomingAll.length + progressAll.length },
+    { key: 'all', label: t('common.all'), count: incomingAll.length + progressAll.length },
     ...Object.keys(channelCounts).sort().map((c) => ({ key: c, label: channelLabel(c), count: channelCounts[c] })),
   ];
 
   const newMenu: ActionMenuItem[] = aggregators.length ? aggregators.map((c) => ({
     key: c.code, label: c.name || channelLabel(c.code), icon: c.code === 'OTHER' ? 'call-outline' : 'bicycle-outline',
-    description: c.commission_pct ? `${c.commission_pct}% commission${c.price_adjust_pct ? ` · prices ${c.price_adjust_pct > 0 ? '+' : ''}${c.price_adjust_pct}%` : ''}` : undefined,
+    description: c.commission_pct ? t('ops.OnlineScreen.commission_pct_commission_v', { commission_pct: c.commission_pct, v: c.price_adjust_pct ? t('ops.OnlineScreen.prices_v_price_adjust_pct', { v: c.price_adjust_pct > 0 ? '+' : '', price_adjust_pct: c.price_adjust_pct }) : '' }) : undefined,
     onPress: () => router.push({ pathname: '/pos', params: { channel: c.code } }),
   })) : [{
-    key: 'none', label: 'Turn on delivery apps', icon: 'settings-outline', description: 'Settings → Sales channels',
-    disabled: !can(role, 'manage'), disabledReason: 'Ask a manager to turn on Swiggy or Zomato', onPress: () => router.push('/settings'),
+    key: 'none', label: t('ops.OnlineScreen.turn_on_delivery_apps'), icon: 'settings-outline', description: t('ops.OnlineScreen.settings_sales_channels'),
+    disabled: !can(role, 'manage'), disabledReason: t('ops.OnlineScreen.ask_a_manager_to_turn_on_swiggy_or_zomato_x'), onPress: () => router.push('/settings'),
   }];
 
   const liveToggles = (
     <>
-      <Button title="Auto-print KOT" icon={autoPrintKot ? 'checkbox' : 'square-outline'} variant={autoPrintKot ? 'tonal' : 'outline'}
-        accessibilityLabel={`Auto-print KOT when accepting: ${autoPrintKot ? 'on' : 'off'}`}
-        onPress={() => { usePrefs.getState().set({ autoPrintKot: !autoPrintKot }); toast.info(autoPrintKot ? 'KOTs won’t print automatically' : 'KOTs print as soon as you accept'); }} />
+      <Button title={t('ops.OnlineScreen.auto_print_kot')} icon={autoPrintKot ? 'checkbox' : 'square-outline'} variant={autoPrintKot ? 'tonal' : 'outline'}
+        accessibilityLabel={t('ops.OnlineScreen.auto_print_kot_when_accepting_v', { v: autoPrintKot ? 'on' : 'off' })}
+        onPress={() => { usePrefs.getState().set({ autoPrintKot: !autoPrintKot }); toast.info(autoPrintKot ? t('ops.OnlineScreen.kots_won_t_print_automatically') : t('ops.OnlineScreen.kots_print_as_soon_as_you_accept')); }} />
       {Platform.OS === 'web' ? (
         <IconButton icon={sound ? 'volume-high-outline' : 'volume-mute-outline'} variant={sound ? 'secondary' : 'tonal'}
-          accessibilityLabel={sound ? 'Mute new-order sound' : 'Turn on new-order sound'} onPress={() => { setSound(!sound); if (!sound) playAlert('online'); }} />
+          accessibilityLabel={sound ? t('ops.OnlineScreen.mute_new_order_sound') : t('ops.OnlineScreen.turn_on_new_order_sound')} onPress={() => { setSound(!sound); if (!sound) playAlert('online'); }} />
       ) : null}
     </>
   );
 
   return (
     <Screen
-      title="Online orders"
-      subtitle={data ? `${data.incomingTotal} waiting${waitingLong ? ` · ${waitingLong} over ${ages.online.warn} min` : ''} · ${progressAll.length} in progress` : undefined}
+      title={t('common.online_orders')}
+      subtitle={data ? t('ops.OnlineScreen.incomingtotal_waiting_v_length_in_progress', { incomingTotal: data.incomingTotal, v: waitingLong ? t('ops.OnlineScreen.waitinglong_over_warn_min', { waitingLong, warn: ages.online.warn }) : '', length: progressAll.length }) : undefined}
       onRefresh={reload}
       maxWidth={isDesktop ? 2000 : 1280}
       actions={
         <>
           {!isPhone ? liveToggles : null}
           {can(role, 'order') ? (
-            <ActionMenu items={newMenu} align="end" title="New aggregator order"
-              trigger={(open) => <Button title={isPhone ? 'New' : 'New aggregator order'} accessibilityLabel="New aggregator order" icon="add" onPress={open} />} />
+            <ActionMenu items={newMenu} align="end" title={t('ops.OnlineScreen.new_aggregator_order')}
+              trigger={(open) => <Button title={isPhone ? t('common.new') : t('ops.OnlineScreen.new_aggregator_order')} accessibilityLabel={t('ops.OnlineScreen.new_aggregator_order')} icon="add" onPress={open} />} />
           ) : null}
         </>
       }
@@ -149,7 +151,7 @@ export default function OnlineScreen() {
 
       {data ? (
         <>
-          <GroupTitle title={`New · ${incoming.length}`} right={<LiveStatus updatedAt={poll.updatedAt} error={error} paused={!poll.live} intervalLabel="5 s" />} />
+          <GroupTitle title={t('ops.OnlineScreen.new_length', { length: incoming.length })} right={<LiveStatus updatedAt={poll.updatedAt} error={error} paused={!poll.live} intervalLabel="5 s" />} />
           {incoming.length ? (
             <Grid minItemWidth={isPhone ? 300 : 360} gap={12}>
               {incoming.map((o) => (
@@ -162,26 +164,26 @@ export default function OnlineScreen() {
                 <Ionicons name="checkmark-done" size={26} color={colors.success} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text variant="h3">All caught up</Text>
-                <Text tone="muted">New orders from QR tables, your store and delivery apps pop up here with a sound.</Text>
+                <Text variant="h3">{t('common.all_caught_up')}</Text>
+                <Text tone="muted">{t('ops.OnlineScreen.new_orders_from_qr_tables_your_store_and')}</Text>
               </View>
             </Card>
           )}
 
-          <GroupTitle title={`In progress · ${progress.length}`} />
+          <GroupTitle title={t('ops.OnlineScreen.in_progress_length', { length: progress.length })} />
           {progress.length ? (
             <Grid minItemWidth={isPhone ? 300 : 360} gap={12}>
               {progress.map((o) => <OnlineOrderCard key={o.id} order={o} mode="progress" now={now} ageLimits={ages.online} isNew={false} onChanged={changed} />)}
             </Grid>
           ) : (
-            <Text tone="muted" style={{ paddingHorizontal: 4 }}>Accepted online orders stay here until they are paid and closed.</Text>
+            <Text tone="muted" style={{ paddingHorizontal: 4 }}>{t('ops.OnlineScreen.accepted_online_orders_stay_here_until')}</Text>
           )}
 
           {showInfo ? (
             <View style={{ marginTop: 8 }}>
-              <Notice tone="neutral" icon="information-circle-outline" title="About Swiggy & Zomato"
-                message="Swiggy and Zomato send orders automatically only to their approved POS partners. Until then, punch them in here with “New aggregator order” — or connect a bridge using the webhook in Settings → Sales channels."
-                action={can(role, 'manage') ? { label: 'Open Sales channels', onPress: () => router.push('/settings') } : undefined}
+              <Notice tone="neutral" icon="information-circle-outline" title={t('ops.OnlineScreen.about_swiggy_zomato')}
+                message={t('ops.OnlineScreen.swiggy_and_zomato_send_orders')}
+                action={can(role, 'manage') ? { label: t('ops.OnlineScreen.open_sales_channels'), onPress: () => router.push('/settings') } : undefined}
                 onClose={() => setShowInfo(false)} />
             </View>
           ) : null}
@@ -222,7 +224,7 @@ function OnlineOrderCard({ order, mode, now, ageLimits, isNew, onChanged }: { or
     setBusy('accept');
     try {
       const updated = await ordersApi.accept(order.id);
-      toast.success(`Order ${label} accepted — sent to kitchen`);
+      toast.success(t('ops.OnlineScreen.order_label_accepted_sent_to_kitchen', { label }));
       onChanged();
       if (usePrefs.getState().autoPrintKot) await printKot(updated);
     } catch (e) {
@@ -235,14 +237,14 @@ function OnlineOrderCard({ order, mode, now, ageLimits, isNew, onChanged }: { or
 
   const reject = async () => {
     const reason = await prompt({
-      title: `Reject order ${label}?`, message: 'The customer will see this reason. Rejected orders are not charged.',
-      label: 'Reason', placeholder: 'e.g. Item out of stock, kitchen closing', confirmLabel: 'Reject order', danger: true, minLength: 3,
+      title: t('ops.OnlineScreen.reject_order_label', { label }), message: t('ops.OnlineScreen.the_customer_will_see_this_reason'),
+      label: t('common.reason'), placeholder: t('ops.OnlineScreen.e_g_item_out_of_stock_kitchen_closing'), confirmLabel: t('ops.OnlineScreen.reject_order'), danger: true, minLength: 3,
     });
     if (!reason) return;
     setBusy('reject');
     try {
       await ordersApi.reject(order.id, reason);
-      toast.info(`Order ${label} rejected`);
+      toast.info(t('ops.OnlineScreen.order_label_rejected', { label }));
       onChanged();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -264,9 +266,9 @@ function OnlineOrderCard({ order, mode, now, ageLimits, isNew, onChanged }: { or
   };
 
   const more: ActionMenuItem[] = [
-    { key: 'kot', label: 'Print KOT', icon: 'flame-outline', onPress: () => { setBusy('kot'); void printKot(order).finally(() => setBusy(null)); } },
-    { key: 'bill', label: 'Print bill', icon: 'print-outline', onPress: () => void print() },
-    { key: 'open', label: 'Open in Billing', icon: 'receipt-outline', hidden: !can(role, 'order'), onPress: () => router.push({ pathname: '/pos', params: { order: order.id } }) },
+    { key: 'kot', label: t('ops.OnlineScreen.print_kot'), icon: 'flame-outline', onPress: () => { setBusy('kot'); void printKot(order).finally(() => setBusy(null)); } },
+    { key: 'bill', label: t('common.print_bill'), icon: 'print-outline', onPress: () => void print() },
+    { key: 'open', label: t('common.open_in_billing'), icon: 'receipt-outline', hidden: !can(role, 'order'), onPress: () => router.push({ pathname: '/pos', params: { order: order.id } }) },
   ];
 
   const border = isNew ? colors.kitchen : mode === 'new' && tone !== 'ok' ? age.solid : mode === 'new' ? colors.borderStrong : colors.border;
@@ -279,8 +281,8 @@ function OnlineOrderCard({ order, mode, now, ageLimits, isNew, onChanged }: { or
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text variant="h3" numberOfLines={1}>{channelLabel(order.channel)} <Text tone="muted" variant="body">{label}</Text></Text>
           <Text variant="small" tone="muted" numberOfLines={1}>
-            {order.table_label ? `Table ${order.table_label}${order.bill_label ? ` · ${order.bill_label}` : ''}` : ORDER_TYPE_LABEL[order.type] ?? order.type}
-            {order.token_no ? ` · Token ${order.token_no}` : ''} · {formatTime(order.created_at)}
+            {order.table_label ? t('ops.OnlineScreen.table_table_label_v', { table_label: order.table_label, v: order.bill_label ? ` · ${order.bill_label}` : '' }) : ORDER_TYPE_UI[order.type] ?? order.type}
+            {order.token_no ? t('ops.OnlineScreen.token_token_no', { token_no: order.token_no }) : ''} · {formatTime(order.created_at)}
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -293,8 +295,8 @@ function OnlineOrderCard({ order, mode, now, ageLimits, isNew, onChanged }: { or
         {order.customer_name || order.customer_phone || order.guests ? (
           <View style={styles.infoRow}>
             <Ionicons name={isQr ? 'people-outline' : 'person-outline'} size={16} color={colors.textSubtle} />
-            <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>{order.customer_name ?? (isQr ? 'Guest' : 'Customer')}</Text>
-            {order.guests ? <Text tone="muted" numberOfLines={1}>· {order.guests} guest{order.guests === 1 ? '' : 's'}</Text> : null}
+            <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>{order.customer_name ?? (isQr ? t('ops.OnlineScreen.guest') : t('common.customer'))}</Text>
+            {order.guests ? <Text tone="muted" numberOfLines={1}>{t('ops.OnlineScreen.guests_guest', { guests: order.guests })}{order.guests === 1 ? '' : 's'}</Text> : null}
             {order.customer_phone ? <Text tone="muted" numberOfLines={1}>{order.customer_phone}</Text> : null}
           </View>
         ) : null}
@@ -316,7 +318,7 @@ function OnlineOrderCard({ order, mode, now, ageLimits, isNew, onChanged }: { or
             </View>
           ))}
           {order.items.length > 6 ? (
-            <Button title={expanded ? 'Show less' : `Show ${order.items.length - 6} more item${order.items.length - 6 === 1 ? '' : 's'}`}
+            <Button title={expanded ? t('ops.OnlineScreen.show_less') : t('ops.OnlineScreen.show_v_more_item_v2', { v: order.items.length - 6, v2: order.items.length - 6 === 1 ? '' : 's' })}
               variant="ghost" size="sm" onPress={() => setExpanded((v) => !v)} style={{ alignSelf: 'flex-start' }} />
           ) : null}
         </View>
@@ -329,28 +331,28 @@ function OnlineOrderCard({ order, mode, now, ageLimits, isNew, onChanged }: { or
         <View style={{ flexGrow: 1, flexBasis: 130, minWidth: 0, gap: 4 }}>
           <Text variant="h2" numberOfLines={1} style={{ fontVariant: ['tabular-nums'] }}>{money(order.total_amount, sym)}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {prepaid ? <StatusPill status="paid" label="Prepaid" />
-              : <StatusPill status={order.paid_amount > 0 ? 'partial' : 'unpaid'} label={order.paid_amount > 0 ? `Due ${money(order.balance_due, sym)}` : undefined} />}
+            {prepaid ? <StatusPill status="paid" label={t('ops.OnlineScreen.prepaid')} />
+              : <StatusPill status={order.paid_amount > 0 ? 'partial' : 'unpaid'} label={order.paid_amount > 0 ? t('ops.OnlineScreen.due_money', { money: money(order.balance_due, sym) }) : undefined} />}
             {!prepaid && choice ? <StatusPill status="choice" label={choice.label} showIcon={false} /> : null}
-            {claim ? <StatusPill status="claim" label="UPI to confirm" /> : null}
+            {claim ? <StatusPill status="claim" label={t('common.upi_to_confirm')} /> : null}
           </View>
         </View>
         {mode === 'new' ? (
           canAct ? (
             <View style={styles.actions}>
-              <Button title="Reject" variant="dangerOutline" onPress={reject} loading={busy === 'reject'} disabled={!!busy} />
-              <Button title="Accept" icon="checkmark" variant="success" size="lg" onPress={accept} loading={busy === 'accept'} disabled={!!busy}
-                style={{ minWidth: 140 }} accessibilityLabel={`Accept order ${label}${usePrefs.getState().autoPrintKot ? ' and print KOT' : ''}`} />
+              <Button title={t('ops.OnlineScreen.reject')} variant="dangerOutline" onPress={reject} loading={busy === 'reject'} disabled={!!busy} />
+              <Button title={t('ops.OnlineScreen.accept')} icon="checkmark" variant="success" size="lg" onPress={accept} loading={busy === 'accept'} disabled={!!busy}
+                style={{ minWidth: 140 }} accessibilityLabel={t('ops.OnlineScreen.accept_order_label_v', { label, v: usePrefs.getState().autoPrintKot ? t('ops.OnlineScreen.and_print_kot') : '' })} />
             </View>
           ) : (
-            <Text variant="small" tone="muted" style={{ maxWidth: 180 }} numberOfLines={3}>A cashier or manager needs to accept this order.</Text>
+            <Text variant="small" tone="muted" style={{ maxWidth: 180 }} numberOfLines={3}>{t('ops.OnlineScreen.a_cashier_or_manager_needs_to_accept_this')}</Text>
           )
         ) : (
           <View style={styles.actions}>
-            <ActionMenu items={more} align="end" title={`Order ${label}`}
-              trigger={(open) => <Button icon="ellipsis-horizontal" variant="outline" accessibilityLabel={`More for order ${label}`} onPress={open} loading={busy === 'print' || busy === 'kot'} />} />
+            <ActionMenu items={more} align="end" title={t('ops.OnlineScreen.order_label', { label })}
+              trigger={(open) => <Button icon="ellipsis-horizontal" variant="outline" accessibilityLabel={t('ops.OnlineScreen.more_for_order_label', { label })} onPress={open} loading={busy === 'print' || busy === 'kot'} />} />
             {can(role, 'order') ? (
-              <Button title={canAct && order.balance_due > 0 ? 'Settle' : 'Open'} iconRight="arrow-forward" variant={canAct && order.balance_due > 0 ? 'success' : 'tonal'}
+              <Button title={canAct && order.balance_due > 0 ? t('ops.OnlineScreen.settle') : t('common.open')} iconRight="arrow-forward" variant={canAct && order.balance_due > 0 ? 'success' : 'tonal'}
                 onPress={() => router.push({ pathname: '/pos', params: { order: order.id } })} />
             ) : null}
           </View>

@@ -11,6 +11,8 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout } from '../components';
 import { ShareLoginSheet, StaffSheet, roleTakesOrders } from './StaffSheet';
 import { Avatar, RoleBadge, canManageRole, roleName, type StaffCtx } from './shared';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 type SheetState = { mode: 'add' } | { mode: 'edit'; member: StaffAccount } | { mode: 'share'; email: string; password: string; name: string } | null;
 
@@ -77,16 +79,16 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
     const label = m.full_name || m.email;
     if (!next) {
       const ok = await confirm({
-        title: `Deactivate ${label}?`,
-        message: "They can't sign in again. A device that is already signed in stays signed in until its session ends (up to 12 hours). Past bills are kept.",
-        confirmLabel: 'Deactivate', danger: true,
+        title: tr('settings.staff_TeamTab.deactivate_label', { label }),
+        message: tr('settings.staff_TeamTab.they_can_t_sign_in_again_a_device_that_is'),
+        confirmLabel: tr('common.deactivate'), danger: true,
       });
       if (!ok) return;
     }
     setBusyId(m.id);
     try {
       upsert(await teamApi.updateStaff(m.id, { is_active: next }));
-      toast.success(next ? `${label} can sign in again` : `${label} deactivated`);
+      toast.success(next ? tr('settings.staff_TeamTab.label_can_sign_in_again', { label }) : tr('settings.staff_TeamTab.label_deactivated', { label }));
       ctx.reloadRoles(); // staff counts per role changed
     } catch (e) {
       toast.error(errorMessage(e));
@@ -105,14 +107,14 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
   const activeControl = (m: StaffAccount) => {
     if (busyId === m.id) return <ActivityIndicator color={colors.primary} />;
     if (!manageable(m) || isSelf(m)) {
-      return m.is_active ? <Badge label="Active" tone="success" /> : <Badge label="Off" tone="neutral" />;
+      return m.is_active ? <Badge label={tr('common.active')} tone="success" /> : <Badge label={tr('common.off')} tone="neutral" />;
     }
     // Own press target so toggling doesn't also open the row's edit sheet.
     return (
       <Pressable onPress={() => undefined} accessible={false} style={{ padding: 4 }}>
         <Switch value={m.is_active} onValueChange={(v) => void toggleActive(m, v)} disabled={!online}
           trackColor={{ true: colors.primary, false: colors.borderStrong }} thumbColor={colors.surface}
-          accessibilityLabel={`${m.full_name || m.email} login active`} />
+          accessibilityLabel={tr('settings.staff_TeamTab.v_login_active', { v: m.full_name || m.email })} />
       </Pressable>
     );
   };
@@ -125,7 +127,7 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text variant="bodyStrong" tone={m.is_active ? 'default' : 'muted'} numberOfLines={1} style={{ flexShrink: 1 }}>{name}</Text>
-            {isSelf(m) ? <Badge label="You" tone="success" /> : null}
+            {isSelf(m) ? <Badge label={tr('settings.staff_TeamTab.you')} tone="success" /> : null}
           </View>
           <Text variant="small" tone="muted" numberOfLines={1}>{m.email}</Text>
         </View>
@@ -135,14 +137,14 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
 
   const showTables = tablesUsed && assignSupported;
   const columns = useMemo<DataColumn<StaffAccount>[]>(() => [
-    { key: 'name', title: 'Name', flex: 2.4, render: nameCell },
-    { key: 'role', title: 'Role', flex: 1.3, render: (m) => <RoleBadge roleKey={m.role} label={m.role_name} muted={!m.is_active} /> },
-    ...(showTables ? [{ key: 'tables', title: 'Tables', flex: 1.2, hideBelow: 760, render: (m: StaffAccount) => {
+    { key: 'name', title: tr('common.name'), flex: 2.4, render: nameCell },
+    { key: 'role', title: tr('common.role'), flex: 1.3, render: (m) => <RoleBadge roleKey={m.role} label={m.role_name} muted={!m.is_active} /> },
+    ...(showTables ? [{ key: 'tables', title: tr('common.tables'), flex: 1.2, hideBelow: 760, render: (m: StaffAccount) => {
       const t = tableLabel(m);
       return t ? <Text variant="small" numberOfLines={1}>{t}</Text>
-        : <Text variant="small" tone="subtle">{roleTakesOrders(m.role, ctx.roles) && m.is_active ? 'None' : '—'}</Text>;
+        : <Text variant="small" tone="subtle">{roleTakesOrders(m.role, ctx.roles) && m.is_active ? tr('common.none') : '—'}</Text>;
     } } as DataColumn<StaffAccount>] : []),
-    { key: 'active', title: 'Active', width: 84, align: 'center', render: activeControl },
+    { key: 'active', title: tr('common.active'), width: 84, align: 'center', render: activeControl },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [showTables, tablesByStaff, busyId, online, ctx.roles, ctx.myStaffId, ctx.myEmail, ctx.isOwner, ctx.canManageStaff, colors]);
 
@@ -154,7 +156,7 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
           {nameCell(m)}
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', paddingLeft: 44 }}>
             <RoleBadge roleKey={m.role} label={m.role_name} muted={!m.is_active} />
-            {t ? <Text variant="caption" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>Tables {t}</Text> : null}
+            {t ? <Text variant="caption" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>{tr('common.tables')} {t}</Text> : null}
           </View>
         </View>
         {activeControl(m)}
@@ -164,9 +166,9 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
   }, [tablesByStaff, busyId, online, ctx.myStaffId, ctx.myEmail, ctx.isOwner, ctx.canManageStaff, colors]);
 
   const filters = useMemo(() => [
-    { key: 'all', label: 'Everyone', count: activeCount },
+    { key: 'all', label: tr('common.everyone'), count: activeCount },
     ...filterRoles.map((key) => ({ key, label: roleName(key, roles), count: roleCounts.get(key) })),
-    ...(staff.length > activeCount ? [{ key: 'inactive', label: 'Deactivated', icon: 'moon-outline' as const, count: staff.length - activeCount }] : []),
+    ...(staff.length > activeCount ? [{ key: 'inactive', label: tr('settings.staff_TeamTab.deactivated'), icon: 'moon-outline' as const, count: staff.length - activeCount }] : []),
   ], [activeCount, filterRoles, roles, roleCounts, staff.length]);
 
   const openMember = useCallback((m: StaffAccount) => {
@@ -181,33 +183,33 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
   ].filter(Boolean) as string[];
 
   const addButton = ctx.canManageStaff ? (
-    <Button title={isPhone ? 'Add' : 'Add staff'} icon="person-add-outline" onPress={() => setSheet({ mode: 'add' })}
+    <Button title={isPhone ? tr('common.add') : tr('settings.staff_TeamTab.add_staff')} icon="person-add-outline" onPress={() => setSheet({ mode: 'add' })}
       disabled={atLimit || !online || roles.length === 0}
-      disabledReason={atLimit ? 'Your plan limit is reached' : !online ? 'You are offline' : 'Roles are still loading'} />
+      disabledReason={atLimit ? tr('settings.staff_TeamTab.your_plan_limit_is_reached_x') : !online ? tr('settings.staff_TeamTab.you_are_offline_x') : tr('settings.staff_TeamTab.roles_are_still_loading_x')} />
   ) : null;
 
   return (
     <View style={{ gap: 12, flex: 1, minHeight: 0 }}>
       {notes.map((n) => <Callout key={n} tone="neutral" icon="shield-checkmark-outline">{n}</Callout>)}
       {ctx.canManageStaff && atLimit ? (
-        <Callout tone="warning" icon="lock-closed-outline" title={`Your ${ctx.access?.plan.name ?? ''} plan allows up to ${limit} active staff logins`}>
-          Deactivate someone who has left, or contact Tallyko to upgrade your plan.
+        <Callout tone="warning" icon="lock-closed-outline" title={tr('settings.staff_TeamTab.your_v_plan_allows_up_to_limit_active', { v: ctx.access?.plan.name ?? '', limit })}>
+          {tr('settings.staff_TeamTab.deactivate_someone_who_has_left_or', { brand: brand.name })}
         </Callout>
       ) : null}
       {ctx.rolesError && !ctx.roles ? (
-        <Callout tone="warning" action={<Button title="Try again" size="sm" variant="outline" icon="refresh" onPress={ctx.reloadRoles} />}>
-          {`Roles couldn't be loaded: ${ctx.rolesError}`}
+        <Callout tone="warning" action={<Button title={tr('common.try_again')} size="sm" variant="outline" icon="refresh" onPress={ctx.reloadRoles} />}>
+          {tr('settings.staff_TeamTab.roles_couldn_t_be_loaded_roleserror', { rolesError: ctx.rolesError })}
         </Callout>
       ) : null}
       {staffQ.data && staff.length <= 1 ? (
-        <Callout tone="info" icon="people-outline" title="Only you so far">
-          Add your cashiers, waiters and kitchen staff. Each gets their own login with only the access their job needs, so bills and reports show who did what.
+        <Callout tone="info" icon="people-outline" title={tr('settings.staff_TeamTab.only_you_so_far')}>
+          {tr('settings.staff_TeamTab.add_your_cashiers_waiters_and_kitchen')}
         </Callout>
       ) : null}
 
       <FilterBar
         onSearch={setQuery}
-        searchPlaceholder="Name, email or role"
+        searchPlaceholder={tr('settings.staff_TeamTab.name_email_or_role_x')}
         filters={staff.length > 1 ? filters : undefined}
         value={filter}
         onChange={setFilter}
@@ -215,9 +217,9 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
       />
       {staffQ.data ? (
         <Text variant="small" tone="muted">
-          {activeCount}{limit !== null ? ` of ${limit}` : ''} active login{activeCount === 1 ? '' : 's'}
-          {staff.length > activeCount ? ` · ${staff.length - activeCount} deactivated` : ''}
-          {visible.length !== staff.length ? ` · showing ${visible.length}` : ''}
+          {activeCount}{limit !== null ? tr('settings.staff_TeamTab.of_limit', { limit }) : ''} {tr('settings.staff_TeamTab.active_login')}{activeCount === 1 ? '' : 's'}
+          {staff.length > activeCount ? tr('settings.staff_TeamTab.v_deactivated', { v: staff.length - activeCount }) : ''}
+          {visible.length !== staff.length ? tr('settings.staff_TeamTab.showing_length', { length: visible.length }) : ''}
         </Text>
       ) : null}
 
@@ -235,19 +237,19 @@ export function TeamTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number
           onRetry={staffQ.reload}
           onRefresh={staffQ.reload}
           empty={q || filter !== 'all'
-            ? { icon: 'search-outline', title: 'No one matches', message: 'Try another name or filter.' }
-            : { icon: 'people-outline', title: 'No staff yet' }}
+            ? { icon: 'search-outline', title: tr('settings.staff_TeamTab.no_one_matches'), message: tr('settings.staff_TeamTab.try_another_name_or_filter') }
+            : { icon: 'people-outline', title: tr('settings.staff_TeamTab.no_staff_yet') }}
           onPressRow={openMember}
           keyboard
           extraData={busyId}
           rowActions={(m) => manageable(m)
             ? <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
-            : <Ionicons name="lock-closed-outline" size={16} color={colors.textSubtle} accessibilityLabel="Only the owner can change this login" />}
+            : <Ionicons name="lock-closed-outline" size={16} color={colors.textSubtle} accessibilityLabel={tr('settings.staff_TeamTab.only_the_owner_can_change_this_login')} />}
           rowActionsWidth={36}
         />
       </View>
       {showTables && canAssignTables && staff.length > 1 && !isPhone ? (
-        <Text variant="small" tone="subtle">Tip: open a waiter to give them tables. New orders on their tables count towards their performance.</Text>
+        <Text variant="small" tone="subtle">{tr('settings.staff_TeamTab.tip_open_a_waiter_to_give_them_tables_new')}</Text>
       ) : null}
 
       {sheet?.mode === 'add' || sheet?.mode === 'edit' ? (

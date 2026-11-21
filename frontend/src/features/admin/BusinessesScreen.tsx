@@ -1,5 +1,5 @@
 /**
- * Every business on Tallyko (thousands): server-paged, virtualised list with search, access filters with server counts
+ * Every business on Storant (thousands): server-paged, virtualised list with search, access filters with server counts
  * (Locked / Demo / Development / Active / Ending in 7 days), status and plan menus.
  * Desktop: the business opens in a side panel and the list stays visible. Tablet/phone: its own page.
  */
@@ -16,6 +16,8 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { BusinessDetailView } from './BusinessDetailScreen';
 import { OnboardBusinessSheet } from './OnboardBusinessSheet';
 import { AccessBadge, BUSINESS_TYPE_LABEL, OfflineStrip, PlanBadge, STATUS_LABEL, StatusBadge, shortDate, useCanEdit } from './shared';
+import { brand } from '@/config/brand';
+import { t, currentLocale } from '@/i18n';
 
 const PAGE = 50;
 
@@ -26,12 +28,12 @@ function agoText(iso: string): string {
 }
 type AccessKey = 'all' | AccessFilter;
 const ACCESS_FILTERS: { key: AccessKey; label: string; icon?: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'locked', label: 'Locked', icon: 'lock-closed-outline' },
-  { key: 'expiring', label: 'Ending in 7 days', icon: 'time-outline' },
-  { key: 'trial', label: 'Demo', icon: 'hourglass-outline' },
-  { key: 'active', label: 'Access on', icon: 'checkmark-circle-outline' },
-  { key: 'development', label: 'Development', icon: 'construct-outline' },
+  { key: 'all', get label() { return t('common.all'); } },
+  { key: 'locked', get label() { return t('common.locked'); }, icon: 'lock-closed-outline' },
+  { key: 'expiring', get label() { return t('admin.BusinessesScreen.ending_in_7_days'); }, icon: 'time-outline' },
+  { key: 'trial', get label() { return t('common.demo'); }, icon: 'hourglass-outline' },
+  { key: 'active', get label() { return t('admin.BusinessesScreen.access_on'); }, icon: 'checkmark-circle-outline' },
+  { key: 'development', get label() { return t('admin.BusinessesScreen.development'); }, icon: 'construct-outline' },
 ];
 const STATUSES: (BusinessStatus | 'all')[] = ['all', 'active', 'suspended', 'deleted'];
 
@@ -128,24 +130,24 @@ export default function BusinessesScreen() {
   useHotkeys({ Escape: () => setOpenId(null) }, [], { enabled: panelOpen });
 
   const columns = useMemo<DataColumn<BusinessSummary>[]>(() => [
-    { key: 'name', title: 'Business', flex: 2.6, render: (b) => (
+    { key: 'name', title: t('common.business'), flex: 2.6, render: (b) => (
       <View style={{ minWidth: 0 }}>
         <Text variant="bodyStrong" numberOfLines={1}>{b.name}</Text>
-        <Text variant="small" tone="muted" numberOfLines={1}>{b.owner.name ? `${b.owner.name} · ` : ''}{b.owner.email ?? 'No owner'}</Text>
+        <Text variant="small" tone="muted" numberOfLines={1}>{b.owner.name ? `${b.owner.name} · ` : ''}{b.owner.email ?? t('admin.BusinessesScreen.no_owner')}</Text>
       </View>
     ) },
-    { key: 'type', title: 'Type', flex: 1, hideBelow: 1100, value: (b) => BUSINESS_TYPE_LABEL[b.business_type] ?? b.business_type },
-    { key: 'plan', title: 'Plan', flex: 1.1, hideBelow: 760, render: (b) => <PlanBadge name={planName(b.plan_key)} /> },
-    { key: 'status', title: 'Status', width: 110, hideBelow: 640, render: (b) => <StatusBadge status={b.status} /> },
-    { key: 'access', title: 'Access', flex: 1.5, render: (b) => (
+    { key: 'type', title: t('admin.BusinessesScreen.type'), flex: 1, hideBelow: 1100, value: (b) => BUSINESS_TYPE_LABEL[b.business_type] ?? b.business_type },
+    { key: 'plan', title: t('common.plan'), flex: 1.1, hideBelow: 760, render: (b) => <PlanBadge name={planName(b.plan_key)} /> },
+    { key: 'status', title: t('common.status'), width: 110, hideBelow: 640, render: (b) => <StatusBadge status={b.status} /> },
+    { key: 'access', title: t('admin.BusinessesScreen.access'), flex: 1.5, render: (b) => (
       <View style={{ gap: 2 }}>
         <AccessBadge access={b.access} days />
         <Text variant="caption" tone="subtle" numberOfLines={1}>
-          {b.access?.state === 'development' ? 'No expiry' : b.paid_until ? `${b.access?.state === 'lapsed' ? 'Ended' : 'Until'} ${shortDate(b.paid_until)}` : 'Never paid'}
+          {b.access?.state === 'development' ? t('admin.BusinessesScreen.no_expiry') : b.paid_until ? `${b.access?.state === 'lapsed' ? t('common.ended') : t('admin.BusinessesScreen.until')} ${shortDate(b.paid_until)}` : t('admin.BusinessesScreen.never_paid')}
         </Text>
       </View>
     ) },
-    { key: 'last', title: 'Last bill', width: 110, hideBelow: 980, align: 'right', value: (b) => (b.last_activity_at ? agoText(b.last_activity_at) : '—') },
+    { key: 'last', title: t('admin.BusinessesScreen.last_bill'), width: 110, hideBelow: 980, align: 'right', value: (b) => (b.last_activity_at ? agoText(b.last_activity_at) : '—') },
   ], [planName]);
 
   const renderCard = useCallback((b: BusinessSummary) => (
@@ -154,11 +156,11 @@ export default function BusinessesScreen() {
         <Text variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{b.name}</Text>
         {b.status !== 'active' ? <StatusBadge status={b.status} /> : null}
       </View>
-      <Text variant="small" tone="muted" numberOfLines={1}>{b.owner.email ?? 'No owner'} · {BUSINESS_TYPE_LABEL[b.business_type] ?? b.business_type} · {planName(b.plan_key)}</Text>
+      <Text variant="small" tone="muted" numberOfLines={1}>{b.owner.email ?? t('admin.BusinessesScreen.no_owner')} · {BUSINESS_TYPE_LABEL[b.business_type] ?? b.business_type} · {planName(b.plan_key)}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <AccessBadge access={b.access} days />
         <Text variant="caption" tone="subtle" numberOfLines={1} style={{ flexShrink: 1 }}>
-          {b.last_activity_at ? `last bill ${agoText(b.last_activity_at)}` : 'no bills yet'}
+          {b.last_activity_at ? t('admin.BusinessesScreen.last_bill_agotext', { agoText: agoText(b.last_activity_at) }) : t('admin.BusinessesScreen.no_bills_yet')}
         </Text>
       </View>
     </View>
@@ -167,13 +169,13 @@ export default function BusinessesScreen() {
   const planItems = [{ key: 'all', name: 'Any plan' }, ...(plans.data?.plans ?? []).map((p) => ({ key: p.key, name: p.name }))];
   const menus = (
     <View style={{ flexDirection: 'row', gap: 8 }}>
-      <ActionMenu title="Status" align="end"
-        items={STATUSES.map((s) => ({ key: s, label: s === 'all' ? 'Any status' : STATUS_LABEL[s], selected: status === s, onPress: () => pickStatus(s) }))}
-        trigger={(openMenu) => <Button title={isPhone ? undefined : status === 'all' ? 'Status' : STATUS_LABEL[status]} accessibilityLabel="Filter by status" icon="funnel-outline" iconRight={isPhone ? undefined : 'chevron-down'}
+      <ActionMenu title={t('common.status')} align="end"
+        items={STATUSES.map((s) => ({ key: s, label: s === 'all' ? t('admin.BusinessesScreen.any_status') : STATUS_LABEL[s], selected: status === s, onPress: () => pickStatus(s) }))}
+        trigger={(openMenu) => <Button title={isPhone ? undefined : status === 'all' ? t('common.status') : STATUS_LABEL[status]} accessibilityLabel={t('admin.BusinessesScreen.filter_by_status')} icon="funnel-outline" iconRight={isPhone ? undefined : 'chevron-down'}
           variant={status === 'all' ? 'outline' : 'tonal'} size="sm" onPress={openMenu} />} />
-      <ActionMenu title="Plan" align="end"
+      <ActionMenu title={t('common.plan')} align="end"
         items={planItems.map((p) => ({ key: p.key, label: p.name, selected: plan === p.key, onPress: () => pickPlan(p.key) }))}
-        trigger={(openMenu) => <Button title={isPhone ? undefined : plan === 'all' ? 'Plan' : planName(plan)} accessibilityLabel="Filter by plan" icon="pricetag-outline" iconRight={isPhone ? undefined : 'chevron-down'}
+        trigger={(openMenu) => <Button title={isPhone ? undefined : plan === 'all' ? t('common.plan') : planName(plan)} accessibilityLabel={t('admin.BusinessesScreen.filter_by_plan')} icon="pricetag-outline" iconRight={isPhone ? undefined : 'chevron-down'}
           variant={plan === 'all' ? 'outline' : 'tonal'} size="sm" onPress={openMenu} />} />
     </View>
   );
@@ -183,17 +185,17 @@ export default function BusinessesScreen() {
     <View style={{ flex: 1, minWidth: 0, paddingHorizontal: pad, paddingTop: isPhone ? 12 : 20, gap: 12 }}>
       <View style={styles.titleRow}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text variant={isPhone ? 'h1' : 'display'} accessibilityRole="header" numberOfLines={1}>Businesses</Text>
+          <Text variant={isPhone ? 'h1' : 'display'} accessibilityRole="header" numberOfLines={1}>{t('common.businesses')}</Text>
           <Text tone="muted" numberOfLines={1}>
-            {total === null ? 'Every shop, restaurant and kitchen using Tallyko.' : `${total.toLocaleString('en-IN')} ${filtered ? 'matching' : 'on Tallyko'}`}
+            {total === null ? t('admin.BusinessesScreen.every_shop_restaurant_and_kitchen_using', { brand: brand.name }) : `${total.toLocaleString(currentLocale())} ${filtered ? 'matching' : t('admin.BusinessesScreen.on_brand', { brand: brand.name })}`}
           </Text>
         </View>
-        {canEdit ? <Button title={isPhone ? 'Onboard' : 'Onboard business'} icon="add" onPress={() => setOnboarding(true)} /> : null}
+        {canEdit ? <Button title={isPhone ? t('admin.BusinessesScreen.onboard') : t('admin.BusinessesScreen.onboard_business')} icon="add" onPress={() => setOnboarding(true)} /> : null}
       </View>
       <FilterBar
         search={params.q ?? ''}
         onSearch={(v) => { setQuery(v); router.setParams({ q: v || undefined }); }}
-        searchPlaceholder="Business name or owner email"
+        searchPlaceholder={t('admin.BusinessesScreen.business_name_or_owner_email_x')}
         filters={ACCESS_FILTERS.map((f) => ({ key: f.key, label: f.label, icon: f.icon, count: counts[f.key] }))}
         value={access}
         onChange={pickAccess}
@@ -223,13 +225,13 @@ export default function BusinessesScreen() {
           rowActions={() => <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />}
           rowActionsWidth={32}
           empty={filtered
-            ? { icon: 'search-outline', title: 'No businesses match', message: 'Try another name or email, or clear the filters.', action: { label: 'Clear filters', onPress: clearFilters, icon: 'close-circle-outline' } }
-            : { icon: 'storefront-outline', title: 'No businesses yet', message: 'Businesses appear here when they sign up or when you onboard them.' }}
+            ? { icon: 'search-outline', title: t('admin.BusinessesScreen.no_businesses_match'), message: t('admin.BusinessesScreen.try_another_name_or_email_or_clear_the'), action: { label: t('common.clear_filters'), onPress: clearFilters, icon: 'close-circle-outline' } }
+            : { icon: 'storefront-outline', title: t('admin.BusinessesScreen.no_businesses_yet'), message: t('admin.BusinessesScreen.businesses_appear_here_when_they_sign_up') }}
         />
       </View>
       {total !== null && items.length > 0 ? (
         <Text variant="caption" tone="subtle" style={{ paddingBottom: 8 }}>
-          {`Showing ${items.length.toLocaleString('en-IN')} of ${total.toLocaleString('en-IN')}${items.length < total ? ' · scroll for more' : ''}`}
+          {t('admin.BusinessesScreen.showing_tolocalestring_of_tolocalestring2', { toLocaleString: items.length.toLocaleString(currentLocale()), toLocaleString2: total.toLocaleString(currentLocale()), v: items.length < total ? t('admin.BusinessesScreen.scroll_for_more') : '' })}
         </Text>
       ) : null}
     </View>

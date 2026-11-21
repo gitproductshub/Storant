@@ -9,7 +9,7 @@ export function buildQrPosterHtml(opts: { title: string; heading: string; subhea
   @page { size: A4; margin: 18mm; }
   * { box-sizing: border-box; }
   body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #0f172a; text-align: center; margin: 0; }
-  .wrap { border: 2px solid #0f766e; border-radius: 24px; padding: 40px 32px; }
+  .wrap { border: 2px solid #51218a; border-radius: 24px; padding: 40px 32px; }
   h1 { font-size: 34px; margin: 0 0 8px; }
   h2 { font-size: 22px; font-weight: 500; margin: 0 0 28px; color: #334155; }
   .qr { display: inline-block; padding: 12px; border: 1px solid #e2e8f0; border-radius: 16px; }

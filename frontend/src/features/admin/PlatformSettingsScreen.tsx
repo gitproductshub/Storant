@@ -13,6 +13,8 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout, ChoiceChips, FieldRow, KeyValue, SaveBar } from '@/features/settings/components';
 import { validateEmail } from '@/features/settings/validation';
 import { AdminPage, ReadOnlyNote, plural, useCanEdit, useOnline } from './shared';
+import { brand } from '@/config/brand';
+import { t as tr, currentLocale } from '@/i18n';
 
 interface Draft {
   trialDays: string;
@@ -82,7 +84,7 @@ export default function PlatformSettingsScreen() {
 
   const save = async () => {
     if (!form || hasErrors) {
-      toast.error('Fix the highlighted fields before saving.');
+      toast.error(tr('admin.PlatformSettingsScreen.fix_the_highlighted_fields_before_saving'));
       return;
     }
     setSaving(true);
@@ -96,7 +98,7 @@ export default function PlatformSettingsScreen() {
       });
       settings.setData(next);
       setDraft(null);
-      toast.success('Platform settings saved');
+      toast.success(tr('admin.PlatformSettingsScreen.platform_settings_saved'));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -106,8 +108,8 @@ export default function PlatformSettingsScreen() {
 
   if (!form) {
     return (
-      <AdminPage title="Platform settings">
-        {settings.loading ? <Loading label="Loading settings" /> : null}
+      <AdminPage title={tr('admin.PlatformSettingsScreen.platform_settings')}>
+        {settings.loading ? <Loading label={tr('admin.PlatformSettingsScreen.loading_settings')} /> : null}
         {settings.error && !settings.loading ? <ErrorState message={settings.error} onRetry={settings.reload} /> : null}
       </AdminPage>
     );
@@ -120,13 +122,13 @@ export default function PlatformSettingsScreen() {
 
   return (
     <AdminPage
-      title="Platform settings"
-      subtitle="Demo length, grace days, how owners pay you, and the nightly subscription check."
+      title={tr('admin.PlatformSettingsScreen.platform_settings')}
+      subtitle={tr('admin.PlatformSettingsScreen.demo_length_grace_days_how_owners_pay_you')}
       refreshing={settings.refreshing}
       onRefresh={() => { void settings.reload(); void jobs.reload(); }}
       footer={canEdit ? (
         <SaveBar visible={dirty} saving={saving} onSave={save} onDiscard={() => setDraft(null)} disabled={!online || hasErrors}
-          message={online ? 'Unsaved platform settings' : "You're offline: changes can't be saved yet"} />
+          message={online ? tr('admin.PlatformSettingsScreen.unsaved_platform_settings') : tr('admin.PlatformSettingsScreen.you_re_offline_changes_can_t_be_saved_yet')} />
       ) : null}
     >
       {!canEdit ? <ReadOnlyNote what="change platform settings" /> : null}
@@ -169,21 +171,21 @@ function DemoCard({ form, errors, canEdit, onChange }: CardProps) {
   const n = wholeIn(form.trialDays, 365);
   return (
     <Card style={{ gap: 12 }}>
-      <CardTitle title="Free demo for new businesses" subtitle="Every new sign-up (and businesses you onboard) gets this many days to try Tallyko before paying."
+      <CardTitle title={tr('admin.PlatformSettingsScreen.free_demo_for_new_businesses')} subtitle={tr('admin.PlatformSettingsScreen.every_new_sign_up_and_businesses_you', { brand: brand.name })}
         right={<Badge label={n === null ? '—' : daysLabel(n)} tone={n ? 'info' : 'neutral'} icon="hourglass-outline" />} />
       {canEdit ? (
         <View style={{ gap: 6 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-            <ChoiceChips value={n !== null && DEMO_CHOICES.includes(n) ? String(n) : ''} onChange={(v) => onChange({ trialDays: v })} accessibilityLabel="Demo length"
+            <ChoiceChips value={n !== null && DEMO_CHOICES.includes(n) ? String(n) : ''} onChange={(v) => onChange({ trialDays: v })} accessibilityLabel={tr('common.demo_length')}
               options={DEMO_CHOICES.map((d) => ({ value: String(d), label: daysLabel(d) }))} />
             <Input value={form.trialDays} onChangeText={(v) => onChange({ trialDays: v.replace(/[^0-9]/g, '') })} keyboardType="number-pad" maxLength={3}
-              containerStyle={{ width: 100 }} accessibilityLabel="Demo days" error={errors.trialDays ? ' ' : undefined} />
+              containerStyle={{ width: 100 }} accessibilityLabel={tr('admin.PlatformSettingsScreen.demo_days')} error={errors.trialDays ? ' ' : undefined} />
           </View>
           {errors.trialDays ? <Text variant="small" tone="danger">{errors.trialDays}</Text> : null}
         </View>
       ) : null}
       <Text variant="small" tone="subtle">
-        0 = no demo: new businesses are locked until their first payment. You can still give any business a demo from its page.
+        {tr('admin.PlatformSettingsScreen.0_no_demo_new_businesses_are_locked_until')}
       </Text>
     </Card>
   );
@@ -194,21 +196,21 @@ function RenewalCard({ form, errors, canEdit, onChange }: CardProps) {
   if (!canEdit) {
     return (
       <Card style={{ gap: 6 }}>
-        <CardTitle title="Renewal" />
-        <KeyValue label="Grace days" value={form.graceDays} />
-        <KeyValue label="Reminder days" value={form.reminderDays} />
+        <CardTitle title={tr('admin.PlatformSettingsScreen.renewal')} />
+        <KeyValue label={tr('admin.PlatformSettingsScreen.grace_days')} value={form.graceDays} />
+        <KeyValue label={tr('admin.PlatformSettingsScreen.reminder_days')} value={form.reminderDays} />
       </Card>
     );
   }
   return (
     <Card style={{ gap: 12 }}>
-      <CardTitle title="Renewal" subtitle="What happens around the end of a paid period." />
+      <CardTitle title={tr('admin.PlatformSettingsScreen.renewal')} subtitle={tr('admin.PlatformSettingsScreen.what_happens_around_the_end_of_a_paid')} />
       <FieldRow>
-        <Input label="Grace days" value={form.graceDays} onChangeText={(v) => onChange({ graceDays: v.replace(/[^0-9]/g, '') })} keyboardType="number-pad"
+        <Input label={tr('admin.PlatformSettingsScreen.grace_days')} value={form.graceDays} onChangeText={(v) => onChange({ graceDays: v.replace(/[^0-9]/g, '') })} keyboardType="number-pad"
           maxLength={2} error={errors.graceDays}
-          hint={grace ? `Keeps working ${grace} day${grace === 1 ? '' : 's'} after the paid date, then locks.` : 'Locks on the day the paid period ends.'} />
-        <Input label="Reminder days" value={form.reminderDays} onChangeText={(v) => onChange({ reminderDays: v.replace(/[^0-9]/g, '') })} keyboardType="number-pad"
-          maxLength={2} error={errors.reminderDays} hint="Owners see a renewal reminder this many days before the end." />
+          hint={grace ? tr('admin.PlatformSettingsScreen.keeps_working_grace_day_v_after_the_paid', { grace, v: grace === 1 ? '' : 's' }) : tr('admin.PlatformSettingsScreen.locks_on_the_day_the_paid_period_ends')} />
+        <Input label={tr('admin.PlatformSettingsScreen.reminder_days')} value={form.reminderDays} onChangeText={(v) => onChange({ reminderDays: v.replace(/[^0-9]/g, '') })} keyboardType="number-pad"
+          maxLength={2} error={errors.reminderDays} hint={tr('admin.PlatformSettingsScreen.owners_see_a_renewal_reminder_this_many')} />
       </FieldRow>
     </Card>
   );
@@ -218,41 +220,41 @@ function PaymentCard({ form, errors, canEdit, onChange }: CardProps) {
   const { colors, radius } = useTheme();
   const preview = (
     <View style={{ padding: 12, borderRadius: radius.md, backgroundColor: colors.surfaceSunken, gap: 4 }}>
-      <Text variant="caption" tone="subtle">WHAT OWNERS SEE</Text>
-      {form.upiId.trim() ? <Text variant="smallStrong">UPI: {form.upiId.trim()}{form.payeeName.trim() ? ` (${form.payeeName.trim()})` : ''}</Text> : <Text variant="small" tone="warning">No UPI ID yet: owners can't pay by UPI.</Text>}
+      <Text variant="caption" tone="subtle">{tr('admin.PlatformSettingsScreen.what_owners_see')}</Text>
+      {form.upiId.trim() ? <Text variant="smallStrong">{tr('admin.PlatformSettingsScreen.upi')} {form.upiId.trim()}{form.payeeName.trim() ? ` (${form.payeeName.trim()})` : ''}</Text> : <Text variant="small" tone="warning">{tr('admin.PlatformSettingsScreen.no_upi_id_yet_owners_can_t_pay_by_upi')}</Text>}
       {form.bankDetails.trim() ? <Text variant="small">{form.bankDetails.trim()}</Text> : null}
       {form.instructions.trim() ? <Text variant="small" tone="muted">{form.instructions.trim()}</Text> : null}
       {form.supportPhone.trim() || form.supportEmail.trim() ? (
-        <Text variant="small" tone="muted">Help: {[form.supportPhone.trim(), form.supportEmail.trim()].filter(Boolean).join(' · ')}</Text>
+        <Text variant="small" tone="muted">{tr('admin.PlatformSettingsScreen.help')} {[form.supportPhone.trim(), form.supportEmail.trim()].filter(Boolean).join(' · ')}</Text>
       ) : null}
     </View>
   );
   if (!canEdit) {
     return (
       <Card style={{ gap: 10 }}>
-        <CardTitle title="How owners pay" subtitle="Shown on the renewal page of a locked or expiring business." />
+        <CardTitle title={tr('admin.PlatformSettingsScreen.how_owners_pay')} subtitle={tr('admin.PlatformSettingsScreen.shown_on_the_renewal_page_of_a_locked_or')} />
         {preview}
       </Card>
     );
   }
   return (
     <Card style={{ gap: 12 }}>
-      <CardTitle title="How owners pay" subtitle="Shown on the renewal page of a locked or expiring business." />
+      <CardTitle title={tr('admin.PlatformSettingsScreen.how_owners_pay')} subtitle={tr('admin.PlatformSettingsScreen.shown_on_the_renewal_page_of_a_locked_or')} />
       <FieldRow>
-        <Input label="UPI ID" value={form.upiId} onChangeText={(upiId) => onChange({ upiId })} maxLength={80} autoCapitalize="none" autoCorrect={false}
-          placeholder="tallyko@okhdfcbank" />
-        <Input label="Payee name" value={form.payeeName} onChangeText={(payeeName) => onChange({ payeeName })} maxLength={80} error={errors.payeeName}
-          placeholder="Tallyko" />
+        <Input label={tr('admin.PlatformSettingsScreen.upi_id')} value={form.upiId} onChangeText={(upiId) => onChange({ upiId })} maxLength={80} autoCapitalize="none" autoCorrect={false}
+          placeholder="storant@okhdfcbank" />
+        <Input label={tr('admin.PlatformSettingsScreen.payee_name')} value={form.payeeName} onChangeText={(payeeName) => onChange({ payeeName })} maxLength={80} error={errors.payeeName}
+          placeholder={brand.name} />
       </FieldRow>
-      <Input label="Bank details" value={form.bankDetails} onChangeText={(bankDetails) => onChange({ bankDetails })} maxLength={400} multiline
-        placeholder={'A/c 1234567890 · IFSC HDFC0001234\nTallyko Technologies, HDFC Bank, Pune'} style={{ minHeight: 72, textAlignVertical: 'top', paddingTop: 10 }} />
+      <Input label={tr('admin.PlatformSettingsScreen.bank_details')} value={form.bankDetails} onChangeText={(bankDetails) => onChange({ bankDetails })} maxLength={400} multiline
+        placeholder={tr('admin.PlatformSettingsScreen.a_c_1234567890_ifsc_hdfc0001234_storant')} style={{ minHeight: 72, textAlignVertical: 'top', paddingTop: 10 }} />
       <FieldRow>
-        <Input label="Support phone" value={form.supportPhone} onChangeText={(supportPhone) => onChange({ supportPhone })} maxLength={30} keyboardType="phone-pad"
+        <Input label={tr('admin.PlatformSettingsScreen.support_phone')} value={form.supportPhone} onChangeText={(supportPhone) => onChange({ supportPhone })} maxLength={30} keyboardType="phone-pad"
           placeholder="+91 98765 43210" />
-        <Input label="Support email" value={form.supportEmail} onChangeText={(supportEmail) => onChange({ supportEmail })} maxLength={120} keyboardType="email-address"
-          autoCapitalize="none" autoCorrect={false} error={errors.supportEmail} placeholder="billing@tallyko.in" />
+        <Input label={tr('admin.PlatformSettingsScreen.support_email')} value={form.supportEmail} onChangeText={(supportEmail) => onChange({ supportEmail })} maxLength={120} keyboardType="email-address"
+          autoCapitalize="none" autoCorrect={false} error={errors.supportEmail} placeholder="billing@storant.in" />
       </FieldRow>
-      <Input label="Instructions" value={form.instructions} onChangeText={(instructions) => onChange({ instructions })} maxLength={600} multiline
+      <Input label={tr('admin.PlatformSettingsScreen.instructions')} value={form.instructions} onChangeText={(instructions) => onChange({ instructions })} maxLength={600} multiline
         style={{ minHeight: 88, textAlignVertical: 'top', paddingTop: 10 }} hint={`${form.instructions.length}/600`} />
       {preview}
     </Card>
@@ -269,14 +271,14 @@ function JobCard({ data, loading, error, onRetry, canEdit, onRan }: {
 
   const runNow = async () => {
     const ok = await confirm({
-      title: 'Run the subscription check now?', confirmLabel: 'Run check', danger: true,
-      message: 'Businesses whose subscription (plus grace days) has ended are locked and every one of their devices is signed out. Bills waiting on those devices stay safe and sync after renewal.',
+      title: tr('admin.PlatformSettingsScreen.run_the_subscription_check_now'), confirmLabel: tr('admin.PlatformSettingsScreen.run_check'), danger: true,
+      message: tr('admin.PlatformSettingsScreen.businesses_whose_subscription_plus_grace'),
     });
     if (!ok) return;
     setRunning(true);
     try {
       const r = await platformApi.runSubscriptionCheck();
-      toast.success(`Check done: ${plural(r.businesses_checked, 'business', 'businesses')} checked, ${r.locked_now} newly locked`);
+      toast.success(tr('admin.PlatformSettingsScreen.check_done_plural_checked_locked_now', { plural: plural(r.businesses_checked, 'business', 'businesses'), locked_now: r.locked_now }));
       onRan();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -287,33 +289,33 @@ function JobCard({ data, loading, error, onRetry, canEdit, onRan }: {
 
   return (
     <Card style={{ gap: 12 }}>
-      <CardTitle title="Daily subscription check"
-        subtitle="Locks businesses whose subscription ended and signs out all their devices, so open screens close too."
-        right={job ? <Badge label={job.enabled ? 'Scheduled' : 'Off'} tone={job.enabled ? 'success' : 'warning'} icon={job.enabled ? 'time-outline' : 'pause-outline'} /> : undefined} />
+      <CardTitle title={tr('admin.PlatformSettingsScreen.daily_subscription_check')}
+        subtitle={tr('admin.PlatformSettingsScreen.locks_businesses_whose_subscription_ended')}
+        right={job ? <Badge label={job.enabled ? tr('common.scheduled') : tr('common.off')} tone={job.enabled ? 'success' : 'warning'} icon={job.enabled ? 'time-outline' : 'pause-outline'} /> : undefined} />
       {loading && !data ? <Loading /> : null}
       {error && !data ? <ErrorState message={error} onRetry={onRetry} /> : null}
       {job ? (
         <>
           <View style={{ gap: 2 }}>
-            <KeyValue label="Schedule" value={job.schedule} />
-            <KeyValue label="Next run" value={job.enabled ? `${formatDateTime(job.next_run_at)} (${untilText(job.next_run_at)})` : 'Not scheduled on this server'} />
+            <KeyValue label={tr('admin.PlatformSettingsScreen.schedule')} value={job.schedule} />
+            <KeyValue label={tr('admin.PlatformSettingsScreen.next_run')} value={job.enabled ? `${formatDateTime(job.next_run_at)} (${untilText(job.next_run_at)})` : 'Not scheduled on this server'} />
           </View>
-          {!job.enabled ? <Callout tone="warning">The scheduler is switched off on this server (JOB_SCHEDULER_ENABLED). Run the check by hand or turn it on.</Callout> : null}
+          {!job.enabled ? <Callout tone="warning">{tr('admin.PlatformSettingsScreen.the_scheduler_is_switched_off_on_this')}</Callout> : null}
           <Divider />
-          <Text variant="smallStrong" tone="muted">Last run</Text>
+          <Text variant="smallStrong" tone="muted">{tr('admin.PlatformSettingsScreen.last_run')}</Text>
           {last ? (
             <View style={{ gap: 10 }}>
-              <Text variant="small" tone="muted">{formatDateTime(last.last_run_at)} · {ago(last.last_run_at)} ago · by {last.by}</Text>
+              <Text variant="small" tone="muted">{formatDateTime(last.last_run_at)} {tr('admin.PlatformSettingsScreen.ago_ago_by', { ago: ago(last.last_run_at) })} {last.by}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                <MiniStat label="Checked" value={last.businesses_checked.toLocaleString('en-IN')} />
-                <MiniStat label="Locked" value={last.locked_now.toLocaleString('en-IN')} tone={last.locked_now ? 'danger' : undefined} />
-                <MiniStat label="Due soon" value={last.renewals_due_soon.toLocaleString('en-IN')} tone={last.renewals_due_soon ? 'warning' : undefined} />
-                <MiniStat label="Took" value={`${last.duration_ms} ms`} />
+                <MiniStat label={tr('admin.PlatformSettingsScreen.checked')} value={last.businesses_checked.toLocaleString(currentLocale())} />
+                <MiniStat label={tr('common.locked')} value={last.locked_now.toLocaleString(currentLocale())} tone={last.locked_now ? 'danger' : undefined} />
+                <MiniStat label={tr('admin.PlatformSettingsScreen.due_soon')} value={last.renewals_due_soon.toLocaleString(currentLocale())} tone={last.renewals_due_soon ? 'warning' : undefined} />
+                <MiniStat label={tr('admin.PlatformSettingsScreen.took')} value={`${last.duration_ms} ms`} />
               </View>
             </View>
-          ) : <Text variant="small" tone="subtle">Hasn't run yet.</Text>}
+          ) : <Text variant="small" tone="subtle">{tr('admin.PlatformSettingsScreen.hasn_t_run_yet')}</Text>}
           {canEdit ? (
-            <Button title="Run check now" icon="play-circle-outline" variant="secondary" onPress={runNow} loading={running} disabled={!online} style={{ alignSelf: 'flex-start' }} />
+            <Button title={tr('admin.PlatformSettingsScreen.run_check_now')} icon="play-circle-outline" variant="secondary" onPress={runNow} loading={running} disabled={!online} style={{ alignSelf: 'flex-start' }} />
           ) : null}
         </>
       ) : null}

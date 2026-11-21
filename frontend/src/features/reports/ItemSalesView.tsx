@@ -6,6 +6,7 @@ import { Button, DataList, FilterBar, Text, type DataColumn, type DataListSort }
 import { money } from '@/lib/format';
 import type { ItemRow } from './useReports';
 import { filterItems, itemKey, itemTotals, shareLabel, sortItems } from './itemSales';
+import { t, currentLocale } from '@/i18n';
 
 export function ItemSalesView({ rows, loading, error, onRetry, symbol, onExport, exporting, exportDisabled, onRefresh, refreshing }: {
   rows: ItemRow[] | null;
@@ -33,24 +34,24 @@ export function ItemSalesView({ rows, loading, error, onRetry, symbol, onExport,
   const columns = useMemo<DataColumn<ItemRow>[]>(() => [
     { key: 'rank', title: '#', width: 48, numeric: true, value: (r) => String(list.indexOf(r) + 1) },
     {
-      key: 'name', title: 'Item', flex: 2.4, minWidth: 160, sortable: true,
+      key: 'name', title: t('common.item'), flex: 2.4, minWidth: 160, sortable: true,
       render: (r) => (
         <Text variant="small" numberOfLines={1}>
           <Text variant="smallStrong">{r.name}</Text>{r.variant ? <Text variant="small" tone="muted"> · {r.variant}</Text> : null}
         </Text>
       ),
     },
-    { key: 'qty', title: 'Qty', width: 80, numeric: true, sortable: true, value: (r) => r.quantity.toLocaleString('en-IN') },
-    { key: 'revenue', title: 'Revenue', width: 120, numeric: true, sortable: true, render: (r) => <Text variant="smallStrong" style={styles.num}>{money(r.revenue, symbol)}</Text> },
-    { key: 'share', title: 'Share', width: 72, numeric: true, hideBelow: 560, value: (r) => shareLabel(r.revenue, grand.revenue) },
-    { key: 'tax', title: 'Tax', width: 100, numeric: true, sortable: true, hideBelow: 480, value: (r) => money(r.tax, symbol) },
+    { key: 'qty', title: t('reports.ItemSalesView.qty'), width: 80, numeric: true, sortable: true, value: (r) => r.quantity.toLocaleString(currentLocale()) },
+    { key: 'revenue', title: t('reports.ItemSalesView.revenue'), width: 120, numeric: true, sortable: true, render: (r) => <Text variant="smallStrong" style={styles.num}>{money(r.revenue, symbol)}</Text> },
+    { key: 'share', title: t('common.share'), width: 72, numeric: true, hideBelow: 560, value: (r) => shareLabel(r.revenue, grand.revenue) },
+    { key: 'tax', title: t('reports.ItemSalesView.tax'), width: 100, numeric: true, sortable: true, hideBelow: 480, value: (r) => money(r.tax, symbol) },
   ], [list, symbol, grand.revenue]);
 
   const renderCard = (r: ItemRow) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text variant="bodyStrong" numberOfLines={1}>{r.name}{r.variant ? <Text variant="small" tone="muted"> · {r.variant}</Text> : null}</Text>
-        <Text variant="small" tone="muted" numberOfLines={1}>{r.quantity} sold · tax {money(r.tax, symbol)} · {shareLabel(r.revenue, grand.revenue)}</Text>
+        <Text variant="small" tone="muted" numberOfLines={1}>{r.quantity} {t('reports.ItemSalesView.sold_tax_money', { money: money(r.tax, symbol) })} {shareLabel(r.revenue, grand.revenue)}</Text>
       </View>
       <Text variant="money">{money(r.revenue, symbol)}</Text>
     </View>
@@ -58,9 +59,9 @@ export function ItemSalesView({ rows, loading, error, onRetry, symbol, onExport,
 
   return (
     <View style={{ flex: 1, gap: 10, minHeight: 0 }}>
-      <FilterBar onSearch={setQ} search={q} searchPlaceholder="Filter items" right={(
-        <Button title={isPhone ? undefined : 'Export items'} icon="download-outline" variant="outline" onPress={onExport} loading={exporting}
-          disabled={exportDisabled || !all.length} accessibilityLabel="Export item-wise sales as CSV" />
+      <FilterBar onSearch={setQ} search={q} searchPlaceholder={t('reports.ItemSalesView.filter_items_x')} right={(
+        <Button title={isPhone ? undefined : t('reports.ItemSalesView.export_items')} icon="download-outline" variant="outline" onPress={onExport} loading={exporting}
+          disabled={exportDisabled || !all.length} accessibilityLabel={t('reports.ItemSalesView.export_item_wise_sales_as_csv')} />
       )} />
       <View style={[styles.box, !isPhone && { borderWidth: 1, borderRadius: 14, borderColor: colors.border, backgroundColor: colors.surface }]}>
         <DataList<ItemRow>
@@ -78,15 +79,15 @@ export function ItemSalesView({ rows, loading, error, onRetry, symbol, onExport,
           onRefresh={onRefresh}
           sort={sort}
           onSortChange={setSort}
-          empty={q ? { icon: 'search-outline', title: `No items match “${q}”` } : { icon: 'receipt-outline', title: 'No items sold in this period' }}
+          empty={q ? { icon: 'search-outline', title: t('reports.ItemSalesView.no_items_match_q', { q }) } : { icon: 'receipt-outline', title: t('reports.ItemSalesView.no_items_sold_in_this_period') }}
           testID="item-sales"
         />
         {list.length ? (
           // Same widths as the table columns so the totals line up (Qty 80, Revenue 120, Share 72, Tax 100)
           <View style={[styles.total, { borderTopColor: colors.border, backgroundColor: colors.surfaceAlt }]}
             onLayout={(e) => setFooterW(e.nativeEvent.layout.width)}>
-            <Text variant="smallStrong" style={[styles.cell, { flex: 1, textAlign: 'left' }]} numberOfLines={1}>{q ? `Filtered: ${list.length} of ${all.length}` : `Total · ${all.length} items`}</Text>
-            <Text variant="smallStrong" style={[styles.num, styles.cell, { width: 80 }]}>{totals.qty.toLocaleString('en-IN')}</Text>
+            <Text variant="smallStrong" style={[styles.cell, { flex: 1, textAlign: 'left' }]} numberOfLines={1}>{q ? t('reports.ItemSalesView.filtered_length_of_length2', { length: list.length, length2: all.length }) : t('reports.ItemSalesView.total_length_items', { length: all.length })}</Text>
+            <Text variant="smallStrong" style={[styles.num, styles.cell, { width: 80 }]}>{totals.qty.toLocaleString(currentLocale())}</Text>
             <Text variant="smallStrong" style={[styles.num, styles.cell, { width: 120 }]}>{money(totals.revenue, symbol)}</Text>
             {footerW >= 560 ? <Text variant="smallStrong" style={[styles.num, styles.cell, { width: 72 }]}>{shareLabel(totals.revenue, grand.revenue)}</Text> : null}
             {footerW >= 480 ? <Text variant="smallStrong" style={[styles.num, styles.cell, { width: 100 }]}>{money(totals.tax, symbol)}</Text> : null}

@@ -1,6 +1,7 @@
 /** Pure helpers for the item history (menu versioning) timeline. */
 import type { ProductSnapshot, ProductVersion } from '@/api/menuHistory';
 import { money } from '@/lib/format';
+import { t as tr, currentLocale } from '@/i18n';
 
 /** Parses the server timestamp; tolerates "…+00:00Z" and missing zones (treated as UTC). */
 export function parseWhen(iso: string): Date | null {
@@ -15,12 +16,12 @@ export function parseWhen(iso: string): Date | null {
 export function whenLabel(iso: string, now: Date = new Date()): string {
   const d = parseWhen(iso);
   if (!d) return '';
-  const time = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  const time = d.toLocaleTimeString(currentLocale(), { hour: 'numeric', minute: '2-digit' });
   const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   if (day === today) return `Today, ${time}`;
   if (today - day === 86_400_000) return `Yesterday, ${time}`;
-  return `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}, ${time}`;
+  return `${d.toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short', year: 'numeric' })}, ${time}`;
 }
 
 const fmt = (n: number, symbol: string) => money(n, symbol, Number.isInteger(n));
@@ -51,17 +52,17 @@ export function priceDiff(current: ProductSnapshot, older: ProductSnapshot | nul
 export function snapshotFacts(s: ProductSnapshot, opts: { symbol?: string; categoryName?: (id: string) => string | undefined; channelName?: (code: string) => string | undefined } = {}): { label: string; value: string }[] {
   const symbol = opts.symbol ?? '₹';
   const out: { label: string; value: string }[] = [];
-  if (s.name) out.push({ label: 'Name', value: s.name });
+  if (s.name) out.push({ label: tr('common.name'), value: s.name });
   const price = snapshotPrice(s, symbol);
-  if (price) out.push({ label: 'Price', value: price });
-  if (s.variants?.length) out.push({ label: 'Options', value: s.variants.map(([n, p]) => `${n} ${fmt(p, symbol)}`).join(' · ') });
-  if (s.category_id !== undefined) out.push({ label: 'Category', value: s.category_id ? opts.categoryName?.(s.category_id) ?? 'Deleted category' : 'None' });
+  if (price) out.push({ label: tr('common.price'), value: price });
+  if (s.variants?.length) out.push({ label: tr('catalog.history.options'), value: s.variants.map(([n, p]) => `${n} ${fmt(p, symbol)}`).join(' · ') });
+  if (s.category_id !== undefined) out.push({ label: tr('common.category'), value: s.category_id ? opts.categoryName?.(s.category_id) ?? 'Deleted category' : 'None' });
   const nameOf = (code: string) => opts.channelName?.(code) ?? (code.length <= 4 ? code : `${code.charAt(0)}${code.slice(1).toLowerCase()}`);
   const apps = Object.entries(s.channel_prices ?? {})
     .map(([code, e]) => (e?.available === false ? `Not on ${nameOf(code)}` : typeof e?.price === 'number' ? `${nameOf(code)} ${fmt(e.price, symbol)}` : null))
     .filter((x): x is string => !!x);
-  if (apps.length) out.push({ label: 'App prices', value: apps.join(' · ') });
-  if (s.is_active !== undefined) out.push({ label: 'On the menu', value: s.is_active ? 'Yes' : 'No (removed)' });
+  if (apps.length) out.push({ label: tr('catalog.history.app_prices'), value: apps.join(' · ') });
+  if (s.is_active !== undefined) out.push({ label: tr('catalog.history.on_the_menu'), value: s.is_active ? 'Yes' : 'No (removed)' });
   return out;
 }
 

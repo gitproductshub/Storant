@@ -17,6 +17,7 @@ import { useHotkeys } from '@/hooks/useHotkeys';
 import { Input } from './Input';
 import { Chip } from './Surface';
 import { ShortcutHint } from './ShortcutHint';
+import { t as tr, currentLanguage } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -67,7 +68,9 @@ export function FilterBar({
   const { isPhone: phoneWindow } = useLayout();
   // Lay out by the space the bar actually has (a list beside a side panel is narrow even on a wide window)
   const [width, setWidth] = useState(0);
-  const isPhone = phoneWindow || (width > 0 && width < 640);
+  // Hindi and Gujarati labels are wider, so the bar stacks earlier and the chips wrap instead of being cut off by a scroll edge
+  const longScript = currentLanguage() !== 'en';
+  const isPhone = phoneWindow || (width > 0 && width < (longScript ? 960 : 640));
   const onLayout = (e: { nativeEvent: { layout: { width: number } } }) => setWidth(Math.round(e.nativeEvent.layout.width));
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = useState(search);
@@ -117,7 +120,7 @@ export function FilterBar({
         <View style={styles.searchRight}>
           {searching ? <ActivityIndicator size="small" color={colors.textSubtle} /> : null}
           {text ? (
-            <Pressable onPress={clear} accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={8} style={styles.clear}>
+            <Pressable onPress={clear} accessibilityRole="button" accessibilityLabel={tr('common.clear_search')} hitSlop={8} style={styles.clear}>
               <Ionicons name="close-circle" size={18} color={colors.textSubtle} />
             </Pressable>
           ) : searchShortcut ? <ShortcutHint keys={searchShortcut} /> : null}
@@ -126,7 +129,12 @@ export function FilterBar({
     />
   ) : null;
 
-  const chips = filters?.length ? (
+  const chipItems = (filters ?? []).map((f) => (
+    <Chip key={f.key} label={f.label} count={f.count} icon={f.icon} selected={selected(f.key)} onPress={onChange ? () => onChange(f.key) : undefined} />
+  ));
+  const chips = filters?.length ? (longScript && isPhone && !phoneWindow ? (
+    <View style={styles.chipsWrap}>{chipItems}</View>
+  ) : (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -134,11 +142,9 @@ export function FilterBar({
       contentContainerStyle={styles.chips}
       keyboardShouldPersistTaps="handled"
     >
-      {filters.map((f) => (
-        <Chip key={f.key} label={f.label} count={f.count} icon={f.icon} selected={selected(f.key)} onPress={onChange ? () => onChange(f.key) : undefined} />
-      ))}
+      {chipItems}
     </ScrollView>
-  ) : null;
+  )) : null;
 
   if (isPhone) {
     return (
@@ -173,5 +179,6 @@ const styles = StyleSheet.create({
   chipScroll: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
   chipScrollPhone: { flexGrow: 0 },
   chips: { gap: 8, alignItems: 'center', paddingVertical: 2 },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   right: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
 });

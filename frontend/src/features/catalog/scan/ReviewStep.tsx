@@ -9,6 +9,7 @@ import { Checkbox, ChoiceChips, Collapsible, Field } from '../components';
 import { GST_RATES, normName, plural, trimRate } from '../utils';
 import { LOW_CONFIDENCE, blankRow, duplicateKeys, rowProblems, type ReviewRow } from './review';
 import { ReviewHeader, ReviewRowItem } from './ReviewRowItem';
+import { t } from '@/i18n';
 
 type Filter = 'all' | 'attention' | 'existing' | 'low' | 'selected';
 
@@ -81,20 +82,20 @@ export function ReviewStep({ rows, setRows, scan, settings, options, setOptions,
   }, [rows]);
 
   const bulkCategory = async () => {
-    if (!stats.selected) return toast.info('Tick the items first.');
+    if (!stats.selected) return toast.info(t('catalog.scan_ReviewStep.tick_the_items_first'));
     const name = await promptTop({
-      title: `Set category for ${plural(stats.selected, 'item')}`,
-      message: categories.length ? `Existing: ${categories.slice(0, 8).join(', ')}${categories.length > 8 ? '…' : ''}` : undefined,
-      label: 'Category name',
-      placeholder: food ? 'e.g. Main course' : 'e.g. Snacks',
-      confirmLabel: 'Apply',
+      title: t('catalog.scan_ReviewStep.set_category_for_plural', { plural: plural(stats.selected, 'item') }),
+      message: categories.length ? t('catalog.scan_ReviewStep.existing_join_v', { join: categories.slice(0, 8).join(', '), v: categories.length > 8 ? '…' : '' }) : undefined,
+      label: t('catalog.scan_ReviewStep.category_name'),
+      placeholder: food ? t('catalog.scan_ReviewStep.e_g_main_course') : t('catalog.scan_ReviewStep.e_g_snacks'),
+      confirmLabel: t('common.apply'),
     });
     if (!name) return;
     const match = categories.find((c) => normName(c) === normName(name)) ?? name.trim().slice(0, 60);
     setRows((list) => list.map((r) => (r.include ? { ...r, category: match } : r)));
   };
   const bulkVeg = (veg: boolean | null) => {
-    if (!stats.selected) return toast.info('Tick the items first.');
+    if (!stats.selected) return toast.info(t('catalog.scan_ReviewStep.tick_the_items_first'));
     setRows((list) => list.map((r) => (r.include ? { ...r, isVeg: veg } : r)));
     if (!options.applyVeg) setOptions({ ...options, applyVeg: true });
   };
@@ -104,7 +105,7 @@ export function ReviewStep({ rows, setRows, scan, settings, options, setOptions,
     setRows((list) => [...list, blankRow(list[list.length - 1]?.category ?? '')]);
   };
 
-  const gstOptions = [{ value: null as number | null, label: `Default (${trimRate(defaultRate)}%)` }, ...GST_RATES.map((r) => ({ value: r as number | null, label: `${r}%` }))];
+  const gstOptions = [{ value: null as number | null, label: t('catalog.scan_ReviewStep.default_trimrate', { trimRate: trimRate(defaultRate) }) }, ...GST_RATES.map((r) => ({ value: r as number | null, label: `${r}%` }))];
   const importable = stats.selected - stats.blocked;
 
   return (
@@ -117,30 +118,30 @@ export function ReviewStep({ rows, setRows, scan, settings, options, setOptions,
                 <Ionicons name="sparkles" size={20} color={colors.success} />
               </View>
               <View style={{ flexShrink: 1 }}>
-                <Text variant="h2">{scan ? `Found ${plural(scan.items.length, 'item')}` : 'Type your items'}</Text>
+                <Text variant="h2">{scan ? t('catalog.scan_ReviewStep.found_plural', { plural: plural(scan.items.length, 'item') }) : t('catalog.scan_ReviewStep.type_your_items')}</Text>
                 <Text variant="small" tone="muted">
                   {scan
-                    ? `${plural(scan.categories.length, 'category', 'categories')} · check names and prices, then import`
-                    : 'Add each item with its price, then import'}
+                    ? t('catalog.scan_ReviewStep.plural_check_names_and_prices_then_import', { plural: plural(scan.categories.length, 'category', 'categories') })
+                    : t('catalog.scan_ReviewStep.add_each_item_with_its_price_then_import')}
                 </Text>
               </View>
             </View>
             <View style={styles.chips}>
-              <Chip label="All" count={rows.length} selected={filter === 'all'} onPress={() => setFilter('all')} />
-              <Chip label="Ticked" count={stats.selected} selected={filter === 'selected'} onPress={() => setFilter('selected')} />
-              {stats.attention ? <Chip label="Needs a fix" icon="alert-circle-outline" count={stats.attention} selected={filter === 'attention'} onPress={() => setFilter('attention')} /> : null}
-              {stats.low ? <Chip label="Low confidence" icon="eye-outline" count={stats.low} selected={filter === 'low'} onPress={() => setFilter('low')} /> : null}
-              {stats.existing ? <Chip label="Already on menu" count={stats.existing} selected={filter === 'existing'} onPress={() => setFilter('existing')} /> : null}
+              <Chip label={t('common.all')} count={rows.length} selected={filter === 'all'} onPress={() => setFilter('all')} />
+              <Chip label={t('catalog.scan_ReviewStep.ticked')} count={stats.selected} selected={filter === 'selected'} onPress={() => setFilter('selected')} />
+              {stats.attention ? <Chip label={t('catalog.scan_ReviewStep.needs_a_fix')} icon="alert-circle-outline" count={stats.attention} selected={filter === 'attention'} onPress={() => setFilter('attention')} /> : null}
+              {stats.low ? <Chip label={t('catalog.scan_ReviewStep.low_confidence')} icon="eye-outline" count={stats.low} selected={filter === 'low'} onPress={() => setFilter('low')} /> : null}
+              {stats.existing ? <Chip label={t('catalog.scan_ReviewStep.already_on_menu')} count={stats.existing} selected={filter === 'existing'} onPress={() => setFilter('existing')} /> : null}
             </View>
           </View>
           <View style={[styles.settings, { borderTopColor: colors.divider }, !isWide && { flexDirection: 'column' }]}>
-            <Field label="GST for these items" style={isWide ? { flex: 1.4 } : undefined}>
+            <Field label={t('catalog.scan_ReviewStep.gst_for_these_items')} style={isWide ? { flex: 1.4 } : undefined}>
               <ChoiceChips<number | null> value={options.taxRate} options={gstOptions} onChange={(v) => setOptions({ ...options, taxRate: v })} />
             </Field>
             <View style={isWide ? { flex: 1 } : undefined}>
-              <SwitchRow title="Send to kitchen (KOT)" value={options.printToKitchen} onValueChange={(v) => setOptions({ ...options, printToKitchen: v })} />
+              <SwitchRow title={t('catalog.scan_ReviewStep.send_to_kitchen_kot')} value={options.printToKitchen} onValueChange={(v) => setOptions({ ...options, printToKitchen: v })} />
               {food ? (
-                <SwitchRow title="Save veg / non-veg marks" subtitle="Guessed from names — tap a row's mark to change"
+                <SwitchRow title={t('catalog.scan_ReviewStep.save_veg_non_veg_marks')} subtitle={t('catalog.scan_ReviewStep.guessed_from_names_tap_a_row_s_mark_to')}
                   value={options.applyVeg} onValueChange={(v) => setOptions({ ...options, applyVeg: v })} />
               ) : null}
             </View>
@@ -148,30 +149,30 @@ export function ReviewStep({ rows, setRows, scan, settings, options, setOptions,
         </Card>
 
         {scan && scan.warnings.length ? (
-          <Collapsible title="Things to check" icon="warning-outline" tone="warning" count={scan.warnings.length} defaultOpen={scan.items.length < 3}>
+          <Collapsible title={t('catalog.scan_ReviewStep.things_to_check')} icon="warning-outline" tone="warning" count={scan.warnings.length} defaultOpen={scan.items.length < 3}>
             {scan.warnings.map((w, i) => <Text key={i} variant="small" tone="warning">• {w}</Text>)}
           </Collapsible>
         ) : null}
 
         <Card padded={false} style={{ overflow: 'hidden' }}>
           <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
-            <Checkbox checked={allChecked} indeterminate={someChecked} onChange={(v) => setAll(v)} label={allChecked ? 'Untick all shown items' : 'Tick all shown items'} />
-            <Text variant="smallStrong" tone="muted" style={{ marginRight: 4 }}>{stats.selected} ticked</Text>
-            <Input icon="search" placeholder="Search" value={query} onChangeText={setQuery} containerStyle={{ flex: 1, minWidth: 160 }} accessibilityLabel="Search scanned items" />
+            <Checkbox checked={allChecked} indeterminate={someChecked} onChange={(v) => setAll(v)} label={allChecked ? t('catalog.scan_ReviewStep.untick_all_shown_items') : t('catalog.scan_ReviewStep.tick_all_shown_items')} />
+            <Text variant="smallStrong" tone="muted" style={{ marginRight: 4 }}>{stats.selected} {t('catalog.scan_ReviewStep.ticked_2')}</Text>
+            <Input icon="search" placeholder={t('catalog.scan_ReviewStep.search')} value={query} onChangeText={setQuery} containerStyle={{ flex: 1, minWidth: 160 }} accessibilityLabel={t('catalog.scan_ReviewStep.search_scanned_items')} />
             <View style={styles.bulk}>
-              <Button title={isPhone ? 'Category' : 'Set category'} icon="folder-outline" size="sm" variant="secondary" onPress={bulkCategory} disabled={!stats.selected} />
-              {food ? <Button title="Veg" size="sm" variant="secondary" onPress={() => bulkVeg(true)} disabled={!stats.selected} accessibilityLabel="Mark ticked items veg" /> : null}
-              {food ? <Button title="Non-veg" size="sm" variant="secondary" onPress={() => bulkVeg(false)} disabled={!stats.selected} accessibilityLabel="Mark ticked items non-veg" /> : null}
-              <Button title="Add item" icon="add" size="sm" variant="soft" onPress={addRow} />
+              <Button title={isPhone ? t('common.category') : t('catalog.scan_ReviewStep.set_category')} icon="folder-outline" size="sm" variant="secondary" onPress={bulkCategory} disabled={!stats.selected} />
+              {food ? <Button title={t('common.veg')} size="sm" variant="secondary" onPress={() => bulkVeg(true)} disabled={!stats.selected} accessibilityLabel={t('catalog.scan_ReviewStep.mark_ticked_items_veg')} /> : null}
+              {food ? <Button title={t('catalog.scan_ReviewStep.non_veg')} size="sm" variant="secondary" onPress={() => bulkVeg(false)} disabled={!stats.selected} accessibilityLabel={t('catalog.scan_ReviewStep.mark_ticked_items_non_veg')} /> : null}
+              <Button title={t('common.add_item')} icon="add" size="sm" variant="soft" onPress={addRow} />
             </View>
           </View>
           {isWide ? <ReviewHeader showVeg={food && options.applyVeg} /> : null}
           {visible.length === 0 ? (
             <View style={{ padding: 28, alignItems: 'center', gap: 10 }}>
-              <Text tone="muted" align="center">{rows.length ? 'No items match this filter.' : 'No items yet.'}</Text>
+              <Text tone="muted" align="center">{rows.length ? t('catalog.scan_ReviewStep.no_items_match_this_filter') : t('catalog.scan_ReviewStep.no_items_yet')}</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                {rows.length ? <Button title="Show all" variant="secondary" onPress={() => { setFilter('all'); setQuery(''); }} /> : null}
-                <Button title="Add item" icon="add" onPress={addRow} />
+                {rows.length ? <Button title={t('common.show_all')} variant="secondary" onPress={() => { setFilter('all'); setQuery(''); }} /> : null}
+                <Button title={t('common.add_item')} icon="add" onPress={addRow} />
               </View>
             </View>
           ) : (
@@ -190,36 +191,36 @@ export function ReviewStep({ rows, setRows, scan, settings, options, setOptions,
             ))
           )}
           <View style={{ padding: 12 }}>
-            <Button title="Add another item" icon="add" variant="ghost" onPress={addRow} />
+            <Button title={t('catalog.scan_ReviewStep.add_another_item')} icon="add" variant="ghost" onPress={addRow} />
           </View>
         </Card>
 
         {scan && scan.lines.length ? (
-          <Collapsible title="Text we read (raw)" icon="document-text-outline" count={scan.lines.length}>
-            <Text variant="small" tone="muted">Useful to spot items the scanner missed — add them with “Add item”.</Text>
+          <Collapsible title={t('catalog.scan_ReviewStep.text_we_read_raw')} icon="document-text-outline" count={scan.lines.length}>
+            <Text variant="small" tone="muted">{t('catalog.scan_ReviewStep.useful_to_spot_items_the_scanner_missed')}</Text>
             <View style={[styles.raw, { backgroundColor: colors.surfaceSunken }]}>
               {scan.lines.map((l, i) => <Text key={i} variant="small" style={styles.mono} selectable>{l}</Text>)}
             </View>
           </Collapsible>
         ) : null}
-        <Button title="Scan different photos" icon="camera-outline" variant="ghost" onPress={onRescan} style={{ alignSelf: 'center' }} />
+        <Button title={t('catalog.scan_ReviewStep.scan_different_photos')} icon="camera-outline" variant="ghost" onPress={onRescan} style={{ alignSelf: 'center' }} />
       </ScrollView>
 
       <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
         <View style={{ flex: 1, minWidth: 0 }}>
           {stats.blocked ? (
             <Text variant="smallStrong" tone="danger" numberOfLines={2}>
-              {plural(stats.blocked, 'ticked item')} {stats.blocked === 1 ? 'needs' : 'need'} a fix (usually a missing price).{' '}
-              <Text variant="smallStrong" tone="primary" onPress={() => setFilter('attention')} accessibilityRole="link">Show</Text>
+              {plural(stats.blocked, 'ticked item')} {stats.blocked === 1 ? 'needs' : 'need'} {t('catalog.scan_ReviewStep.a_fix_usually_a_missing_price')}{' '}
+              <Text variant="smallStrong" tone="primary" onPress={() => setFilter('attention')} accessibilityRole="link">{t('common.show')}</Text>
             </Text>
           ) : (
             <Text variant="small" tone="muted" numberOfLines={2}>
-              {importable ? `${plural(importable, 'item')} will be added${stats.existing ? '. Items already on your menu are skipped.' : '.'}` : 'Tick the items you want to add.'}
+              {importable ? t('catalog.scan_ReviewStep.plural_will_be_added_v', { plural: plural(importable, 'item'), v: stats.existing ? t('catalog.scan_ReviewStep.items_already_on_your_menu_are_skipped') : '.' }) : t('catalog.scan_ReviewStep.tick_the_items_you_want_to_add')}
             </Text>
           )}
         </View>
         <Button
-          title={importable ? `Import ${plural(importable, 'item')}` : 'Import'}
+          title={importable ? t('catalog.scan_ReviewStep.import_plural', { plural: plural(importable, 'item') }) : t('catalog.scan_ReviewStep.import')}
           icon="cloud-upload-outline"
           size="lg"
           onPress={onImport}

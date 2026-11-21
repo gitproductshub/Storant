@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { qrMatrix, qrPath, type QrErrorCorrection } from '@/lib/barcode/qr';
+import { t } from '@/i18n';
 
 export interface QrCodeProps {
   value: string;
@@ -31,24 +33,25 @@ export function QrCode({
   caption,
   style,
 }: QrCodeProps) {
+  const { colors } = useTheme();
   const result = useMemo(() => {
     try {
       const matrix = qrMatrix(value, ecc);
       return { dim: matrix.length + margin * 2, d: qrPath(matrix, margin), error: null };
     } catch (e) {
-      return { dim: 0, d: '', error: e instanceof Error ? e.message : 'Invalid QR data' };
+      return { dim: 0, d: '', error: e instanceof Error ? e.message : t('shell.QrCode.invalid_qr_data') };
     }
   }, [value, ecc, margin]);
 
   if (result.error) {
     return (
       <View style={style}>
-        <Text style={{ color: '#b91c1c', fontSize: 12 }}>{result.error}</Text>
+        <Text style={{ color: colors.dangerText, fontSize: 12 }}>{result.error}</Text>
       </View>
     );
   }
   return (
-    <View style={[{ alignItems: 'center' }, style]} accessibilityRole="image" accessibilityLabel="QR code">
+    <View style={[{ alignItems: 'center' }, style]} accessibilityRole="image" accessibilityLabel={t('shell.QrCode.qr_code')}>
       <Svg width={size} height={size} viewBox={`0 0 ${result.dim} ${result.dim}`}>
         {background !== 'transparent' ? <Rect x={0} y={0} width={result.dim} height={result.dim} fill={background} /> : null}
         <Path d={result.d} fill={color} />

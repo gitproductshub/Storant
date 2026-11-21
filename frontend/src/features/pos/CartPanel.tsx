@@ -10,7 +10,8 @@ import type { BusinessSettings, Order, OrderType } from '@/api/types';
 import { ActionMenu, Badge, Button, Chip, IconButton, Segmented, Text, prompt, type ActionMenuItem } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeProvider';
 import { fonts } from '@/theme/tokens';
-import { CHANNEL_LABEL, money } from '@/lib/format';
+import { money } from '@/lib/format';
+import { CHANNEL_UI } from '@/lib/uiLabels';
 import { useCart, type Draft } from './cart';
 import { BillTabs } from './BillSheets';
 import { PaymentClaimBanner } from '../ops/PaymentClaim';
@@ -20,6 +21,7 @@ import type { AppliedOffer } from './offers';
 import { isAggregator, type PricedDraft, type PricedLine } from './totals';
 import { Avatar } from './sheets';
 import { usePosPrefs } from './posPrefs';
+import { t as tr } from '@/i18n';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -125,11 +127,11 @@ export function CartPanel(p: CartPanelProps) {
   }, [lastIndex, priced.lines.length]);
 
   const typeOptions: { value: OrderType; label: string; icon: IconName }[] = isRetail
-    ? [{ value: 'RETAIL_WALKIN', label: 'Walk-in', icon: 'walk-outline' }, { value: 'TAKEAWAY', label: 'Takeaway', icon: 'bag-handle-outline' }]
+    ? [{ value: 'RETAIL_WALKIN', label: tr('pos.CartPanel.walk_in'), icon: 'walk-outline' }, { value: 'TAKEAWAY', label: tr('common.takeaway'), icon: 'bag-handle-outline' }]
     : [
-      { value: 'TAKEAWAY', label: 'Takeaway', icon: 'bag-handle-outline' },
-      { value: 'DINE_IN', label: 'Dine-in', icon: 'restaurant-outline' },
-      { value: 'DELIVERY', label: 'Delivery', icon: 'bicycle-outline' },
+      { value: 'TAKEAWAY', label: tr('common.takeaway'), icon: 'bag-handle-outline' },
+      { value: 'DINE_IN', label: tr('pos.CartPanel.dine_in'), icon: 'restaurant-outline' },
+      { value: 'DELIVERY', label: tr('common.delivery'), icon: 'bicycle-outline' },
     ];
 
   const payBlocked = !canBill;
@@ -153,15 +155,15 @@ export function CartPanel(p: CartPanelProps) {
               <Ionicons name={resume.table_label ? 'grid' : 'receipt'} size={18} color={colors.primary} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text variant="bodyStrong" color={colors.primarySoftText} numberOfLines={1}>
-                  {resume.table_label ? `Table ${resume.table_label}${bills.length > 1 || resume.bill_label ? ` · ${currentBillName}` : ''}` : `${resume.type === 'DELIVERY' ? 'Delivery' : resume.type === 'DINE_IN' ? 'Dine-in' : 'Takeaway'}${resume.token_no ? ` #${resume.token_no}` : ''}`} · {money(resume.total_amount, currency)}
+                  {resume.table_label ? tr('pos.CartPanel.table_table_label_v', { table_label: resume.table_label, v: bills.length > 1 || resume.bill_label ? ` · ${currentBillName}` : '' }) : `${resume.type === 'DELIVERY' ? tr('common.delivery') : resume.type === 'DINE_IN' ? tr('pos.CartPanel.dine_in') : tr('common.takeaway')}${resume.token_no ? ` #${resume.token_no}` : ''}`} · {money(resume.total_amount, currency)}
                 </Text>
                 <Text variant="caption" color={colors.primarySoftText} numberOfLines={1}>
-                  {[`Running bill #${resume.code}`, resume.guests ? `${resume.guests} guest${resume.guests === 1 ? '' : 's'}` : null, resume.customer_name, resume.channel !== 'POS' ? CHANNEL_LABEL[resume.channel] : null, resume.paid_amount ? `${money(resume.paid_amount, currency)} paid` : null].filter(Boolean).join(' · ')}
+                  {[`Running bill #${resume.code}`, resume.guests ? `${resume.guests} guest${resume.guests === 1 ? '' : 's'}` : null, resume.customer_name, resume.channel !== 'POS' ? CHANNEL_UI[resume.channel] : null, resume.paid_amount ? `${money(resume.paid_amount, currency)} paid` : null].filter(Boolean).join(' · ')}
                 </Text>
               </View>
-              <ActionMenu items={p.billMenu} title={resume.table_label ? `Table ${resume.table_label} · ${currentBillName}` : `Bill #${resume.code}`} align="end"
-                trigger={(open) => <IconButton icon="ellipsis-horizontal" variant="secondary" accessibilityLabel="Bill options: name, guests, merge" onPress={open} testID="pos-bill-menu" />} />
-              <IconButton icon="close" variant="secondary" accessibilityLabel="Leave this running bill" onPress={p.onExitResume} />
+              <ActionMenu items={p.billMenu} title={resume.table_label ? tr('pos.CartPanel.table_table_label_currentbillname', { table_label: resume.table_label, currentBillName }) : tr('pos.CartPanel.bill_code', { code: resume.code })} align="end"
+                trigger={(open) => <IconButton icon="ellipsis-horizontal" variant="secondary" accessibilityLabel={tr('pos.CartPanel.bill_options_name_guests_merge')} onPress={open} testID="pos-bill-menu" />} />
+              <IconButton icon="close" variant="secondary" accessibilityLabel={tr('pos.CartPanel.leave_this_running_bill')} onPress={p.onExitResume} />
             </View>
           ) : (
             <View onLayout={(e) => setNarrow(e.nativeEvent.layout.width < 340)}>
@@ -185,25 +187,25 @@ export function CartPanel(p: CartPanelProps) {
           <View style={styles.pillBar}>
             <View style={styles.pills}>
               {orderType === 'DINE_IN' && !resume ? (
-                <Pill icon="grid-outline" label={draft.tableLabel ? `Table ${draft.tableLabel}` : 'Pick table'} onPress={p.onPickTable}
+                <Pill icon="grid-outline" label={draft.tableLabel ? tr('pos.CartPanel.table_tablelabel', { tableLabel: draft.tableLabel }) : tr('pos.CartPanel.pick_table')} onPress={p.onPickTable}
                   tone={draft.tableId ? 'active' : 'warn'} />
               ) : null}
               {orderType === 'DINE_IN' && !resume && draft.newBill && draft.tableId ? (
-                <Pill icon="people-outline" label={currentBillName} sub={draft.guests ? `${draft.guests} guests · separate bill` : 'Separate bill'}
+                <Pill icon="people-outline" label={currentBillName} sub={draft.guests ? tr('pos.CartPanel.guests_guests_separate_bill_x', { guests: draft.guests }) : tr('pos.CartPanel.separate_bill_x')}
                   onPress={p.onBillMenu} tone="active" />
               ) : null}
               {showChannel && !resume ? (
-                <Pill icon={draft.channel === 'POS' ? 'storefront-outline' : 'bicycle-outline'} label={CHANNEL_LABEL[draft.channel] ?? draft.channel}
+                <Pill icon={draft.channel === 'POS' ? 'storefront-outline' : 'bicycle-outline'} label={CHANNEL_UI[draft.channel] ?? draft.channel}
                   onPress={p.onPickChannel} tone={draft.channel === 'POS' ? 'plain' : 'active'} />
               ) : null}
-              <Pill icon={draft.customer ? undefined : 'person-add-outline'} label={draft.customer ? draft.customer.name : 'Customer'}
-                sub={draft.customer ? `${draft.customer.phone}${draft.customer.points ? ` · ${draft.customer.points} pts` : ''}` : undefined}
+              <Pill icon={draft.customer ? undefined : 'person-add-outline'} label={draft.customer ? draft.customer.name : tr('common.customer')}
+                sub={draft.customer ? `${draft.customer.phone}${draft.customer.points ? tr('pos.CartPanel.points_pts_x', { points: draft.customer.points }) : ''}` : undefined}
                 left={draft.customer ? <Avatar name={draft.customer.name} size={22} /> : undefined}
                 badge={draft.customer?.tier ?? undefined}
                 onPress={p.onPickCustomer} tone={draft.customer ? 'active' : orderType === 'DELIVERY' && !isAggregator(draft.channel) ? 'warn' : 'plain'} />
             </View>
             {hasNew ? (
-              <Pressable onPress={p.onClear} accessibilityRole="button" accessibilityLabel="Clear cart" hitSlop={6}
+              <Pressable onPress={p.onClear} accessibilityRole="button" accessibilityLabel={tr('pos.CartPanel.clear_cart')} hitSlop={6}
                 style={({ hovered }: any) => [styles.clear, { borderRadius: radius.sm, backgroundColor: hovered ? colors.dangerSoft : 'transparent' }]}>
                 <Ionicons name="trash-outline" size={18} color={colors.danger} />
               </Pressable>
@@ -212,11 +214,11 @@ export function CartPanel(p: CartPanelProps) {
           )}
 
           {isAggregator(draft.channel) && !resume ? (
-            <InlineField icon="pricetag-outline" placeholder={`${CHANNEL_LABEL[draft.channel] ?? 'Aggregator'} order ID`} value={draft.externalOrderId}
+            <InlineField icon="pricetag-outline" placeholder={tr('pos.CartPanel.v_order_id', { v: CHANNEL_UI[draft.channel] ?? tr('pos.CartPanel.aggregator') })} value={draft.externalOrderId}
               onChangeText={(t) => patch({ externalOrderId: t })} maxLength={64} />
           ) : null}
           {orderType === 'DELIVERY' && !resume ? (
-            <InlineField icon="location-outline" placeholder="Delivery address" value={draft.deliveryAddress}
+            <InlineField icon="location-outline" placeholder={tr('pos.CartPanel.delivery_address')} value={draft.deliveryAddress}
               onChangeText={(t) => patch({ deliveryAddress: t })} maxLength={500} multiline />
           ) : null}
         </View>
@@ -230,7 +232,7 @@ export function CartPanel(p: CartPanelProps) {
               {hasNew ? (
                 <View style={[styles.sectionHead, { marginTop: 10 }]}>
                   <Ionicons name="add-circle-outline" size={14} color={colors.primary} />
-                  <Text variant="caption" tone="primary" style={{ textTransform: 'uppercase' }}>New items</Text>
+                  <Text variant="caption" tone="primary" style={{ textTransform: 'uppercase' }}>{tr('pos.CartPanel.new_items')}</Text>
                 </View>
               ) : null}
             </View>
@@ -243,9 +245,9 @@ export function CartPanel(p: CartPanelProps) {
                   <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceSunken }]}>
                     <Ionicons name={isRetail ? 'barcode-outline' : 'fast-food-outline'} size={28} color={colors.textSubtle} />
                   </View>
-                  <Text variant="h3" align="center">{resume ? 'Add more items' : 'New bill'}</Text>
+                  <Text variant="h3" align="center">{resume ? tr('pos.CartPanel.add_more_items') : tr('common.new_bill')}</Text>
                   <Text variant="small" tone="muted" align="center" style={{ maxWidth: 260 }}>
-                    {isRetail ? 'Scan a barcode or tap items to add them.' : 'Tap items to add them. Tap a line to add a note.'}
+                    {isRetail ? tr('pos.CartPanel.scan_a_barcode_or_tap_items_to_add_them') : tr('pos.CartPanel.tap_items_to_add_them_tap_a_line_to_add_a')}
                   </Text>
                 </>
               )}
@@ -272,23 +274,23 @@ export function CartPanel(p: CartPanelProps) {
         {priced.itemCount > 0 ? (
           <View style={styles.summaryRow}>
             <Pressable onPress={() => setPrefs({ totalsOpen: !totalsOpen })} accessibilityRole="button" accessibilityState={{ expanded: totalsOpen }}
-              accessibilityLabel={`${summary}. ${totalsOpen ? 'Hide' : 'Show'} tax breakdown`} hitSlop={8} testID="pos-totals-toggle"
+              accessibilityLabel={tr('pos.CartPanel.summary_v_tax_breakdown', { summary, v: totalsOpen ? tr('common.hide') : tr('common.show') })} hitSlop={8} testID="pos-totals-toggle"
               style={({ hovered }: any) => [styles.summaryToggle, { borderRadius: radius.sm }, hovered && { backgroundColor: colors.surfaceSunken },
                 Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
               <Ionicons name={totalsOpen ? 'chevron-down' : 'chevron-forward'} size={15} color={colors.textMuted} />
-              <Text variant="small" tone="muted" numberOfLines={1} style={[styles.num, { flexShrink: 1 }]}>{totalsOpen ? 'Hide breakdown' : summary}</Text>
+              <Text variant="small" tone="muted" numberOfLines={1} style={[styles.num, { flexShrink: 1 }]}>{totalsOpen ? tr('pos.CartPanel.hide_breakdown') : summary}</Text>
             </Pressable>
             {p.offers ? <OfferChip info={p.offers} currency={currency} discount={priced.offerDiscount} onPress={p.onOffers} /> : null}
             {canBill ? (
-              <MiniChip icon="pricetag-outline" label={priced.manualDiscount > 0 ? `−${money(priced.manualDiscount, currency)}` : 'Discount'}
+              <MiniChip icon="pricetag-outline" label={priced.manualDiscount > 0 ? `−${money(priced.manualDiscount, currency)}` : tr('common.discount')}
                 tone={priced.manualDiscount > 0 ? 'success' : 'plain'} onPress={p.onDiscount}
-                accessibilityLabel={priced.manualDiscount > 0 ? `${discountLabel(draft, priced.redeemValue, currency)} ${money(priced.manualDiscount, currency)}, change` : 'Add discount'} />
+                accessibilityLabel={priced.manualDiscount > 0 ? tr('pos.CartPanel.discountlabel_money_change', { discountLabel: discountLabel(draft, priced.redeemValue, currency), money: money(priced.manualDiscount, currency) }) : tr('pos.CartPanel.add_discount')} />
             ) : null}
           </View>
         ) : null}
         {priced.itemCount > 0 && totalsOpen ? (
           <View style={{ gap: 2 }}>
-            <TotalRow label={`Subtotal · ${priced.itemCount} item${priced.itemCount === 1 ? '' : 's'}`} value={money(preview.subtotal, currency)} />
+            <TotalRow label={tr('pos.CartPanel.subtotal_itemcount_item_v', { itemCount: priced.itemCount, v: priced.itemCount === 1 ? '' : 's' })} value={money(preview.subtotal, currency)} />
             {p.offers?.applied ? <OfferRow info={p.offers} currency={currency} discount={priced.offerDiscount} onPress={p.onOffers} /> : null}
             {priced.manualDiscount > 0 ? (
               <TotalRow label={discountLabel(draft, priced.redeemValue, currency)} value={`−${money(priced.manualDiscount, currency)}`} tone="success"
@@ -296,42 +298,42 @@ export function CartPanel(p: CartPanelProps) {
             ) : null}
             {preview.taxBreakup.filter((t) => t.rate > 0 && (t.cgst || t.sgst)).map((t) => (
               <React.Fragment key={t.rate}>
-                <TotalRow label={`CGST ${t.rate / 2}%${settings?.prices_include_tax ? ' (incl.)' : ''}`} value={money(t.cgst, currency)} muted />
-                <TotalRow label={`SGST ${t.rate / 2}%${settings?.prices_include_tax ? ' (incl.)' : ''}`} value={money(t.sgst, currency)} muted />
+                <TotalRow label={tr('pos.CartPanel.cgst_v_v2', { v: t.rate / 2, v2: settings?.prices_include_tax ? tr('pos.CartPanel.incl') : '' })} value={money(t.cgst, currency)} muted />
+                <TotalRow label={tr('pos.CartPanel.sgst_v_v2', { v: t.rate / 2, v2: settings?.prices_include_tax ? tr('pos.CartPanel.incl') : '' })} value={money(t.sgst, currency)} muted />
               </React.Fragment>
             ))}
-            {preview.roundOff ? <TotalRow label="Round off" value={`${preview.roundOff > 0 ? '+' : '−'}${money(Math.abs(preview.roundOff), currency)}`} muted /> : null}
-            {priced.paid > 0 ? <TotalRow label="Already paid" value={`−${money(priced.paid, currency)}`} muted /> : null}
+            {preview.roundOff ? <TotalRow label={tr('common.round_off')} value={`${preview.roundOff > 0 ? '+' : '−'}${money(Math.abs(preview.roundOff), currency)}`} muted /> : null}
+            {priced.paid > 0 ? <TotalRow label={tr('pos.CartPanel.already_paid')} value={`−${money(priced.paid, currency)}`} muted /> : null}
           </View>
         ) : priced.paid > 0 ? (
-          <TotalRow label="Already paid" value={`−${money(priced.paid, currency)}`} muted />
+          <TotalRow label={tr('pos.CartPanel.already_paid')} value={`−${money(priced.paid, currency)}`} muted />
         ) : null}
         {p.offers?.problem && !p.offers.applied && !p.offers.locked && p.offers.online ? (
           <Text variant="caption" tone="warning" numberOfLines={2}>{p.offers.problem}</Text>
         ) : null}
         {p.offers?.applied && p.offers.freeItemName && !totalsOpen ? (
           <Text variant="caption" tone="success" numberOfLines={1}>
-            + {p.offers.applied.freeQuantity > 1 ? `${p.offers.applied.freeQuantity} × ` : ''}{p.offers.freeItemName} free with {p.offers.applied.name}
+            + {p.offers.applied.freeQuantity > 1 ? `${p.offers.applied.freeQuantity} × ` : ''}{p.offers.freeItemName} {tr('pos.CartPanel.free_with_name', { name: p.offers.applied.name })}
           </Text>
         ) : null}
         <View style={styles.totalRow}>
-          <Text variant="bodyStrong" tone="muted">{priced.paid > 0 ? 'Balance due' : 'Total'}</Text>
+          <Text variant="bodyStrong" tone="muted">{priced.paid > 0 ? tr('pos.CartPanel.balance_due') : tr('common.total')}</Text>
           <Text variant="moneyLarge" testID="pos-total" style={styles.num}>{money(due, currency)}</Text>
         </View>
         <View style={styles.actions} onLayout={(e) => setActionsWidth(e.nativeEvent.layout.width)}>
-          <Button title={isRetail ? 'Hold' : 'KOT'} variant={isRetail ? 'outline' : 'kitchen'} size="lg" icon={isRetail ? 'bookmark-outline' : 'flame'}
+          <Button title={isRetail ? tr('pos.CartPanel.hold') : 'KOT'} variant={isRetail ? 'outline' : 'kitchen'} size="lg" icon={isRetail ? 'bookmark-outline' : 'flame'}
             badge={hasNew ? priced.newCount : undefined} shortcut={hints ? 'F9' : undefined}
             onPress={p.onKot} loading={submitting === 'kot'} disabled={!hasNew || submitting !== null}
-            disabledReason={submitting ? undefined : resume ? 'Add new items to send them to the kitchen' : 'Add an item first'}
+            disabledReason={submitting ? undefined : resume ? tr('pos.CartPanel.add_new_items_to_send_them_to_the_kitchen_x') : tr('pos.CartPanel.add_an_item_first_x')}
             style={{ flex: payBlocked ? 1 : undefined, minWidth: 104 }}
-            accessibilityLabel={isRetail ? 'Hold bill (F9)' : hasNew ? `Send ${priced.newCount} new item${priced.newCount === 1 ? '' : 's'} to the kitchen (F9)` : 'Nothing new to send to the kitchen'} testID="pos-kot" />
+            accessibilityLabel={isRetail ? tr('pos.CartPanel.hold_bill_f9') : hasNew ? tr('pos.CartPanel.send_newcount_new_item_v_to_the_kitchen_f9', { newCount: priced.newCount, v: priced.newCount === 1 ? '' : 's' }) : tr('pos.CartPanel.nothing_new_to_send_to_the_kitchen')} testID="pos-kot" />
           {!payBlocked ? (
-            <Button title={`Pay ${money(due, currency)}`} variant="success" size="lg" icon="card" shortcut={hints ? 'F8' : undefined}
-              onPress={p.onPay} loading={submitting === 'pay'} disabled={nothingToPay || submitting !== null} disabledReason={submitting ? undefined : 'Add an item first'}
-              style={{ flex: 1 }} accessibilityLabel={`Pay ${money(due, currency)} (F8)`} testID="pos-pay" />
+            <Button title={tr('pos.CartPanel.pay_money', { money: money(due, currency) })} variant="success" size="lg" icon="card" shortcut={hints ? 'F8' : undefined}
+              onPress={p.onPay} loading={submitting === 'pay'} disabled={nothingToPay || submitting !== null} disabledReason={submitting ? undefined : tr('pos.CartPanel.add_an_item_first_x')}
+              style={{ flex: 1 }} accessibilityLabel={tr('pos.CartPanel.pay_money_f8', { money: money(due, currency) })} testID="pos-pay" />
           ) : null}
         </View>
-        {payBlocked ? <Text variant="caption" tone="subtle" align="center">Only cashiers and managers can take payment.</Text> : null}
+        {payBlocked ? <Text variant="caption" tone="subtle" align="center">{tr('pos.CartPanel.only_cashiers_and_managers_can_take')}</Text> : null}
       </View>
     </View>
   );
@@ -359,12 +361,12 @@ function OfferChip({ info, currency, discount, onPress }: { info: CartOfferInfo;
   const tap = info.locked ? undefined : onPress;
   if (info.applied) {
     return <MiniChip icon="pricetag" tone="success" onPress={tap} label={discount > 0 ? `−${money(discount, currency)}` : info.applied.name}
-      accessibilityLabel={`Offer ${info.applied.name}${discount > 0 ? `, ${money(discount, currency)} off` : ''}${tap ? ', change offer' : ''}`} />;
+      accessibilityLabel={tr('pos.CartPanel.offer_name_v_v2', { name: info.applied.name, v: discount > 0 ? tr('pos.CartPanel.money_off', { money: money(discount, currency) }) : '', v2: tap ? tr('pos.CartPanel.change_offer') : '' })} />;
   }
   if (info.locked || !info.online) return null;
-  if (info.problem) return <MiniChip icon="alert-circle-outline" tone="warning" label="Offer" onPress={tap} accessibilityLabel={`${info.problem}. Change offer`} />;
-  if (info.eligibleCount > 0) return <MiniChip icon="pricetags-outline" tone="primary" label={`${info.eligibleCount} offer${info.eligibleCount === 1 ? '' : 's'}`} onPress={tap} />;
-  return <MiniChip icon="ticket-outline" tone="plain" label={info.pending ? 'Offers…' : 'Coupon'} onPress={tap} accessibilityLabel="Coupon or offers" />;
+  if (info.problem) return <MiniChip icon="alert-circle-outline" tone="warning" label={tr('common.offer')} onPress={tap} accessibilityLabel={tr('pos.CartPanel.problem_change_offer', { problem: info.problem })} />;
+  if (info.eligibleCount > 0) return <MiniChip icon="pricetags-outline" tone="primary" label={tr('pos.CartPanel.eligiblecount_offer_v', { eligibleCount: info.eligibleCount, v: info.eligibleCount === 1 ? '' : 's' })} onPress={tap} />;
+  return <MiniChip icon="ticket-outline" tone="plain" label={info.pending ? tr('pos.CartPanel.offers') : tr('pos.CartPanel.coupon')} onPress={tap} accessibilityLabel={tr('pos.CartPanel.coupon_or_offers')} />;
 }
 
 /** Customer on a running bill as one compact button next to the bill tabs. */
@@ -372,7 +374,7 @@ function CustomerButton({ customer, onPress }: { customer: Draft['customer']; on
   const { colors, radius } = useTheme();
   return (
     <Pressable onPress={onPress} accessibilityRole="button"
-      accessibilityLabel={customer ? `Customer ${customer.name}${customer.phone ? `, ${customer.phone}` : ''}. Change customer` : 'Add customer'}
+      accessibilityLabel={customer ? tr('pos.CartPanel.customer_name_v_change_customer', { name: customer.name, v: customer.phone ? `, ${customer.phone}` : '' }) : tr('common.add_customer')}
       style={({ hovered }: any) => [styles.custBtn, {
         borderRadius: radius.pill, borderColor: customer ? colors.primary : colors.border,
         backgroundColor: hovered ? colors.surfaceSunken : customer ? colors.primarySoft : colors.surface,
@@ -389,7 +391,7 @@ function OfferRow({ info, currency, discount, onPress }: { info: CartOfferInfo; 
   if (info.applied) {
     const label = `${info.applied.name}${info.code ? ` · ${info.code}` : ''}`;
     return (
-      <Pressable onPress={tap} disabled={!tap} accessibilityRole="button" accessibilityLabel={`Offer ${label}${tap ? ', change offer' : ''}`}>
+      <Pressable onPress={tap} disabled={!tap} accessibilityRole="button" accessibilityLabel={tr('pos.CartPanel.offer_label_v', { label, v: tap ? tr('pos.CartPanel.change_offer') : '' })}>
         <View style={styles.tRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
             <Ionicons name="pricetag" size={13} color={colors.successText} />
@@ -400,7 +402,7 @@ function OfferRow({ info, currency, discount, onPress }: { info: CartOfferInfo; 
         {info.freeItemName ? (
           <View style={styles.tRow}>
             <Text variant="caption" tone="success" numberOfLines={1} style={{ flex: 1, paddingLeft: 17 }}>
-              + {info.applied.freeQuantity > 1 ? `${info.applied.freeQuantity} × ` : ''}{info.freeItemName} free
+              + {info.applied.freeQuantity > 1 ? `${info.applied.freeQuantity} × ` : ''}{info.freeItemName} {tr('pos.CartPanel.free')}
             </Text>
             <Text variant="caption" tone="success">{money(0, currency)}</Text>
           </View>
@@ -413,7 +415,7 @@ function OfferRow({ info, currency, discount, onPress }: { info: CartOfferInfo; 
     return (
       <Pressable onPress={tap} accessibilityRole="button" style={styles.addDiscount} hitSlop={4}>
         <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
-        <Text variant="small" tone="warning" numberOfLines={2} style={{ flexShrink: 1 }}>{info.problem} · change offer</Text>
+        <Text variant="small" tone="warning" numberOfLines={2} style={{ flexShrink: 1 }}>{info.problem} {tr('pos.CartPanel.change_offer_2')}</Text>
       </Pressable>
     );
   }
@@ -421,14 +423,14 @@ function OfferRow({ info, currency, discount, onPress }: { info: CartOfferInfo; 
     return (
       <Pressable onPress={tap} accessibilityRole="button" style={styles.addDiscount} hitSlop={4}>
         <Ionicons name="pricetags-outline" size={14} color={colors.primary} />
-        <Text variant="smallStrong" tone="primary">{info.eligibleCount} offer{info.eligibleCount === 1 ? '' : 's'} available</Text>
+        <Text variant="smallStrong" tone="primary">{info.eligibleCount} {tr('pos.CartPanel.offer_2')}{info.eligibleCount === 1 ? '' : 's'} {tr('pos.CartPanel.available')}</Text>
       </Pressable>
     );
   }
   return (
     <Pressable onPress={tap} accessibilityRole="button" style={styles.addDiscount} hitSlop={4}>
       <Ionicons name="ticket-outline" size={14} color={colors.textMuted} />
-      <Text variant="small" tone="muted">{info.pending ? 'Checking offers…' : 'Coupon / offers'}</Text>
+      <Text variant="small" tone="muted">{info.pending ? tr('pos.CartPanel.checking_offers') : tr('pos.CartPanel.coupon_offers')}</Text>
     </Pressable>
   );
 }
@@ -453,7 +455,7 @@ function LineRow({ pl, currency, expanded, highlight, onToggle, quickNotes }: {
   const missing = !pl.product || !pl.product.is_active || pl.unavailable;
 
   const editQty = async () => {
-    const v = await prompt({ title: `Quantity · ${line.name}`, label: 'Quantity', placeholder: String(line.quantity), confirmLabel: 'Set' });
+    const v = await prompt({ title: tr('pos.CartPanel.quantity_name', { name: line.name }), label: tr('pos.CartPanel.quantity'), placeholder: String(line.quantity), confirmLabel: tr('pos.CartPanel.set') });
     if (v === null) return;
     const n = Number(v);
     if (Number.isFinite(n) && n >= 0) setQty(line.id, n);
@@ -468,12 +470,12 @@ function LineRow({ pl, currency, expanded, highlight, onToggle, quickNotes }: {
   return (
     <View style={[styles.line, { borderRadius: radius.md, backgroundColor: expanded ? colors.surfaceSunken : highlight ? colors.primarySoft : 'transparent' }]}>
       <View style={styles.lineMain}>
-        <Pressable onPress={onToggle} style={{ flex: 1, minWidth: 0 }} accessibilityRole="button" accessibilityLabel={`${line.name}, edit note or remove`}>
+        <Pressable onPress={onToggle} style={{ flex: 1, minWidth: 0 }} accessibilityRole="button" accessibilityLabel={tr('pos.CartPanel.name_edit_note_or_remove', { name: line.name })}>
           <Text variant="bodyStrong" numberOfLines={2} tone={missing ? 'danger' : 'default'}>
             {line.name}{line.variantName ? <Text variant="body" tone="muted"> · {line.variantName}</Text> : null}
           </Text>
           <Text variant="caption" tone={missing ? 'danger' : 'subtle'} numberOfLines={1}>
-            {pl.unavailable ? 'Not on this channel\'s menu — remove it' : missing ? 'No longer on the menu — remove it' : `${money(pl.unitPrice, currency)} each`}
+            {pl.unavailable ? tr('pos.CartPanel.not_on_this_channel_s_menu_remove_it') : missing ? tr('pos.CartPanel.no_longer_on_the_menu_remove_it') : tr('pos.CartPanel.money_each', { money: money(pl.unitPrice, currency) })}
           </Text>
           {line.notes ? (
             <View style={styles.noteRow}>
@@ -483,12 +485,12 @@ function LineRow({ pl, currency, expanded, highlight, onToggle, quickNotes }: {
           ) : null}
         </Pressable>
         <View style={[styles.stepper, { borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface }]}>
-          <StepBtn icon={line.quantity === 1 ? 'trash-outline' : 'remove'} label={line.quantity === 1 ? `Remove ${line.name}` : `One less ${line.name}`}
+          <StepBtn icon={line.quantity === 1 ? 'trash-outline' : 'remove'} label={line.quantity === 1 ? tr('pos.CartPanel.remove_name', { name: line.name }) : tr('pos.CartPanel.one_less_name', { name: line.name })}
             danger={line.quantity === 1} onPress={() => bump(line.id, -1)} />
-          <Pressable onPress={() => void editQty()} accessibilityRole="button" accessibilityLabel={`Quantity ${line.quantity}, tap to type`} style={styles.qtyBox}>
+          <Pressable onPress={() => void editQty()} accessibilityRole="button" accessibilityLabel={tr('pos.CartPanel.quantity_quantity_tap_to_type', { quantity: line.quantity })} style={styles.qtyBox}>
             <Text variant="bodyStrong" style={styles.num}>{line.quantity}</Text>
           </Pressable>
-          <StepBtn icon="add" label={`One more ${line.name}`} onPress={() => bump(line.id, 1)} />
+          <StepBtn icon="add" label={tr('pos.CartPanel.one_more_name', { name: line.name })} onPress={() => bump(line.id, 1)} />
         </View>
         <Text variant="money" style={[styles.lineTotal, styles.num]} numberOfLines={1}>{money(pl.total, currency)}</Text>
       </View>
@@ -499,8 +501,8 @@ function LineRow({ pl, currency, expanded, highlight, onToggle, quickNotes }: {
             {quickNotes.map((n) => <Chip key={n} label={n} selected={!!line.notes?.split(', ').includes(n)} onPress={() => toggleNote(n)} />)}
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Button title="Remove item" size="sm" variant="ghost" icon="trash-outline" onPress={() => remove(line.id)} />
-            <Button title="Done" size="sm" variant="soft" onPress={onToggle} />
+            <Button title={tr('pos.CartPanel.remove_item')} size="sm" variant="ghost" icon="trash-outline" onPress={() => remove(line.id)} />
+            <Button title={tr('common.done')} size="sm" variant="soft" onPress={onToggle} />
           </View>
         </View>
       ) : null}
@@ -514,8 +516,8 @@ function NoteInput({ value, onCommit }: { value: string; onCommit: (t: string) =
   useEffect(() => setText(value), [value]);
   return (
     <TextInput value={text} onChangeText={setText} onBlur={() => onCommit(text)} onSubmitEditing={() => onCommit(text)}
-      placeholder="Note for kitchen (e.g. less spicy)" placeholderTextColor={colors.textSubtle} maxLength={200} autoFocus={Platform.OS === 'web'}
-      accessibilityLabel="Item note"
+      placeholder={tr('pos.CartPanel.note_for_kitchen_e_g_less_spicy')} placeholderTextColor={colors.textSubtle} maxLength={200} autoFocus={Platform.OS === 'web'}
+      accessibilityLabel={tr('pos.CartPanel.item_note')}
       style={[styles.noteInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface, borderRadius: radius.sm, fontFamily: fonts.regular },
         Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)]} />
   );

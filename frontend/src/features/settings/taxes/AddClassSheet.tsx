@@ -1,4 +1,4 @@
-/** Add a tax class: copy a slab from the Tallyko GST library (keeps getting government changes) or a custom rate. */
+/** Add a tax class: copy a slab from the Storant GST library (keeps getting government changes) or a custom rate. */
 import React, { useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,8 @@ import { Badge, Button, Input, Loading, Segmented, Sheet, Text, toast } from '@/
 import { useApi } from '@/hooks/useApi';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Callout, ChoiceChips, FieldRow, SettingSwitch } from '../components';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 const QUICK_RATES = [0, 3, 5, 12, 18, 28, 40];
 const HSN_PATTERN = /^[0-9]{4,8}$/;
@@ -57,7 +59,7 @@ export function AddClassSheet({ classes, onClose, onCreated }: {
         ? { name: name.trim(), preset_key: presetKey, follow_preset: follow, hsn_sac: hsn.trim() || null }
         : { name: name.trim(), rate, hsn_sac: hsn.trim() || null });
       onCreated(overview);
-      toast.success(`${name.trim()} added`);
+      toast.success(tr('settings.taxes_AddClassSheet.trim_added', { trim: name.trim() }));
       onClose();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -67,32 +69,32 @@ export function AddClassSheet({ classes, onClose, onCreated }: {
   };
 
   return (
-    <Sheet visible onClose={saving ? () => undefined : onClose} title="Add tax class" width={640}
-      subtitle="Group items that are taxed the same way, e.g. “Sweets”, “Packaged food”, “Aerated drinks”."
+    <Sheet visible onClose={saving ? () => undefined : onClose} title={tr('settings.taxes_AddClassSheet.add_tax_class')} width={640}
+      subtitle={tr('settings.taxes_AddClassSheet.group_items_that_are_taxed_the_same_way_e')}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title="Add class" icon="checkmark" onPress={create} loading={saving} disabled={saving || (submitted && invalid)} />
+          <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={tr('settings.taxes_AddClassSheet.add_class')} icon="checkmark" onPress={create} loading={saving} disabled={saving || (submitted && invalid)} />
         </View>
       }>
       {!libraryFailed ? (
         <Segmented<'library' | 'custom'> value={mode} onChange={(v) => { setMode(v); setSubmitted(false); }}
-          options={[{ value: 'library', label: 'From GST library', icon: 'library-outline' }, { value: 'custom', label: 'Custom rate', icon: 'create-outline' }]} />
+          options={[{ value: 'library', label: tr('settings.taxes_AddClassSheet.from_gst_library'), icon: 'library-outline' }, { value: 'custom', label: tr('settings.taxes_AddClassSheet.custom_rate'), icon: 'create-outline' }]} />
       ) : (
-        <Callout tone="warning" title="GST library unavailable" action={<Button title="Try again" size="sm" variant="secondary" icon="refresh" onPress={presets.reload} />}>
-          {`Couldn't load the Tallyko GST library (${presets.error ?? 'unknown error'}). You can still add a class with a custom rate.`}
+        <Callout tone="warning" title={tr('settings.taxes_AddClassSheet.gst_library_unavailable')} action={<Button title={tr('common.try_again')} size="sm" variant="secondary" icon="refresh" onPress={presets.reload} />}>
+          {tr('settings.taxes_AddClassSheet.couldn_t_load_the_brand_gst_library_v_you', { brand: brand.name, v: presets.error ?? tr('settings.taxes_AddClassSheet.unknown_error') })}
         </Callout>
       )}
 
       {effectiveMode === 'library' ? (
-        presets.loading && !presets.data ? <Loading label="Loading GST slabs" /> : (
+        presets.loading && !presets.data ? <Loading label={tr('settings.taxes_AddClassSheet.loading_gst_slabs')} /> : (
           <View style={{ gap: 8 }}>
-            <Text variant="small" tone="muted">Slabs from the GST library get government rate changes automatically (GST 2.0 slabs from 22 Sep 2025).</Text>
+            <Text variant="small" tone="muted">{tr('settings.taxes_AddClassSheet.slabs_from_the_gst_library_get_government')}</Text>
             {(presets.data ?? []).map((p) => {
               const selected = p.key === presetKey;
               return (
                 <Pressable key={p.key} onPress={() => pickPreset(p)} accessibilityRole="radio" accessibilityState={{ checked: selected }}
-                  accessibilityLabel={`${p.name}, ${formatRate(p.current_rate)} percent`}
+                  accessibilityLabel={tr('settings.taxes_AddClassSheet.name_formatrate_percent', { name: p.name, formatRate: formatRate(p.current_rate) })}
                   style={({ hovered }: any) => [{
                     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.md, borderWidth: 1.5,
                     borderColor: selected ? colors.primary : colors.border,
@@ -102,7 +104,7 @@ export function AddClassSheet({ classes, onClose, onCreated }: {
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                       <Text variant="bodyStrong">{p.name}</Text>
-                      {used.has(p.key) ? <Badge label="Already added" tone="neutral" /> : null}
+                      {used.has(p.key) ? <Badge label={tr('settings.taxes_AddClassSheet.already_added')} tone="neutral" /> : null}
                     </View>
                     {p.description ? <Text variant="small" tone="muted" numberOfLines={2}>{p.description}</Text> : null}
                     <Text variant="caption" tone="subtle">
@@ -118,24 +120,24 @@ export function AddClassSheet({ classes, onClose, onCreated }: {
         )
       ) : (
         <View style={{ gap: 6 }}>
-          <Input label="GST rate" required value={rateText} onChangeText={(t) => setRateText(t.replace(/[^\d.,]/g, ''))} keyboardType="decimal-pad"
+          <Input label={tr('settings.taxes_AddClassSheet.gst_rate')} required value={rateText} onChangeText={(t) => setRateText(t.replace(/[^\d.,]/g, ''))} keyboardType="decimal-pad"
             maxLength={6} placeholder="5" right={<Text tone="muted" style={{ marginRight: 12 }}>%</Text>} error={show('rate')}
-            hint={rate !== null && Number.isFinite(rate) ? describeComponents(splitGst(rate), rate) : 'Split equally into CGST and SGST on bills.'} />
-          <ChoiceChips<number> value={rate ?? -1} onChange={(v) => setRateText(String(v))} accessibilityLabel="Common GST rates"
+            hint={rate !== null && Number.isFinite(rate) ? describeComponents(splitGst(rate), rate) : tr('settings.taxes_AddClassSheet.split_equally_into_cgst_and_sgst_on_bills')} />
+          <ChoiceChips<number> value={rate ?? -1} onChange={(v) => setRateText(String(v))} accessibilityLabel={tr('common.common_gst_rates')}
             options={QUICK_RATES.map((r) => ({ value: r, label: `${r}%` }))} />
-          <Text variant="small" tone="subtle">Custom classes don't get government changes automatically — schedule them yourself when a rate changes.</Text>
+          <Text variant="small" tone="subtle">{tr('settings.taxes_AddClassSheet.custom_classes_don_t_get_government')}</Text>
         </View>
       )}
 
       <FieldRow>
-        <Input label="Class name" required value={name} onChangeText={(t) => { setName(t); setNameTouched(true); }} maxLength={80}
-          placeholder="e.g. Sweets" error={show('name')} />
-        <Input label="HSN / SAC code" value={hsn} onChangeText={(t) => setHsn(t.replace(/\D/g, ''))} maxLength={8} keyboardType="number-pad"
-          placeholder="Optional" error={show('hsn')} hint="Printed on tax invoices." />
+        <Input label={tr('settings.taxes_AddClassSheet.class_name')} required value={name} onChangeText={(t) => { setName(t); setNameTouched(true); }} maxLength={80}
+          placeholder={tr('settings.taxes_AddClassSheet.e_g_sweets')} error={show('name')} />
+        <Input label={tr('settings.taxes_AddClassSheet.hsn_sac_code')} value={hsn} onChangeText={(t) => setHsn(t.replace(/\D/g, ''))} maxLength={8} keyboardType="number-pad"
+          placeholder={tr('common.optional')} error={show('hsn')} hint={tr('settings.taxes_AddClassSheet.printed_on_tax_invoices')} />
       </FieldRow>
       {effectiveMode === 'library' && preset ? (
-        <SettingSwitch title="Follow the Tallyko GST library" value={follow} onValueChange={setFollow}
-          subtitle="Recommended. When the government changes this slab, the new rate is scheduled for you." />
+        <SettingSwitch title={tr('settings.taxes_AddClassSheet.follow_the_brand_gst_library', { brand: brand.name })} value={follow} onValueChange={setFollow}
+          subtitle={tr('settings.taxes_AddClassSheet.recommended_when_the_government_changes')} />
       ) : null}
     </Sheet>
   );

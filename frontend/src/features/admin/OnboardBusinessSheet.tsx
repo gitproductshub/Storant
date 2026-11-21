@@ -1,5 +1,5 @@
 /**
- * Onboard a business for a customer who bought Tallyko, then show the owner's temporary password once (copy / share).
+ * Onboard a business for a customer who bought Storant, then show the owner's temporary password once (copy / share).
  * Also exports the one-time credentials sheet used after "Reset owner password".
  */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -12,6 +12,8 @@ import { useApi } from '@/hooks/useApi';
 import { Callout, ChoiceChips, FieldRow, SettingSwitch, copyText, shareText } from '@/features/settings/components';
 import { fieldErrorsFrom, validateEmail, validatePhone } from '@/features/settings/validation';
 import { BUSINESS_TYPES, BUSINESS_TYPE_LABEL, goTo, useOnline } from './shared';
+import { brand } from '@/config/brand';
+import { t as tr, currentLocale } from '@/i18n';
 
 export function OnboardBusinessSheet({ plans, onClose, onDone }: { plans: PlanInfo[]; onClose: () => void; onDone?: (created: BusinessCreated) => void }) {
   const online = useOnline();
@@ -62,7 +64,7 @@ export function OnboardBusinessSheet({ plans, onClose, onDone }: { plans: PlanIn
         owner_email: ownerEmail.trim().toLowerCase(), owner_phone: ownerPhone.replace(/-/g, ' ').trim(), plan_key: planKey,
         demo_days: development ? undefined : demoNum, development,
       });
-      toast.success(`${businessName.trim()} is on Tallyko`);
+      toast.success(tr('admin.OnboardBusinessSheet.trim_is_on_brand', { trim: businessName.trim(), brand: brand.name }));
       setCreated({ ...result, name: businessName.trim() });
       onDone?.(result);
     } catch (e) {
@@ -76,13 +78,13 @@ export function OnboardBusinessSheet({ plans, onClose, onDone }: { plans: PlanIn
   if (created) {
     return (
       <CredentialsSheet
-        title="Business onboarded"
-        heading={`${created.name} is ready`}
-        message="Send the owner these sign-in details privately. They should change the password after signing in."
+        title={tr('admin.OnboardBusinessSheet.business_onboarded')}
+        heading={tr('admin.OnboardBusinessSheet.name_is_ready', { name: created.name })}
+        message={tr('admin.OnboardBusinessSheet.send_the_owner_these_sign_in_details')}
         email={created.owner_email}
         password={created.temporary_password}
         onClose={onClose}
-        extraAction={<Button title="Open business" variant="secondary" icon="open-outline" onPress={() => { onClose(); goTo(`/admin/businesses/${created.id}`); }} />}
+        extraAction={<Button title={tr('common.open_business')} variant="secondary" icon="open-outline" onPress={() => { onClose(); goTo(`/admin/businesses/${created.id}`); }} />}
       />
     );
   }
@@ -91,67 +93,67 @@ export function OnboardBusinessSheet({ plans, onClose, onDone }: { plans: PlanIn
     <Sheet
       visible
       onClose={onClose}
-      title="Onboard a business"
-      subtitle="Creates the business and its owner login. Tallyko generates a temporary password."
+      title={tr('admin.OnboardBusinessSheet.onboard_a_business')}
+      subtitle={tr('admin.OnboardBusinessSheet.creates_the_business_and_its_owner_login', { brand: brand.name })}
       width={640}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title="Create business" icon="storefront-outline" onPress={submit} loading={saving} disabled={!online} />
+          <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={tr('admin.OnboardBusinessSheet.create_business')} icon="storefront-outline" onPress={submit} loading={saving} disabled={!online} />
         </View>
       }
     >
       {formError ? <Callout tone="danger">{formError}</Callout> : null}
-      {!online ? <Callout tone="warning">You're offline. Connect to the internet to onboard a business.</Callout> : null}
-      <Input label="Business name" required value={businessName} onChangeText={(v) => { setBusinessName(v); clear('vendor_name'); }}
-        error={show('business_name') || serverErrors.vendor_name} maxLength={100} placeholder="e.g. Sharma Sweets" autoFocus />
+      {!online ? <Callout tone="warning">{tr('admin.OnboardBusinessSheet.you_re_offline_connect_to_the_internet_to')}</Callout> : null}
+      <Input label={tr('common.business_name')} required value={businessName} onChangeText={(v) => { setBusinessName(v); clear('vendor_name'); }}
+        error={show('business_name') || serverErrors.vendor_name} maxLength={100} placeholder={tr('admin.OnboardBusinessSheet.e_g_sharma_sweets')} autoFocus />
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Business type</Text>
-        <ChoiceChips value={businessType} onChange={setBusinessType} accessibilityLabel="Business type"
+        <Text variant="smallStrong" tone="muted">{tr('admin.OnboardBusinessSheet.business_type')}</Text>
+        <ChoiceChips value={businessType} onChange={setBusinessType} accessibilityLabel={tr('admin.OnboardBusinessSheet.business_type')}
           options={BUSINESS_TYPES.map((t) => ({ value: t, label: BUSINESS_TYPE_LABEL[t] ?? t }))} />
       </View>
       <FieldRow>
-        <Input label="Owner name" required value={ownerName} onChangeText={(v) => { setOwnerName(v); clear('owner_name'); }}
-          error={show('owner_name')} maxLength={80} placeholder="e.g. Rakesh Sharma" />
-        <Input label="Owner phone" required value={ownerPhone} onChangeText={(v) => { setOwnerPhone(v); clear('owner_phone'); }}
+        <Input label={tr('admin.OnboardBusinessSheet.owner_name')} required value={ownerName} onChangeText={(v) => { setOwnerName(v); clear('owner_name'); }}
+          error={show('owner_name')} maxLength={80} placeholder={tr('admin.OnboardBusinessSheet.e_g_rakesh_sharma')} />
+        <Input label={tr('admin.OnboardBusinessSheet.owner_phone')} required value={ownerPhone} onChangeText={(v) => { setOwnerPhone(v); clear('owner_phone'); }}
           error={show('owner_phone')} keyboardType="phone-pad" maxLength={16} placeholder="98765 43210" />
       </FieldRow>
-      <Input label="Owner email (used to sign in)" required value={ownerEmail} onChangeText={(v) => { setOwnerEmail(v); clear('owner_email'); clear('email'); }}
+      <Input label={tr('admin.OnboardBusinessSheet.owner_email_used_to_sign_in')} required value={ownerEmail} onChangeText={(v) => { setOwnerEmail(v); clear('owner_email'); clear('email'); }}
         error={show('owner_email') || serverErrors.email} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} placeholder="owner@business.in" />
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Plan</Text>
+        <Text variant="smallStrong" tone="muted">{tr('common.plan')}</Text>
         {activePlans.length ? (
-          <ChoiceChips value={planKey} onChange={setPlanKey} accessibilityLabel="Plan"
-            options={activePlans.map((p) => ({ value: p.key, label: p.price_monthly ? `${p.name} · ₹${p.price_monthly.toLocaleString('en-IN')}/mo` : p.name }))} />
-        ) : <Text variant="small" tone="subtle">Plans are loading; the business starts on the default plan.</Text>}
+          <ChoiceChips value={planKey} onChange={setPlanKey} accessibilityLabel={tr('common.plan')}
+            options={activePlans.map((p) => ({ value: p.key, label: p.price_monthly ? tr('admin.OnboardBusinessSheet.name_tolocalestring_mo', { name: p.name, toLocaleString: p.price_monthly.toLocaleString(currentLocale()) }) : p.name }))} />
+        ) : <Text variant="small" tone="subtle">{tr('admin.OnboardBusinessSheet.plans_are_loading_the_business_starts_on')}</Text>}
       </View>
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Free demo</Text>
+        <Text variant="smallStrong" tone="muted">{tr('common.free_demo')}</Text>
         {development ? (
-          <Text variant="small" tone="subtle">Not needed: development access has no expiry.</Text>
+          <Text variant="small" tone="subtle">{tr('admin.OnboardBusinessSheet.not_needed_development_access_has_no')}</Text>
         ) : (
           <>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-              <ChoiceChips value={demo} onChange={setDemo} accessibilityLabel="Demo length"
+              <ChoiceChips value={demo} onChange={setDemo} accessibilityLabel={tr('common.demo_length')}
                 options={[
-                  { value: '', label: defaultDays === null ? 'Default' : `Default · ${defaultDays ? `${defaultDays} days` : 'none'}` },
-                  { value: '0', label: 'No demo' }, { value: '7', label: '7 days' }, { value: '14', label: '14 days' }, { value: '30', label: '30 days' },
+                  { value: '', label: defaultDays === null ? tr('admin.OnboardBusinessSheet.default') : tr('admin.OnboardBusinessSheet.default_v', { v: defaultDays ? tr('admin.OnboardBusinessSheet.defaultdays_days', { defaultDays }) : 'none' }) },
+                  { value: '0', label: tr('admin.OnboardBusinessSheet.no_demo') }, { value: '7', label: tr('common.7_days') }, { value: '14', label: tr('admin.OnboardBusinessSheet.14_days') }, { value: '30', label: tr('common.30_days') },
                 ]} />
-              <Input value={demo} onChangeText={(v) => setDemo(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={3} placeholder="Days"
-                containerStyle={{ width: 84 }} accessibilityLabel="Custom demo days" error={show('demo_days') ? ' ' : undefined} />
+              <Input value={demo} onChangeText={(v) => setDemo(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={3} placeholder={tr('common.days')}
+                containerStyle={{ width: 84 }} accessibilityLabel={tr('admin.OnboardBusinessSheet.custom_demo_days')} error={show('demo_days') ? ' ' : undefined} />
             </View>
             {show('demo_days') ? <Text variant="small" tone="danger">{show('demo_days')}</Text> : (
               <Text variant="small" tone="subtle">
                 {(demoNum ?? defaultDays) === 0
-                  ? 'No demo: the business is locked until you record the first payment.'
-                  : 'The business works free for the demo, then locks until a payment is recorded.'}
+                  ? tr('admin.OnboardBusinessSheet.no_demo_the_business_is_locked_until_you')
+                  : tr('admin.OnboardBusinessSheet.the_business_works_free_for_the_demo_then')}
               </Text>
             )}
           </>
         )}
       </View>
-      <SettingSwitch title="Development access" value={development} onValueChange={setDevelopment}
-        subtitle="For internal or pilot owners: works with no expiry until you switch it off on the business page." />
+      <SettingSwitch title={tr('common.development_access')} value={development} onValueChange={setDevelopment}
+        subtitle={tr('admin.OnboardBusinessSheet.for_internal_or_pilot_owners_works_with')} />
     </Sheet>
   );
 }
@@ -160,27 +162,27 @@ export function OnboardBusinessSheet({ plans, onClose, onDone }: { plans: PlanIn
 export function CredentialsSheet({ title, heading, message, email, password, onClose, extraAction }: {
   title: string; heading: string; message: string; email: string; password: string | null; onClose: () => void; extraAction?: React.ReactNode;
 }) {
-  const text = `Tallyko sign-in\nEmail: ${email}${password ? `\nTemporary password: ${password}` : ''}\nPlease change the password after signing in (Settings → Account).`;
+  const text = tr('admin.OnboardBusinessSheet.brand_sign_in_email_email_v_please_change', { brand: brand.name, email, v: password ? tr('admin.OnboardBusinessSheet.temporary_password_password', { password }) : '' });
   return (
-    <Sheet visible onClose={onClose} title={title} subtitle={password ? 'This password is shown only once.' : undefined} width={500}
+    <Sheet visible onClose={onClose} title={title} subtitle={password ? tr('admin.OnboardBusinessSheet.this_password_is_shown_only_once') : undefined} width={500}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           {extraAction}
-          <Button title="Share" variant="secondary" icon="share-social-outline" onPress={() => shareText(text, 'Tallyko sign-in')} />
-          <Button title="Copy" variant="secondary" icon="copy-outline" onPress={() => copyText(text, 'Sign-in details')} />
-          <Button title="Done" onPress={onClose} />
+          <Button title={tr('common.share')} variant="secondary" icon="share-social-outline" onPress={() => shareText(text, `${brand.name} sign-in`)} />
+          <Button title={tr('common.copy')} variant="secondary" icon="copy-outline" onPress={() => copyText(text, 'Sign-in details')} />
+          <Button title={tr('common.done')} onPress={onClose} />
         </View>
       }>
       <Callout tone="success" title={heading}>{message}</Callout>
       <Card style={{ gap: 8 }}>
-        <Text variant="small" tone="muted">Email</Text>
+        <Text variant="small" tone="muted">{tr('common.email')}</Text>
         <Text variant="bodyStrong" selectable>{email}</Text>
         {password ? (
           <>
-            <Text variant="small" tone="muted" style={{ marginTop: 6 }}>Temporary password</Text>
+            <Text variant="small" tone="muted" style={{ marginTop: 6 }}>{tr('admin.OnboardBusinessSheet.temporary_password')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text variant="h2" selectable style={{ letterSpacing: 1, flex: 1 }}>{password}</Text>
-              <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel="Copy password" onPress={() => copyText(password, 'Password')} />
+              <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel={tr('admin.OnboardBusinessSheet.copy_password')} onPress={() => copyText(password, 'Password')} />
             </View>
           </>
         ) : null}

@@ -1,5 +1,5 @@
 /**
- * Subscription offers: launch promotions on Tallyko's own plans (Diwali 25% off yearly, a free welcome month...).
+ * Subscription offers: launch promotions on Storant's own plans (Diwali 25% off yearly, a free welcome month...).
  * Owners type the code on the renewal page; super admins can also apply it when recording a payment.
  */
 import React, { useMemo, useState } from 'react';
@@ -13,9 +13,11 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout, ChoiceChips, FieldRow, SettingSwitch, monoFont } from '@/features/settings/components';
 import { fieldErrorsFrom } from '@/features/settings/validation';
 import { AdminListFrame, ReadOnlyNote, istDate, istMidnightIso, plural, useCanEdit, useOnline } from './shared';
+import { brand } from '@/config/brand';
+import { t as tr, currentLocale } from '@/i18n';
 
 type OfferState = 'live' | 'scheduled' | 'ended' | 'used_up' | 'paused';
-const STATE_LABEL: Record<OfferState, string> = { live: 'Live', scheduled: 'Scheduled', ended: 'Ended', used_up: 'Fully used', paused: 'Paused' };
+const STATE_LABEL: Record<OfferState, string> = { get live() { return tr('common.live'); }, get scheduled() { return tr('common.scheduled'); }, get ended() { return tr('common.ended'); }, get used_up() { return tr('admin.SubscriptionOffersScreen.fully_used'); }, get paused() { return tr('admin.SubscriptionOffersScreen.paused'); } };
 const STATE_TONE: Record<OfferState, BadgeTone> = { live: 'success', scheduled: 'info', ended: 'neutral', used_up: 'warning', paused: 'neutral' };
 const STATE_ORDER: Record<OfferState, number> = { live: 0, scheduled: 1, used_up: 2, paused: 3, ended: 4 };
 
@@ -34,7 +36,7 @@ function istDateOf(iso: string, offsetMs = 0): string {
 
 /** "3 Nov 2026" for a YYYY-MM-DD date (no timezone shift). */
 function dayText(ymd: string): string {
-  return new Date(`${ymd}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(`${ymd}T00:00:00`).toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /** Last day an offer can be used (ends_at is exclusive). */
@@ -85,8 +87,8 @@ export default function SubscriptionOffersScreen() {
     try {
       const next = await platformApi.updateSubscriptionOffer(o.id, { ...bodyFrom(o), is_active: value });
       replace(next);
-      if (value) toast.success(`${o.name} is on`);
-      else toast.undo(`${o.name} paused`, () => void toggle(next, true));
+      if (value) toast.success(tr('admin.SubscriptionOffersScreen.name_is_on', { name: o.name }));
+      else toast.undo(tr('admin.SubscriptionOffersScreen.name_paused', { name: o.name }), () => void toggle(next, true));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -98,27 +100,27 @@ export default function SubscriptionOffersScreen() {
     <Pressable onPress={() => undefined} accessible={false} style={{ padding: 4 }}>
       <Switch value={o.is_active} onValueChange={(v) => void toggle(o, v)} disabled={!online || toggling === o.id}
         trackColor={{ true: colors.primary, false: colors.borderStrong }} thumbColor={colors.surface}
-        accessibilityLabel={`${o.name} active`} />
+        accessibilityLabel={tr('admin.SubscriptionOffersScreen.name_active', { name: o.name })} />
     </Pressable>
-  ) : <Badge label={o.is_active ? 'On' : 'Off'} tone={o.is_active ? 'success' : 'neutral'} />);
+  ) : <Badge label={o.is_active ? tr('common.on') : tr('common.off')} tone={o.is_active ? 'success' : 'neutral'} />);
 
   const usedText = (o: SubscriptionOffer) => (o.max_redemptions ? `${o.redemptions}/${o.max_redemptions}` : String(o.redemptions));
   const validText = (o: SubscriptionOffer) => (o.ends_at ? `till ${dayText(lastDay(o))}` : o.starts_at ? `from ${dayText(istDateOf(o.starts_at))}` : 'Always');
 
   const columns: DataColumn<SubscriptionOffer>[] = [
-    { key: 'name', title: 'Offer', flex: 2.4, render: (o) => (
+    { key: 'name', title: tr('common.offer'), flex: 2.4, render: (o) => (
       <View style={{ minWidth: 0 }}>
         <Text variant="bodyStrong" numberOfLines={1}>{o.name}</Text>
         <Text variant="small" tone="primary" numberOfLines={1}>{o.summary}</Text>
       </View>
     ) },
-    { key: 'code', title: 'Code', width: 130, render: (o) => (o.code
+    { key: 'code', title: tr('admin.SubscriptionOffersScreen.code'), width: 130, render: (o) => (o.code
       ? <Text variant="smallStrong" style={{ fontFamily: monoFont, letterSpacing: 1 }} numberOfLines={1} selectable>{o.code}</Text>
-      : <Text variant="small" tone="subtle">No code</Text>) },
-    { key: 'plans', title: 'Plans', flex: 1.2, hideBelow: 1000, value: (o) => `${planNames(o.plan_keys, planList)}${o.min_months > 1 ? ` · ${o.min_months}+ mo` : ''}` },
-    { key: 'valid', title: 'Valid', width: 130, hideBelow: 820, value: validText },
-    { key: 'used', title: 'Used', width: 70, numeric: true, hideBelow: 700, value: usedText },
-    { key: 'state', title: 'State', width: 110, render: (o) => <Badge label={STATE_LABEL[offerState(o)]} tone={STATE_TONE[offerState(o)]} /> },
+      : <Text variant="small" tone="subtle">{tr('admin.SubscriptionOffersScreen.no_code')}</Text>) },
+    { key: 'plans', title: tr('admin.SubscriptionOffersScreen.plans'), flex: 1.2, hideBelow: 1000, value: (o) => `${planNames(o.plan_keys, planList)}${o.min_months > 1 ? ` · ${o.min_months}+ mo` : ''}` },
+    { key: 'valid', title: tr('admin.SubscriptionOffersScreen.valid'), width: 130, hideBelow: 820, value: validText },
+    { key: 'used', title: tr('admin.SubscriptionOffersScreen.used'), width: 70, numeric: true, hideBelow: 700, value: usedText },
+    { key: 'state', title: tr('admin.SubscriptionOffersScreen.state'), width: 110, render: (o) => <Badge label={STATE_LABEL[offerState(o)]} tone={STATE_TONE[offerState(o)]} /> },
   ];
 
   const renderCard = (o: SubscriptionOffer) => (
@@ -128,19 +130,19 @@ export default function SubscriptionOffersScreen() {
         <Badge label={STATE_LABEL[offerState(o)]} tone={STATE_TONE[offerState(o)]} />
       </View>
       <Text variant="small" tone="primary" numberOfLines={1}>{o.summary}</Text>
-      <Text variant="caption" tone="muted" numberOfLines={1}>{o.code ?? 'No code'} · {validText(o)} · used {usedText(o)}</Text>
+      <Text variant="caption" tone="muted" numberOfLines={1}>{o.code ?? tr('admin.SubscriptionOffersScreen.no_code')} {tr('admin.SubscriptionOffersScreen.validtext_used', { validText: validText(o) })} {usedText(o)}</Text>
     </View>
   );
 
   return (
     <AdminListFrame
-      title="Subscription offers"
-      subtitle="Promotions on Tallyko plans: a discount, extra free days, or both. Owners enter the code when they renew."
-      actions={canEdit ? <Button title={isPhone ? 'New' : 'New offer'} icon="add" onPress={() => setEditing('new')} /> : null}
+      title={tr('admin.SubscriptionOffersScreen.subscription_offers')}
+      subtitle={tr('admin.SubscriptionOffersScreen.promotions_on_brand_plans_a_discount', { brand: brand.name })}
+      actions={canEdit ? <Button title={isPhone ? tr('common.new') : tr('common.new_offer')} icon="add" onPress={() => setEditing('new')} /> : null}
       toolbar={
         <View style={{ gap: 8 }}>
-          <FilterBar onSearch={setQuery} searchPlaceholder="Offer name or code" value={filter} onChange={(k) => setFilter(k as 'all' | OfferState)}
-            filters={[{ key: 'all', label: 'All', count: counts.all }, ...(['live', 'scheduled', 'used_up', 'paused', 'ended'] as OfferState[])
+          <FilterBar onSearch={setQuery} searchPlaceholder={tr('admin.SubscriptionOffersScreen.offer_name_or_code_x')} value={filter} onChange={(k) => setFilter(k as 'all' | OfferState)}
+            filters={[{ key: 'all', label: tr('common.all'), count: counts.all }, ...(['live', 'scheduled', 'used_up', 'paused', 'ended'] as OfferState[])
               .map((k) => ({ key: k, label: STATE_LABEL[k], count: counts[k] ?? 0 }))]} />
           {!canEdit ? <ReadOnlyNote what="create or change offers" /> : null}
         </View>
@@ -165,9 +167,9 @@ export default function SubscriptionOffersScreen() {
         rowActionsWidth={72}
         extraData={toggling}
         empty={q || filter !== 'all'
-          ? { icon: 'search-outline', title: 'No offers match', message: 'Try another name or filter.' }
-          : { icon: 'pricetags-outline', title: 'No offers yet', message: 'Launch a festive discount or a welcome month to win new shops.',
-            action: canEdit ? { label: 'New offer', icon: 'add', onPress: () => setEditing('new') } : undefined }}
+          ? { icon: 'search-outline', title: tr('admin.SubscriptionOffersScreen.no_offers_match'), message: tr('admin.SubscriptionOffersScreen.try_another_name_or_filter') }
+          : { icon: 'pricetags-outline', title: tr('admin.SubscriptionOffersScreen.no_offers_yet'), message: tr('admin.SubscriptionOffersScreen.launch_a_festive_discount_or_a_welcome'),
+            action: canEdit ? { label: tr('common.new_offer'), icon: 'add', onPress: () => setEditing('new') } : undefined }}
       />
 
       {editing ? (
@@ -179,7 +181,7 @@ export default function SubscriptionOffersScreen() {
 }
 
 const DISCOUNT_TYPES: { value: DiscountType; label: string }[] = [
-  { value: 'percent', label: '% off' }, { value: 'flat', label: '₹ off' }, { value: 'none', label: 'No discount' },
+  { value: 'percent', get label() { return tr('admin.SubscriptionOffersScreen.off_2'); } }, { value: 'flat', get label() { return tr('admin.SubscriptionOffersScreen.off_3'); } }, { value: 'none', get label() { return tr('admin.SubscriptionOffersScreen.no_discount'); } },
 ];
 const EXTRA_DAY_CHOICES = [0, 7, 15, 30];
 const MIN_MONTH_CHOICES = [1, 3, 6, 12];
@@ -279,7 +281,7 @@ function OfferSheet({ offer, plans, existing, onClose, onSaved }: {
     setSaving(true);
     try {
       const saved = isNew ? await platformApi.createSubscriptionOffer(body) : await platformApi.updateSubscriptionOffer(offer!.id, body);
-      toast.success(isNew ? `${saved.name} created` : `${saved.name} saved`);
+      toast.success(isNew ? tr('admin.SubscriptionOffersScreen.name_created', { name: saved.name }) : tr('common.name_saved', { name: saved.name }));
       onSaved(saved);
     } catch (e) {
       setServerErrors(fieldErrorsFrom(e));
@@ -290,27 +292,27 @@ function OfferSheet({ offer, plans, existing, onClose, onSaved }: {
   };
 
   return (
-    <Sheet visible onClose={onClose} title={isNew ? 'New subscription offer' : `Edit ${offer!.name}`}
-      subtitle={offer ? `${plural(offer.redemptions, 'redemption')} so far` : 'A promotion on Tallyko plans.'} width={720}
+    <Sheet visible onClose={onClose} title={isNew ? tr('admin.SubscriptionOffersScreen.new_subscription_offer') : tr('admin.SubscriptionOffersScreen.edit_name', { name: offer!.name })}
+      subtitle={offer ? tr('admin.SubscriptionOffersScreen.plural_so_far', { plural: plural(offer.redemptions, 'redemption') }) : tr('admin.SubscriptionOffersScreen.a_promotion_on_brand_plans', { brand: brand.name })} width={720}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title={isNew ? 'Create offer' : 'Save offer'} icon="checkmark" onPress={submit} loading={saving} disabled={!online} />
+          <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={isNew ? tr('admin.SubscriptionOffersScreen.create_offer') : tr('admin.SubscriptionOffersScreen.save_offer')} icon="checkmark" onPress={submit} loading={saving} disabled={!online} />
         </View>
       }>
       {formError ? <Callout tone="danger">{formError}</Callout> : null}
-      {!online ? <Callout tone="warning">You're offline. Connect to save the offer.</Callout> : null}
+      {!online ? <Callout tone="warning">{tr('admin.SubscriptionOffersScreen.you_re_offline_connect_to_save_the_offer')}</Callout> : null}
 
       <Card style={{ gap: 6 }}>
-        <Text variant="caption" tone="subtle">PREVIEW</Text>
+        <Text variant="caption" tone="subtle">{tr('admin.SubscriptionOffersScreen.preview')}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Text variant="h3">{name.trim() || 'Offer name'}</Text>
+          <Text variant="h3">{name.trim() || tr('admin.SubscriptionOffersScreen.offer_name')}</Text>
           {codeUpper ? <Badge label={codeUpper} tone="primary" icon="pricetag-outline" /> : null}
         </View>
-        <Text variant="bodyStrong" tone={summary ? 'primary' : 'subtle'}>{summary || 'Choose a discount or extra free days.'}</Text>
+        <Text variant="bodyStrong" tone={summary ? 'primary' : 'subtle'}>{summary || tr('admin.SubscriptionOffersScreen.choose_a_discount_or_extra_free_days')}</Text>
         {example ? (
           <Text variant="small" tone="muted">
-            {`e.g. ${example.plan} · ${example.label}: ${money(example.price, '₹', true)} → ${money(example.pay)}${example.days ? ` + ${example.days} days free` : ''}`}
+            {tr('admin.SubscriptionOffersScreen.e_g_plan_label_money_money2_v', { plan: example.plan, label: example.label, money: money(example.price, '₹', true), money2: money(example.pay), v: example.days ? tr('admin.SubscriptionOffersScreen.days_days_free', { days: example.days }) : '' })}
           </Text>
         ) : null}
         <Text variant="small" tone="subtle">
@@ -320,39 +322,39 @@ function OfferSheet({ offer, plans, existing, onClose, onSaved }: {
       </Card>
 
       <FieldRow>
-        <Input label="Offer name" required value={name} onChangeText={setName} maxLength={80} error={show('name')} placeholder="e.g. Diwali offer" autoFocus={isNew} />
-        <Input label="Code" value={code} onChangeText={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))} maxLength={30} error={show('code')}
-          autoCapitalize="characters" autoCorrect={false} placeholder="DIWALI25" hint="Owners type this when they renew." />
+        <Input label={tr('admin.SubscriptionOffersScreen.offer_name')} required value={name} onChangeText={setName} maxLength={80} error={show('name')} placeholder={tr('admin.SubscriptionOffersScreen.e_g_diwali_offer')} autoFocus={isNew} />
+        <Input label={tr('admin.SubscriptionOffersScreen.code')} value={code} onChangeText={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))} maxLength={30} error={show('code')}
+          autoCapitalize="characters" autoCorrect={false} placeholder={tr('admin.SubscriptionOffersScreen.diwali25')} hint={tr('admin.SubscriptionOffersScreen.owners_type_this_when_they_renew')} />
       </FieldRow>
-      <Input label="Description" value={description} onChangeText={setDescription} maxLength={300} placeholder="e.g. 25% off any yearly plan" />
+      <Input label={tr('common.description')} value={description} onChangeText={setDescription} maxLength={300} placeholder={tr('admin.SubscriptionOffersScreen.e_g_25_off_any_yearly_plan')} />
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Discount</Text>
+        <Text variant="smallStrong" tone="muted">{tr('common.discount')}</Text>
         <View style={{ maxWidth: 420 }}>
           <Segmented value={type} options={DISCOUNT_TYPES} onChange={(t) => { setType(t); if (t === 'none') setValue(''); }} />
         </View>
         {type !== 'none' ? (
           <Input value={value} onChangeText={(v) => setValue(v.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" maxLength={10}
             prefix={type === 'flat' ? '₹' : undefined} right={type === 'percent' ? <Text tone="muted" style={{ marginRight: 12 }}>%</Text> : undefined}
-            containerStyle={{ maxWidth: 220 }} accessibilityLabel="Discount value" error={show('discount_value')} placeholder={type === 'percent' ? '25' : '500'} />
+            containerStyle={{ maxWidth: 220 }} accessibilityLabel={tr('admin.SubscriptionOffersScreen.discount_value')} error={show('discount_value')} placeholder={type === 'percent' ? '25' : '500'} />
         ) : null}
       </View>
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Extra free days</Text>
+        <Text variant="smallStrong" tone="muted">{tr('admin.SubscriptionOffersScreen.extra_free_days')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-          <ChoiceChips value={Number.isFinite(extraNum) && EXTRA_DAY_CHOICES.includes(extraNum) ? String(extraNum) : ''} onChange={setExtra} accessibilityLabel="Extra free days"
-            options={EXTRA_DAY_CHOICES.map((d) => ({ value: String(d), label: d === 0 ? 'None' : `${d} days` }))} />
+          <ChoiceChips value={Number.isFinite(extraNum) && EXTRA_DAY_CHOICES.includes(extraNum) ? String(extraNum) : ''} onChange={setExtra} accessibilityLabel={tr('admin.SubscriptionOffersScreen.extra_free_days')}
+            options={EXTRA_DAY_CHOICES.map((d) => ({ value: String(d), label: d === 0 ? tr('common.none') : tr('admin.SubscriptionOffersScreen.d_days', { d }) }))} />
           <Input value={extra} onChangeText={(v) => setExtra(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={3}
-            containerStyle={{ width: 90 }} accessibilityLabel="Extra free days" error={show('extra_days') ? ' ' : undefined} />
+            containerStyle={{ width: 90 }} accessibilityLabel={tr('admin.SubscriptionOffersScreen.extra_free_days')} error={show('extra_days') ? ' ' : undefined} />
         </View>
-        {show('extra_days') ? <Text variant="small" tone="danger">{show('extra_days')}</Text> : <Text variant="small" tone="subtle">Added on top of the months paid for.</Text>}
+        {show('extra_days') ? <Text variant="small" tone="danger">{show('extra_days')}</Text> : <Text variant="small" tone="subtle">{tr('admin.SubscriptionOffersScreen.added_on_top_of_the_months_paid_for')}</Text>}
       </View>
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Plans</Text>
+        <Text variant="smallStrong" tone="muted">{tr('admin.SubscriptionOffersScreen.plans')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <Chip label="All plans" selected={planKeys.length === 0} onPress={() => setPlanKeys([])} />
+          <Chip label={tr('admin.SubscriptionOffersScreen.all_plans')} selected={planKeys.length === 0} onPress={() => setPlanKeys([])} />
           {plans.filter((p) => p.is_active || planKeys.includes(p.key)).map((p) => (
             <Chip key={p.key} label={p.name} selected={planKeys.includes(p.key)} onPress={() => togglePlan(p.key)} icon={planKeys.includes(p.key) ? 'checkmark' : undefined} />
           ))}
@@ -360,40 +362,40 @@ function OfferSheet({ offer, plans, existing, onClose, onSaved }: {
       </View>
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Minimum duration</Text>
+        <Text variant="smallStrong" tone="muted">{tr('admin.SubscriptionOffersScreen.minimum_duration')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-          <ChoiceChips value={Number.isFinite(minNum) && MIN_MONTH_CHOICES.includes(minNum) ? String(minNum) : ''} onChange={setMinMonths} accessibilityLabel="Minimum months"
-            options={MIN_MONTH_CHOICES.map((m) => ({ value: String(m), label: m === 1 ? 'Any' : m === 12 ? '1 year+' : `${m} months+` }))} />
+          <ChoiceChips value={Number.isFinite(minNum) && MIN_MONTH_CHOICES.includes(minNum) ? String(minNum) : ''} onChange={setMinMonths} accessibilityLabel={tr('admin.SubscriptionOffersScreen.minimum_months')}
+            options={MIN_MONTH_CHOICES.map((m) => ({ value: String(m), label: m === 1 ? tr('admin.SubscriptionOffersScreen.any') : m === 12 ? tr('admin.SubscriptionOffersScreen.1_year') : tr('admin.SubscriptionOffersScreen.m_months', { m }) }))} />
           <Input value={minMonths} onChangeText={(v) => setMinMonths(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={2}
-            containerStyle={{ width: 90 }} accessibilityLabel="Minimum months" error={show('min_months') ? ' ' : undefined} />
+            containerStyle={{ width: 90 }} accessibilityLabel={tr('admin.SubscriptionOffersScreen.minimum_months')} error={show('min_months') ? ' ' : undefined} />
         </View>
         {show('min_months') ? <Text variant="small" tone="danger">{show('min_months')}</Text> : null}
       </View>
 
       <FieldRow>
-        <Input label="Starts on" value={start} onChangeText={setStart} maxLength={10} placeholder={istDate()} error={show('starts_at')}
-          hint="YYYY-MM-DD, India time. Empty = now." autoCapitalize="none" />
-        <Input label="Last day" value={end} onChangeText={setEnd} maxLength={10} placeholder={istDate(30)} error={show('ends_at')}
-          hint="Inclusive. Empty = no end date." autoCapitalize="none"
-          right={end ? <Button icon="close" size="sm" variant="ghost" accessibilityLabel="Clear last day" onPress={() => setEnd('')} /> : undefined} />
+        <Input label={tr('admin.SubscriptionOffersScreen.starts_on')} value={start} onChangeText={setStart} maxLength={10} placeholder={istDate()} error={show('starts_at')}
+          hint={tr('admin.SubscriptionOffersScreen.yyyy_mm_dd_india_time_empty_now')} autoCapitalize="none" />
+        <Input label={tr('admin.SubscriptionOffersScreen.last_day')} value={end} onChangeText={setEnd} maxLength={10} placeholder={istDate(30)} error={show('ends_at')}
+          hint={tr('admin.SubscriptionOffersScreen.inclusive_empty_no_end_date')} autoCapitalize="none"
+          right={end ? <Button icon="close" size="sm" variant="ghost" accessibilityLabel={tr('admin.SubscriptionOffersScreen.clear_last_day')} onPress={() => setEnd('')} /> : undefined} />
       </FieldRow>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {[7, 15, 30, 60].map((d) => (
-          <Button key={d} title={`Ends in ${d} days`} size="sm" variant={end === istDate(d) ? 'soft' : 'secondary'} onPress={() => setEnd(istDate(d))} />
+          <Button key={d} title={tr('admin.SubscriptionOffersScreen.ends_in_d_days', { d })} size="sm" variant={end === istDate(d) ? 'soft' : 'secondary'} onPress={() => setEnd(istDate(d))} />
         ))}
       </View>
 
-      <Input label="Maximum uses" value={maxUses} onChangeText={(v) => setMaxUses(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={7}
-        placeholder="No limit" error={show('max_redemptions')} containerStyle={{ maxWidth: 260 }}
-        hint={offer?.redemptions ? `Used ${offer.redemptions} time${offer.redemptions === 1 ? '' : 's'} so far.` : 'Across all businesses. Empty = no limit.'} />
+      <Input label={tr('admin.SubscriptionOffersScreen.maximum_uses')} value={maxUses} onChangeText={(v) => setMaxUses(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={7}
+        placeholder={tr('admin.SubscriptionOffersScreen.no_limit')} error={show('max_redemptions')} containerStyle={{ maxWidth: 260 }}
+        hint={offer?.redemptions ? tr('admin.SubscriptionOffersScreen.used_redemptions_time_v_so_far', { redemptions: offer.redemptions, v: offer.redemptions === 1 ? '' : 's' }) : tr('admin.SubscriptionOffersScreen.across_all_businesses_empty_no_limit')} />
 
       <View style={{ gap: 4 }}>
-        <SettingSwitch title="First paid subscription only" value={newOnly} onValueChange={setNewOnly}
-          subtitle="For businesses that have never paid (demos and new sign-ups)." />
-        <SettingSwitch title="Show to owners on the renewal page" value={showOwners} onValueChange={setShowOwners}
-          subtitle={showOwners ? 'Owners see it with its code.' : 'Hidden: only people you give the code to can use it.'} />
-        <SettingSwitch title="Active" value={active} onValueChange={setActive}
-          subtitle={active ? 'Can be used within its dates.' : 'Paused: nobody can use it.'} />
+        <SettingSwitch title={tr('admin.SubscriptionOffersScreen.first_paid_subscription_only')} value={newOnly} onValueChange={setNewOnly}
+          subtitle={tr('admin.SubscriptionOffersScreen.for_businesses_that_have_never_paid_demos')} />
+        <SettingSwitch title={tr('admin.SubscriptionOffersScreen.show_to_owners_on_the_renewal_page')} value={showOwners} onValueChange={setShowOwners}
+          subtitle={showOwners ? tr('admin.SubscriptionOffersScreen.owners_see_it_with_its_code') : tr('admin.SubscriptionOffersScreen.hidden_only_people_you_give_the_code_to')} />
+        <SettingSwitch title={tr('common.active')} value={active} onValueChange={setActive}
+          subtitle={active ? tr('admin.SubscriptionOffersScreen.can_be_used_within_its_dates') : tr('admin.SubscriptionOffersScreen.paused_nobody_can_use_it')} />
       </View>
     </Sheet>
   );

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { fonts, touch } from '@/theme/tokens';
 import { Text } from './Text';
+import { t } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -66,7 +67,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           ]}
         />
         {secureTextEntry ? (
-          <Pressable onPress={() => setRevealed((v) => !v)} accessibilityRole="button" accessibilityLabel={revealed ? 'Hide password' : 'Show password'} style={styles.reveal}>
+          <Pressable onPress={() => setRevealed((v) => !v)} accessibilityRole="button" accessibilityLabel={revealed ? t('ui.Input.hide_password') : t('ui.Input.show_password')} style={styles.reveal}>
             <Ionicons name={revealed ? 'eye-off-outline' : 'eye-outline'} size={19} color={colors.textSubtle} />
           </Pressable>
         ) : null}

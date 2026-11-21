@@ -50,9 +50,9 @@ DEMO_CUSTOMERS = [("Amit Verma", "9811111111"), ("Priya Singh", "9822222222"), (
 
 # Tallyko platform staff (super admin console) — demo only
 PLATFORM_ADMINS = [
-    ("superadmin@example.com", "Tallyko Super Admin", "super_admin"),
+    ("superadmin@example.com", "Storant Super Admin", "super_admin"),
     ("superadmin2@example.com", "Priya Nair (Operations)", "super_admin"),
-    ("support@example.com", "Tallyko Support (read-only)", "support"),
+    ("support@example.com", "Storant Support (read-only)", "support"),
     ("support2@example.com", "Arjun Rao (Support, read-only)", "support"),
 ]
 

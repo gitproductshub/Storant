@@ -19,20 +19,21 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { TopDialogHost } from '@/features/catalog/dialogs';
 import { OfferEditor } from './OfferEditor';
 import { offerCounts, offerMatches, offerPill, searchOffers, sortOffers, toggledState, type OfferFilter } from './offerList';
+import { t as tr } from '@/i18n';
 
 export default function OffersScreen() {
   const info = useAccessInfo();
   const canManage = useCan('offers.manage', 'offers');
   if (!info) {
-    return <Screen title="Offers & rewards"><Loading label="Checking your access…" /></Screen>;
+    return <Screen title={tr('common.offers_rewards')}><Loading label={tr('offers.OffersScreen.checking_your_access')} /></Screen>;
   }
   if (!canManage) {
     return (
-      <Screen title="Offers & rewards">
-        <EmptyState icon="lock-closed-outline" title={info.features.includes('offers') ? 'Only managers can change offers' : 'Offers aren\'t in your plan'}
+      <Screen title={tr('common.offers_rewards')}>
+        <EmptyState icon="lock-closed-outline" title={info.features.includes('offers') ? tr('offers.OffersScreen.only_managers_can_change_offers') : tr('offers.OffersScreen.offers_aren_t_in_your_plan')}
           message={info.features.includes('offers')
-            ? 'Ask the owner or a manager to create offers. Cashiers apply them on the bill.'
-            : 'Upgrade your plan to run discounts, coupon codes and loyalty rewards.'} />
+            ? tr('offers.OffersScreen.ask_the_owner_or_a_manager_to_create')
+            : tr('offers.OffersScreen.upgrade_your_plan_to_run_discounts_coupon')} />
       </Screen>
     );
   }
@@ -86,8 +87,8 @@ function Offers() {
       const saved = await offersApi.setActive(o.id, on);
       const next = { ...saved, redemptions: o.redemptions };
       upsert(next);
-      if (on) toast.success(`${o.name} is on`);
-      else toast.undo(`${o.name} switched off`, () => void toggleRef.current(next, true));
+      if (on) toast.success(tr('offers.OffersScreen.name_is_on', { name: o.name }));
+      else toast.undo(tr('offers.OffersScreen.name_switched_off', { name: o.name }), () => void toggleRef.current(next, true));
     } catch (e) {
       upsert(o);
       toast.error(errorMessage(e));
@@ -104,7 +105,7 @@ function Offers() {
   const offerSwitch = (o: Offer) => (
     <Switch value={o.is_active} onValueChange={(v) => void toggle(o, v)} disabled={!!toggling[o.id]}
       trackColor={{ true: colors.primary, false: colors.borderStrong }} thumbColor={colors.surface}
-      accessibilityLabel={o.is_active ? `Switch off ${o.name}` : `Switch on ${o.name}`} />
+      accessibilityLabel={o.is_active ? tr('offers.OffersScreen.switch_off_name', { name: o.name }) : tr('offers.OffersScreen.switch_on_name', { name: o.name })} />
   );
   const icon = (o: Offer) => {
     const loyalty = o.kind === 'loyalty';
@@ -117,7 +118,7 @@ function Offers() {
 
   const columns = useMemo<DataColumn<Offer>[]>(() => [
     {
-      key: 'name', title: 'Offer', flex: 1.6, minWidth: 180,
+      key: 'name', title: tr('common.offer'), flex: 1.6, minWidth: 180,
       render: (o) => (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 }}>
           {icon(o)}
@@ -125,13 +126,13 @@ function Offers() {
         </View>
       ),
     },
-    { key: 'summary', title: 'What the customer gets', flex: 2.2, minWidth: 160, hideBelow: 900, render: (o) => <Text variant="small" tone="muted" numberOfLines={1}>{o.summary}</Text> },
-    { key: 'state', title: 'Status', width: 120, render: (o) => { const p = offerPill(o.state); return <StatusPill status={p.status} label={p.label} />; } },
-    { key: 'code', title: 'Code', width: 110, hideBelow: 760, render: (o) => (o.code ? <Badge label={o.code} tone="accent" icon="ticket-outline" /> : <Text variant="small" tone="subtle">—</Text>) },
-    { key: 'apply', title: 'Applied', width: 110, hideBelow: 1180, value: (o) => (o.auto_apply ? 'Automatic' : 'By cashier') },
-    { key: 'uses', title: 'Used', width: 70, numeric: true, hideBelow: 640, value: usesLabel },
-    { key: 'ends', title: 'Dates', width: 150, hideBelow: 1040, value: endsLabel },
-    { key: 'on', title: 'On', width: 64, align: 'center', render: offerSwitch },
+    { key: 'summary', title: tr('offers.OffersScreen.what_the_customer_gets'), flex: 2.2, minWidth: 160, hideBelow: 900, render: (o) => <Text variant="small" tone="muted" numberOfLines={1}>{o.summary}</Text> },
+    { key: 'state', title: tr('common.status'), width: 120, render: (o) => { const p = offerPill(o.state); return <StatusPill status={p.status} label={p.label} />; } },
+    { key: 'code', title: tr('offers.OffersScreen.code'), width: 110, hideBelow: 760, render: (o) => (o.code ? <Badge label={o.code} tone="accent" icon="ticket-outline" /> : <Text variant="small" tone="subtle">—</Text>) },
+    { key: 'apply', title: tr('offers.OffersScreen.applied'), width: 110, hideBelow: 1180, value: (o) => (o.auto_apply ? 'Automatic' : 'By cashier') },
+    { key: 'uses', title: tr('offers.OffersScreen.used'), width: 70, numeric: true, hideBelow: 640, value: usesLabel },
+    { key: 'ends', title: tr('offers.OffersScreen.dates'), width: 150, hideBelow: 1040, value: endsLabel },
+    { key: 'on', title: tr('common.on'), width: 64, align: 'center', render: offerSwitch },
   ], [colors, toggling, toggle]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const renderCard = useCallback((o: Offer) => {
@@ -152,47 +153,47 @@ function Offers() {
   }, [colors, toggling, toggle]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filters: FilterOption[] = [
-    { key: 'all', label: 'All', count: counts.all },
-    { key: 'live', label: 'Live', count: counts.live },
-    { key: 'scheduled', label: 'Scheduled', count: counts.scheduled },
-    { key: 'off', label: 'Off', count: counts.off },
-    ...(counts.ended ? [{ key: 'ended', label: 'Ended', count: counts.ended }] : []),
-    ...(loyaltyAllowed || counts.loyalty ? [{ key: 'loyalty', label: 'Loyalty', icon: 'ribbon-outline' as const, count: counts.loyalty }] : []),
+    { key: 'all', label: tr('common.all'), count: counts.all },
+    { key: 'live', label: tr('common.live'), count: counts.live },
+    { key: 'scheduled', label: tr('common.scheduled'), count: counts.scheduled },
+    { key: 'off', label: tr('common.off'), count: counts.off },
+    ...(counts.ended ? [{ key: 'ended', label: tr('common.ended'), count: counts.ended }] : []),
+    ...(loyaltyAllowed || counts.loyalty ? [{ key: 'loyalty', label: tr('common.loyalty'), icon: 'ribbon-outline' as const, count: counts.loyalty }] : []),
   ];
 
   const newMenu: ActionMenuItem[] = [
-    { key: 'bill', label: 'Offer on the whole bill', icon: 'receipt-outline', description: 'Happy hour, % or ₹ off above an amount', onPress: () => newOffer('bill') },
-    { key: 'items', label: 'Offer on items', icon: 'fast-food-outline', description: 'Item deals and free items', onPress: () => newOffer('items') },
-    { key: 'loyalty', label: 'Loyalty reward', icon: 'ribbon-outline', description: 'For regulars after N visits', hidden: !loyaltyAllowed, onPress: () => newOffer('loyalty') },
+    { key: 'bill', label: tr('offers.OffersScreen.offer_on_the_whole_bill'), icon: 'receipt-outline', description: tr('offers.OffersScreen.happy_hour_or_off_above_an_amount'), onPress: () => newOffer('bill') },
+    { key: 'items', label: tr('offers.OffersScreen.offer_on_items'), icon: 'fast-food-outline', description: tr('offers.OffersScreen.item_deals_and_free_items'), onPress: () => newOffer('items') },
+    { key: 'loyalty', label: tr('offers.OffersScreen.loyalty_reward'), icon: 'ribbon-outline', description: tr('offers.OffersScreen.for_regulars_after_n_visits'), hidden: !loyaltyAllowed, onPress: () => newOffer('loyalty') },
   ];
 
   const empty = filter === 'loyalty' ? {
-    icon: 'ribbon-outline' as const, title: 'No loyalty rewards yet',
-    message: 'Reward regulars automatically — for example 20% off or a free meal after 5 visits, on bills above ₹500.',
-    action: loyaltyAllowed ? { label: 'New loyalty reward', icon: 'add' as const, onPress: () => newOffer('loyalty') } : undefined,
+    icon: 'ribbon-outline' as const, title: tr('offers.OffersScreen.no_loyalty_rewards_yet'),
+    message: tr('offers.OffersScreen.reward_regulars_automatically_for_example'),
+    action: loyaltyAllowed ? { label: tr('offers.OffersScreen.new_loyalty_reward'), icon: 'add' as const, onPress: () => newOffer('loyalty') } : undefined,
   } : q || filter !== 'all' ? {
-    icon: 'search-outline' as const, title: 'No offers match', action: { label: 'Show all', icon: 'list-outline' as const, onPress: () => { setFilter('all'); setQ(''); } },
+    icon: 'search-outline' as const, title: tr('offers.OffersScreen.no_offers_match'), action: { label: tr('common.show_all'), icon: 'list-outline' as const, onPress: () => { setFilter('all'); setQ(''); } },
   } : {
-    icon: 'pricetags-outline' as const, title: 'No offers yet',
-    message: 'Create happy-hour discounts, item deals, free items and coupon codes. Turn any offer off instantly when you need to.',
-    action: { label: 'New offer', icon: 'add' as const, onPress: () => newOffer('bill') },
+    icon: 'pricetags-outline' as const, title: tr('offers.OffersScreen.no_offers_yet'),
+    message: tr('offers.OffersScreen.create_happy_hour_discounts_item_deals'),
+    action: { label: tr('common.new_offer'), icon: 'add' as const, onPress: () => newOffer('bill') },
   };
 
   return (
     <Screen
-      title="Offers & rewards"
-      subtitle={data ? `${liveCount} live · ${all.length} total` : undefined}
+      title={tr('common.offers_rewards')}
+      subtitle={data ? tr('offers.OffersScreen.livecount_live_length_total', { liveCount, length: all.length }) : undefined}
       scroll={false}
       contentStyle={{ flex: 1, paddingBottom: 16 }}
       maxWidth={isDesktop ? 1680 : 1280}
       actions={(
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          {loyaltyAllowed && !isPhone ? <Button title="New reward" icon="ribbon-outline" variant="outline" onPress={() => newOffer('loyalty')} /> : null}
-          <ActionMenu items={newMenu} title="New" align="end"
-            trigger={(openMenu) => <Button title={isPhone ? 'New' : 'New offer'} icon="add" onPress={openMenu} shortcut="N" testID="offers-new" />} />
+          {loyaltyAllowed && !isPhone ? <Button title={tr('offers.OffersScreen.new_reward')} icon="ribbon-outline" variant="outline" onPress={() => newOffer('loyalty')} /> : null}
+          <ActionMenu items={newMenu} title={tr('common.new')} align="end"
+            trigger={(openMenu) => <Button title={isPhone ? tr('common.new') : tr('common.new_offer')} icon="add" onPress={openMenu} shortcut="N" testID="offers-new" />} />
         </View>
       )}
-      toolbar={<FilterBar onSearch={setQ} search={q} searchPlaceholder="Search name or coupon code" filters={filters} value={filter} onChange={(k) => setFilter(k as OfferFilter)} />}
+      toolbar={<FilterBar onSearch={setQ} search={q} searchPlaceholder={tr('offers.OffersScreen.search_name_or_coupon_code_x')} filters={filters} value={filter} onChange={(k) => setFilter(k as OfferFilter)} />}
     >
       <View style={{ flex: 1, flexDirection: 'row', gap: 16, minHeight: 0 }}>
         <View style={[{ flex: 1, minWidth: 0, overflow: 'hidden' }, tableMode && { borderWidth: 1, borderRadius: 14, borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -205,7 +206,7 @@ function Offers() {
             layout={tableMode ? 'table' : 'cards'}
             cardHeight={84}
             loading={loading}
-            error={error ? `${error} Offers can be managed when you are online — billing keeps working without them.` : null}
+            error={error ? tr('offers.OffersScreen.error_offers_can_be_managed_when_you_are', { error }) : null}
             onRetry={reload}
             refreshing={refreshing}
             onRefresh={reload}

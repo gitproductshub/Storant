@@ -62,7 +62,7 @@ services:
       SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
       SMTP_SSL: ${SMTP_SSL:-false}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@tallyko.local}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Tallyko}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Storant}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://${DOMAIN:-localhost}}
     depends_on:
       db:

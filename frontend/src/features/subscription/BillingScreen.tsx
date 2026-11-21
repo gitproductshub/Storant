@@ -15,6 +15,8 @@ import { useSubscription } from '@/store/subscription';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { HistoryList, RenewFlow, RequestsList, SupportLinks } from './RenewFlow';
 import { KIND_LABEL, STATE_LABEL, STATE_TONE, daysText, liveDaysLeft, monthsText, currentPeriod } from './format';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 function SummaryTile({ label, value, hint, icon }: { label: string; value: string; hint?: string; icon: React.ComponentProps<typeof Ionicons>['name'] }) {
   const { colors } = useTheme();
@@ -58,8 +60,8 @@ export default function BillingScreen() {
 
   if (role !== 'owner') {
     return (
-      <SettingsFrame active="billing" title="Plan & billing">
-        <EmptyState icon="lock-closed-outline" title="Only the owner can manage the plan" message="Ask the owner of this business to renew or change the Tallyko plan." />
+      <SettingsFrame active="billing" title={t('common.plan_billing')}>
+        <EmptyState icon="lock-closed-outline" title={t('subscription.BillingScreen.only_the_owner_can_manage_the_plan')} message={t('subscription.BillingScreen.ask_the_owner_of_this_business_to_renew', { brand: brand.name })} />
       </SettingsFrame>
     );
   }
@@ -71,74 +73,74 @@ export default function BillingScreen() {
   const showRenewOpen = renewOpen || (!!info && (info.state === 'trial' || info.state === 'grace' || (left !== null && left <= 14)));
 
   return (
-    <SettingsFrame active="billing" title="Plan & billing" subtitle="Your Tallyko subscription, renewals and payments."
+    <SettingsFrame active="billing" title={t('common.plan_billing')} subtitle={t('subscription.BillingScreen.your_brand_subscription_renewals_and', { brand: brand.name })}
       refreshing={refreshing} onRefresh={() => void load('refresh')}
-      actions={info ? <Button title="Refresh" icon="refresh" variant="ghost" size="sm" onPress={() => void load('refresh')} loading={refreshing} /> : undefined}>
-      {loading && !info ? <Loading label="Loading your plan…" /> : null}
+      actions={info ? <Button title={t('common.refresh')} icon="refresh" variant="ghost" size="sm" onPress={() => void load('refresh')} loading={refreshing} /> : undefined}>
+      {loading && !info ? <Loading label={t('subscription.BillingScreen.loading_your_plan')} /> : null}
       {error && !info ? <ErrorState message={error} onRetry={() => void load('refresh')} /> : null}
 
       {info ? (
         <>
           <Card style={{ gap: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <Text variant="h2" style={{ flexShrink: 1 }}>{info.plan_name} plan</Text>
+              <Text variant="h2" style={{ flexShrink: 1 }}>{info.plan_name} {t('subscription.BillingScreen.plan')}</Text>
               <Badge label={STATE_LABEL[info.state]} tone={STATE_TONE[info.state]} icon={info.state === 'development' ? 'construct-outline' : undefined} />
               {info.kind && info.kind !== 'development' && info.kind !== 'trial' ? <Badge label={KIND_LABEL[info.kind] ?? info.kind} tone="neutral" /> : null}
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: isPhone ? 14 : 24 }}>
-              <SummaryTile icon="calendar-outline" label={info.state === 'grace' ? 'Ended on' : 'Valid until'}
+              <SummaryTile icon="calendar-outline" label={info.state === 'grace' ? t('subscription.BillingScreen.ended_on') : t('subscription.BillingScreen.valid_until')}
                 value={info.state === 'development' ? 'No expiry' : info.paid_until ? formatDate(info.paid_until) : '—'}
-                hint={info.state === 'grace' && info.lock_at ? `Access stops on ${formatDate(info.lock_at)}` : undefined} />
-              <SummaryTile icon="hourglass-outline" label="Days left"
+                hint={info.state === 'grace' && info.lock_at ? t('subscription.BillingScreen.access_stops_on_formatdate', { formatDate: formatDate(info.lock_at) }) : undefined} />
+              <SummaryTile icon="hourglass-outline" label={t('subscription.BillingScreen.days_left')}
                 value={info.state === 'development' ? '—' : left === null ? '—' : left <= 0 ? 'Ends today' : String(left)}
-                hint={info.state === 'development' ? 'Development access' : left !== null && left > 0 ? daysText(left) : undefined} />
-              <SummaryTile icon="receipt-outline" label="Current period"
+                hint={info.state === 'development' ? t('common.development_access') : left !== null && left > 0 ? daysText(left) : undefined} />
+              <SummaryTile icon="receipt-outline" label={t('subscription.BillingScreen.current_period')}
                 value={period ? (period.months ? monthsText(period.months) : KIND_LABEL[period.kind] ?? period.kind) : '—'}
                 hint={period ? `${formatDate(period.start_date)} – ${formatDate(period.end_date)}` : undefined} />
             </View>
             {info.state === 'development' ? (
-              <Callout tone="info" icon="construct-outline" title="Development access">
-                Tallyko switched this business on without an end date (for testing or a pilot). Nothing to pay while it lasts.
+              <Callout tone="info" icon="construct-outline" title={t('common.development_access')}>
+                {t('subscription.BillingScreen.brand_switched_this_business_on_without', { brand: brand.name })}
               </Callout>
             ) : info.state === 'grace' ? (
-              <Callout tone="danger" title="Payment due">
-                {`Your subscription ended${info.paid_until ? ` on ${formatDate(info.paid_until)}` : ''}. Renew before ${info.lock_at ? formatDate(info.lock_at) : 'access stops'} to keep billing without interruption.`}
+              <Callout tone="danger" title={t('common.payment_due')}>
+                {t('subscription.BillingScreen.your_subscription_ended_v_renew_before_v2', { v: info.paid_until ? t('subscription.BillingScreen.on_formatdate', { formatDate: formatDate(info.paid_until) }) : '', v2: info.lock_at ? formatDate(info.lock_at) : t('subscription.BillingScreen.access_stops') })}
               </Callout>
             ) : info.state === 'trial' ? (
-              <Callout tone="info" title="You're on the free demo">
-                {`Everything is switched on during the demo${left !== null ? ` (${daysText(left)})` : ''}. Pick a plan any time — your menu, bills and customers carry over.`}
+              <Callout tone="info" title={t('subscription.BillingScreen.you_re_on_the_free_demo')}>
+                {t('subscription.BillingScreen.everything_is_switched_on_during_the_demo', { v: left !== null ? ` (${daysText(left)})` : '' })}
               </Callout>
             ) : null}
           </Card>
 
           {pending.length || rejected ? (
-            <FormSection title="Payments" description="Payments you told us about. Tallyko confirms them and extends your plan.">
+            <FormSection title={t('common.payments')} description={t('subscription.BillingScreen.payments_you_told_us_about_brand_confirms', { brand: brand.name })}>
               {pending.length ? (
-                <Callout tone="info" title="Waiting for confirmation">Your plan is extended as soon as Tallyko confirms the payment. You don't need to send it again.</Callout>
+                <Callout tone="info" title={t('subscription.BillingScreen.waiting_for_confirmation')}>{t('subscription.BillingScreen.your_plan_is_extended_as_soon_as_brand', { brand: brand.name })}</Callout>
               ) : null}
               <RequestsList requests={info.requests} plans={info.plans} />
             </FormSection>
           ) : null}
 
-          {/* Development access has no end date (a renewal would start after it), so there is nothing to buy until Tallyko removes it */}
+          {/* Development access has no end date (a renewal would start after it), so there is nothing to buy until Storant removes it */}
           {info.can_pay && info.state !== 'development' ? (
             <View style={{ gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <View style={{ flex: 1, minWidth: 200 }}>
-                  <Text variant="h3" accessibilityRole="header">Renew or change plan</Text>
-                  <Text variant="small" tone="muted">A renewal starts when the current period ends, so you never lose paid days.</Text>
+                  <Text variant="h3" accessibilityRole="header">{t('subscription.BillingScreen.renew_or_change_plan')}</Text>
+                  <Text variant="small" tone="muted">{t('subscription.BillingScreen.a_renewal_starts_when_the_current_period')}</Text>
                 </View>
-                {!showRenewOpen ? <Button title="Renew now" icon="card-outline" onPress={() => setRenewOpen(true)} /> : null}
+                {!showRenewOpen ? <Button title={t('subscription.BillingScreen.renew_now')} icon="card-outline" onPress={() => setRenewOpen(true)} /> : null}
               </View>
               {showRenewOpen ? <RenewFlow info={info} onSubmitted={() => void load('silent')} allowTwoColumns={false} /> : null}
             </View>
           ) : null}
 
-          <FormSection title="History" description="Demo, paid and complimentary periods of this business.">
+          <FormSection title={t('subscription.BillingScreen.history')} description={t('subscription.BillingScreen.demo_paid_and_complimentary_periods_of')}>
             <HistoryList history={info.history} />
           </FormSection>
 
-          <FormSection title="Billing support" description="Questions about plans or payments.">
+          <FormSection title={t('subscription.BillingScreen.billing_support')} description={t('subscription.BillingScreen.questions_about_plans_or_payments')}>
             <SupportLinks payment={info.payment} />
           </FormSection>
         </>

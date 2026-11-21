@@ -20,6 +20,7 @@ import { Button } from './Button';
 import { EmptyState, ErrorState } from './Surface';
 import { Checkbox, Skeleton } from './Checkbox';
 import { fixedItemLayout, selectionState, toggleKey, visibleColumns } from './listLogic';
+import { t } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -162,7 +163,7 @@ function RowImpl<T>({
   const bg = selected || open ? colors.selectedRow : highlighted ? colors.kitchenSoft : colors.surface;
   const check = selectable ? (
     <View style={styles.checkCell}>
-      <Checkbox checked={selected} onChange={() => onToggle(rowKey)} accessibilityLabel={selected ? 'Deselect row' : 'Select row'} />
+      <Checkbox checked={selected} onChange={() => onToggle(rowKey)} accessibilityLabel={selected ? t('ui.DataList.deselect_row') : t('ui.DataList.select_row')} />
     </View>
   ) : null;
   const pressProps = {
@@ -334,7 +335,7 @@ export function DataList<T>({
       {selectable ? (
         <View style={styles.checkCell}>
           <Checkbox checked={headState === 'all'} indeterminate={headState === 'some'} onChange={toggleAll}
-            accessibilityLabel={headState === 'all' ? 'Deselect all' : 'Select all'} disabled={!rows.length} />
+            accessibilityLabel={headState === 'all' ? t('ui.DataList.deselect_all') : t('ui.DataList.select_all')} disabled={!rows.length} />
         </View>
       ) : null}
       {cols.map((col) => {
@@ -346,7 +347,7 @@ export function DataList<T>({
             disabled={!canSort}
             onPress={() => onSortChange?.({ key: col.key, dir: sorted === 'asc' ? 'desc' : 'asc' })}
             accessibilityRole={canSort ? 'button' : undefined}
-            accessibilityLabel={canSort ? `Sort by ${col.title}` : col.title}
+            accessibilityLabel={canSort ? t('ui.DataList.sort_by_title', { title: col.title }) : col.title}
             style={[styles.cell, colStyle(col), styles.headCell, { justifyContent: alignOf(col) }, Platform.OS === 'web' && canSort ? ({ cursor: 'pointer' } as any) : null]}
           >
             <Text variant="caption" tone={sorted ? 'default' : 'muted'} numberOfLines={1} style={styles.headText}>{col.title}</Text>
@@ -372,7 +373,7 @@ export function DataList<T>({
   let body: React.ReactNode;
   if (!rows.length && loading) {
     body = (
-      <View accessibilityLabel="Loading" style={mode === 'cards' ? styles.cardsPad : undefined}>
+      <View accessibilityLabel={t('ui.DataList.loading')} style={mode === 'cards' ? styles.cardsPad : undefined}>
         {Array.from({ length: skeletonRows }, (_, i) => (
           mode === 'table' ? (
             <View key={i} style={[styles.tableRow, { height, borderBottomColor: colors.divider, backgroundColor: colors.surface }]}>
@@ -401,7 +402,7 @@ export function DataList<T>({
     body = (
       <View style={{ flex: 1 }}>
         {ListHeaderComponent ?? null}
-        <EmptyState icon={empty?.icon} title={empty?.title ?? 'Nothing here yet'} message={empty?.message} action={empty?.action} />
+        <EmptyState icon={empty?.icon} title={empty?.title ?? t('ui.DataList.nothing_here_yet')} message={empty?.message} action={empty?.action} />
       </View>
     );
   } else {
@@ -438,7 +439,7 @@ export function DataList<T>({
         <View style={[styles.inlineError, { backgroundColor: colors.dangerSoft }]}>
           <Ionicons name="cloud-offline-outline" size={16} color={colors.dangerText} />
           <Text variant="small" tone="danger" style={{ flex: 1 }} numberOfLines={1}>{error}</Text>
-          {onRetry ? <Button title="Retry" size="sm" variant="ghost" onPress={onRetry} /> : null}
+          {onRetry ? <Button title={t('common.retry')} size="sm" variant="ghost" onPress={onRetry} /> : null}
         </View>
       ) : null}
       {tableHeader}

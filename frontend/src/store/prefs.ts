@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Platform } from 'react-native';
 import { persistStorage } from '@/lib/storage';
+import type { Language } from '@/i18n';
 import type { PaperWidth } from '@/lib/print/receipt';
 import type { PrinterDevice } from '@/lib/print/printers';
 
@@ -32,6 +33,7 @@ export function normaliseServerUrl(input: string): string {
 
 interface PrefsState {
   theme: 'system' | 'light' | 'dark';
+  language: Language;
   serverUrl: string | null; // null = default
   paperWidth: PaperWidth;
   printer: PrinterDevice | null;
@@ -49,6 +51,7 @@ export const usePrefs = create<PrefsState>()(
   persist(
     (set) => ({
       theme: 'system',
+      language: 'en',
       serverUrl: null,
       paperWidth: 58,
       printer: null,

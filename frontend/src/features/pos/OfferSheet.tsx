@@ -9,6 +9,7 @@ import { money } from '@/lib/format';
 import { Callout } from '@/features/settings/components';
 import type { OfferMode } from './cart';
 import { findOfferByCode, offerValueLabel, useOfferCatalog, type CartOffers } from './offers';
+import { t as tr } from '@/i18n';
 
 export function OfferSheet({ visible, onClose, offers, mode, offerId, code, online, currency, onChoose }: {
   visible: boolean;
@@ -66,28 +67,28 @@ export function OfferSheet({ visible, onClose, offers, mode, offerId, code, onli
   const body = () => {
     if (!online) {
       return (
-        <EmptyState icon="cloud-offline-outline" title="Offers need the internet"
-          message="You can keep billing — this bill will go through without an offer. Offers show up again when you are back online." />
+        <EmptyState icon="cloud-offline-outline" title={tr('pos.OfferSheet.offers_need_the_internet')}
+          message={tr('pos.OfferSheet.you_can_keep_billing_this_bill_will_go')} />
       );
     }
     if (offers.locked) {
       return (
-        <Callout tone="info" title="Offer locked">
-          {offers.applied ? `${offers.applied.name} stays on this bill because a payment was already taken.` : 'A payment was already taken on this bill, so offers can no longer be changed.'}
+        <Callout tone="info" title={tr('pos.OfferSheet.offer_locked')}>
+          {offers.applied ? tr('pos.OfferSheet.name_stays_on_this_bill_because_a_payment', { name: offers.applied.name }) : tr('pos.OfferSheet.a_payment_was_already_taken_on_this_bill')}
         </Callout>
       );
     }
-    if (!offers.data && offers.pending) return <View style={styles.loading}><ActivityIndicator color={colors.primary} /><Text tone="muted">Checking offers…</Text></View>;
+    if (!offers.data && offers.pending) return <View style={styles.loading}><ActivityIndicator color={colors.primary} /><Text tone="muted">{tr('pos.OfferSheet.checking_offers')}</Text></View>;
     if (!offers.data && offers.error) {
       return (
-        <EmptyState icon="pricetags-outline" title="Couldn't check offers" message="The bill can still be paid without an offer."
-          action={{ label: 'Try again', icon: 'refresh', onPress: offers.refresh }} />
+        <EmptyState icon="pricetags-outline" title={tr('pos.OfferSheet.couldn_t_check_offers')} message={tr('pos.OfferSheet.the_bill_can_still_be_paid_without_an')}
+          action={{ label: tr('common.try_again'), icon: 'refresh', onPress: offers.refresh }} />
       );
     }
     return (
       <View style={{ gap: 8 }}>
-        <Option selected={mode === 'auto'} icon="sparkles-outline" title="Best offer automatically"
-          subtitle={best ? `${best.name} · ${best.description}` : 'No automatic offer applies to this bill right now'}
+        <Option selected={mode === 'auto'} icon="sparkles-outline" title={tr('pos.OfferSheet.best_offer_automatically')}
+          subtitle={best ? `${best.name} · ${best.description}` : tr('pos.OfferSheet.no_automatic_offer_applies_to_this_bill')}
           value={best ? offerValueLabel(best, cur) : undefined}
           onPress={() => onChoose({ mode: 'auto' })} />
         {offers.eligible.map((ev) => (
@@ -95,16 +96,16 @@ export function OfferSheet({ visible, onClose, offers, mode, offerId, code, onli
             value={offerValueLabel(ev, cur)} badges={badges(ev, codesById.get(ev.offer_id))}
             onPress={() => onChoose({ mode: 'manual', offerId: ev.offer_id, name: ev.name, code: null })} />
         ))}
-        <Option selected={mode === 'none'} icon="close-circle-outline" title="No offer" subtitle="Bill at full price"
+        <Option selected={mode === 'none'} icon="close-circle-outline" title={tr('pos.OfferSheet.no_offer')} subtitle={tr('pos.OfferSheet.bill_at_full_price')}
           onPress={() => onChoose({ mode: 'none' })} />
         {offers.eligible.length === 0 && offers.data ? (
-          <Text variant="small" tone="muted" style={{ paddingHorizontal: 4 }}>No offer applies to this bill yet{offers.ineligible.length ? ' — see why below.' : '.'}</Text>
+          <Text variant="small" tone="muted" style={{ paddingHorizontal: 4 }}>{tr('pos.OfferSheet.no_offer_applies_to_this_bill_yet')}{offers.ineligible.length ? tr('pos.OfferSheet.see_why_below') : '.'}</Text>
         ) : null}
         {offers.ineligible.length ? (
           <View style={{ gap: 6, marginTop: 4 }}>
             <Pressable onPress={() => setShowOthers((v) => !v)} accessibilityRole="button" style={styles.othersHead} hitSlop={6}>
               <Ionicons name={showOthers ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.textMuted} />
-              <Text variant="smallStrong" tone="muted">Not applicable ({offers.ineligible.length})</Text>
+              <Text variant="smallStrong" tone="muted">{tr('pos.OfferSheet.not_applicable_length', { length: offers.ineligible.length })}</Text>
             </Pressable>
             {showOthers ? offers.ineligible.map((ev) => (
               <View key={ev.offer_id} style={[styles.other, { borderColor: colors.border, borderRadius: radius.md }]}>
@@ -120,18 +121,18 @@ export function OfferSheet({ visible, onClose, offers, mode, offerId, code, onli
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Offers" subtitle={offers.pending && offers.data ? 'Updating for the latest cart…' : 'Pick the offer for this bill'} width={520}
-      footer={<Button title="Done" onPress={onClose} full />}>
-      {offers.problem ? <Callout tone="warning" title="Offer removed from the preview">{offers.problem}</Callout> : null}
+    <Sheet visible={visible} onClose={onClose} title={tr('common.offers')} subtitle={offers.pending && offers.data ? tr('pos.OfferSheet.updating_for_the_latest_cart') : tr('pos.OfferSheet.pick_the_offer_for_this_bill')} width={520}
+      footer={<Button title={tr('common.done')} onPress={onClose} full />}>
+      {offers.problem ? <Callout tone="warning" title={tr('pos.OfferSheet.offer_removed_from_the_preview')}>{offers.problem}</Callout> : null}
       {online && !offers.locked ? (
-        <Input label="Coupon code" value={codeText} onChangeText={(t) => { setCodeText(t.toUpperCase()); setCodeError(null); }}
-          placeholder="e.g. DIWALI20" autoCapitalize="characters" autoCorrect={false} maxLength={20} icon="ticket-outline"
+        <Input label={tr('pos.OfferSheet.coupon_code')} value={codeText} onChangeText={(t) => { setCodeText(t.toUpperCase()); setCodeError(null); }}
+          placeholder={tr('pos.OfferSheet.e_g_diwali20')} autoCapitalize="characters" autoCorrect={false} maxLength={20} icon="ticket-outline"
           onSubmitEditing={() => void applyCode()} error={codeError}
-          right={<Button title="Apply" size="sm" variant="soft" onPress={() => void applyCode()} loading={checking} style={{ marginRight: 6 }} />} />
+          right={<Button title={tr('common.apply')} size="sm" variant="soft" onPress={() => void applyCode()} loading={checking} style={{ marginRight: 6 }} />} />
       ) : null}
       {body()}
       {appliedId && offers.applied?.freeProductId ? (
-        <Text variant="small" tone="muted">The free item is added to the bill when it is saved.</Text>
+        <Text variant="small" tone="muted">{tr('pos.OfferSheet.the_free_item_is_added_to_the_bill_when')}</Text>
       ) : null}
     </Sheet>
   );
@@ -139,8 +140,8 @@ export function OfferSheet({ visible, onClose, offers, mode, offerId, code, onli
 
 function badges(ev: OfferEvaluation, code?: string): { label: string; tone: 'primary' | 'accent' | 'neutral' }[] {
   const out: { label: string; tone: 'primary' | 'accent' | 'neutral' }[] = [];
-  if (ev.auto_apply) out.push({ label: 'Auto', tone: 'primary' });
-  if (code) out.push({ label: `Code ${code}`, tone: 'accent' });
+  if (ev.auto_apply) out.push({ label: tr('pos.OfferSheet.auto'), tone: 'primary' });
+  if (code) out.push({ label: tr('pos.OfferSheet.code_code', { code }), tone: 'accent' });
   return out;
 }
 

@@ -7,15 +7,16 @@ import type { StockRow } from '@/api/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState, ErrorState, Loading, Sheet, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/format';
+import { t } from '@/i18n';
 
 interface StockLog { id: string; product_id: string; product_name: string; quantity_change: number; reason: string; note: string | null; created_at: string }
 
 const REASONS: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  restock: { label: 'Stock added', icon: 'arrow-down-circle-outline' },
-  wastage: { label: 'Wastage', icon: 'trash-outline' },
-  adjustment: { label: 'Adjustment', icon: 'swap-vertical-outline' },
-  return: { label: 'Returned', icon: 'return-down-back-outline' },
-  sale: { label: 'Sold', icon: 'receipt-outline' },
+  restock: { get label() { return t('catalog.inventory_StockHistorySheet.stock_added'); }, icon: 'arrow-down-circle-outline' },
+  wastage: { get label() { return t('catalog.inventory_StockHistorySheet.wastage'); }, icon: 'trash-outline' },
+  adjustment: { get label() { return t('catalog.inventory_StockHistorySheet.adjustment'); }, icon: 'swap-vertical-outline' },
+  return: { get label() { return t('catalog.inventory_StockHistorySheet.returned'); }, icon: 'return-down-back-outline' },
+  sale: { get label() { return t('catalog.inventory_StockHistorySheet.sold'); }, icon: 'receipt-outline' },
 };
 
 export function StockHistorySheet({ row, onClose }: { row: StockRow; onClose: () => void }) {
@@ -37,13 +38,13 @@ export function StockHistorySheet({ row, onClose }: { row: StockRow; onClose: ()
 
   const unit = row.unit || 'pcs';
   return (
-    <Sheet visible onClose={onClose} title="Stock history" subtitle={`${row.name} · ${row.stock} ${unit} in stock`} width={560}>
+    <Sheet visible onClose={onClose} title={t('catalog.inventory_StockHistorySheet.stock_history')} subtitle={t('catalog.inventory_StockHistorySheet.name_stock_unit_in_stock', { name: row.name, stock: row.stock, unit })} width={560}>
       {error ? (
         <ErrorState message={error} onRetry={load} />
       ) : !logs ? (
-        <Loading label="Loading history…" />
+        <Loading label={t('catalog.inventory_StockHistorySheet.loading_history')} />
       ) : logs.length === 0 ? (
-        <EmptyState icon="time-outline" title="No movements yet" message="Stock added, sold, wasted or adjusted will show here." />
+        <EmptyState icon="time-outline" title={t('catalog.inventory_StockHistorySheet.no_movements_yet')} message={t('catalog.inventory_StockHistorySheet.stock_added_sold_wasted_or_adjusted_will')} />
       ) : (
         <View style={[styles.list, { borderColor: colors.border }]}>
           {logs.map((l, i) => {
@@ -65,7 +66,7 @@ export function StockHistorySheet({ row, onClose }: { row: StockRow; onClose: ()
           })}
         </View>
       )}
-      {logs && logs.length >= 100 ? <Text variant="small" tone="subtle" align="center">Showing the latest 100 movements</Text> : null}
+      {logs && logs.length >= 100 ? <Text variant="small" tone="subtle" align="center">{t('catalog.inventory_StockHistorySheet.showing_the_latest_100_movements')}</Text> : null}
     </Sheet>
   );
 }

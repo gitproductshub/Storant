@@ -5,6 +5,7 @@
 import type { OpsThresholds, TableBill, TableInfo } from '@/api/types';
 import { paymentClaimOf } from '@/api/floor';
 import { dayRange } from '@/lib/format';
+import { t as tr } from '@/i18n';
 
 // ---------------------------------------------------------------- time & escalation
 
@@ -250,8 +251,8 @@ export function pruneMarks(marks: Record<string, number>, now: number, ttlMs: nu
 
 export type DatePreset = 'today' | 'yesterday' | 'week' | 'month' | 'any';
 export const DATE_PRESETS: { key: DatePreset; label: string }[] = [
-  { key: 'today', label: 'Today' }, { key: 'yesterday', label: 'Yesterday' }, { key: 'week', label: 'Last 7 days' },
-  { key: 'month', label: 'Last 30 days' }, { key: 'any', label: 'Any date' },
+  { key: 'today', get label() { return tr('common.today'); } }, { key: 'yesterday', get label() { return tr('ops.floorLogic.yesterday'); } }, { key: 'week', get label() { return tr('ops.floorLogic.last_7_days'); } },
+  { key: 'month', get label() { return tr('ops.floorLogic.last_30_days'); } }, { key: 'any', get label() { return tr('ops.floorLogic.any_date'); } },
 ];
 
 export function datePresetRange(preset: DatePreset, now = new Date()): { from?: string; to?: string } {
@@ -268,8 +269,8 @@ export function datePresetRange(preset: DatePreset, now = new Date()): { from?: 
 export type OrderStatusFilter = 'all' | 'active' | 'placed' | 'completed' | 'cancelled' | 'merged';
 /** `optional` chips only show when they have bills (or are selected). */
 export const ORDER_STATUS_FILTERS: { key: OrderStatusFilter; label: string; optional?: boolean }[] = [
-  { key: 'all', label: 'All' }, { key: 'active', label: 'Running' }, { key: 'placed', label: 'New' },
-  { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' }, { key: 'merged', label: 'Merged', optional: true },
+  { key: 'all', get label() { return tr('common.all'); } }, { key: 'active', get label() { return tr('common.running'); } }, { key: 'placed', get label() { return tr('common.new'); } },
+  { key: 'completed', get label() { return tr('common.completed'); } }, { key: 'cancelled', get label() { return tr('common.cancelled'); } }, { key: 'merged', get label() { return tr('common.merged'); }, optional: true },
 ];
 
 /** Merge a refreshed first page into a long list without dropping what the user already scrolled to. */

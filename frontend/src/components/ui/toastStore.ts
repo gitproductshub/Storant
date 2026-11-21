@@ -1,5 +1,6 @@
 /** Global toast queue. Lives apart from Overlay.tsx so Button can use it without an import cycle. */
 import { create } from 'zustand';
+import { t as tr } from '@/i18n';
 
 export type ToastTone = 'success' | 'error' | 'info' | 'warning';
 export interface ToastAction { label: string; onPress: () => void }
@@ -19,7 +20,7 @@ export const toast = {
   },
   /** Act now, offer Undo for 5 s (docs/20 §1.4): `toast.undo('Offer paused', () => resume())` */
   undo(message: string, onUndo: () => void, ms = 5000) {
-    return toast.show(message, 'success', ms, { label: 'Undo', onPress: onUndo });
+    return toast.show(message, 'success', ms, { label: tr('ui.toastStore.undo'), onPress: onUndo });
   },
   success: (m: string) => toast.show(m, 'success'),
   error: (m: string) => toast.show(m, 'error', 5000),

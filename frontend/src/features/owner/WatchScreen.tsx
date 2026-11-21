@@ -1,7 +1,7 @@
 /**
  * Owner's watch: cancelled bills, items cancelled or removed, on the house, discounts and menu changes — who did what.
  * Only the owner sees it (the server answers 403 for everyone else); nothing here can be edited or deleted.
- * Corrections go to Tallyko through "Ask Tallyko".
+ * Corrections go to Storant through "Ask Storant".
  *
  * High-volume layout (docs/20_High_Volume_UX.md): every tab, including the staff ranking, is one virtualised DataList —
  * a dense table on desktops with the summary pinned above it, cards on tablets and phones where the summary scrolls with the list.
@@ -24,9 +24,11 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import type { ThemeColors } from '@/theme/tokens';
 import { OrderDetail } from '@/features/ops/OrderDetail';
 import { presetRange, rangeLabel, rangeQuery, validateCustom, ymd, type ReportRange } from '@/features/reports/range';
-import { AskTallykoSheet, RequestsCard } from './AskTallyko';
+import { AskStorantSheet, RequestsCard } from './AskStorant';
 import { filterByStaff, plural, rankStaff, staffLoss, staffOptions, totalLoss } from './watchUtils';
 import { viewCount, watchRows, type WatchRow, type WatchView } from './watchRows';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 type Period = 'today' | '7d' | '30d';
@@ -34,20 +36,20 @@ type Period = 'today' | '7d' | '30d';
 const EVENTS_PAGE = 500;
 
 const PERIODS: { id: Period; label: string }[] = [
-  { id: 'today', label: 'Today' },
-  { id: '7d', label: '7 days' },
-  { id: '30d', label: '30 days' },
+  { id: 'today', get label() { return tr('common.today'); } },
+  { id: '7d', get label() { return tr('common.7_days'); } },
+  { id: '30d', get label() { return tr('common.30_days'); } },
 ];
 
 const TABS: { id: WatchView; label: string; short: string; icon: IconName }[] = [
-  { id: 'staff', label: 'By staff', short: 'Staff', icon: 'people-outline' },
-  { id: 'bills', label: 'Cancelled bills', short: 'Bills', icon: 'close-circle-outline' },
-  { id: 'items', label: 'Removed & cancelled items', short: 'Items', icon: 'remove-circle-outline' },
-  { id: 'comps', label: 'On the house', short: 'Free', icon: 'gift-outline' },
-  { id: 'discounts', label: 'Discounts', short: 'Discounts', icon: 'pricetag-outline' },
-  { id: 'menu', label: 'Menu changes', short: 'Menu', icon: 'create-outline' },
-  { id: 'timeline', label: 'Timeline', short: 'Timeline', icon: 'time-outline' },
-  { id: 'requests', label: 'Your requests', short: 'Requests', icon: 'chatbubbles-outline' },
+  { id: 'staff', get label() { return tr('owner.WatchScreen.by_staff'); }, short: 'Staff', icon: 'people-outline' },
+  { id: 'bills', get label() { return tr('owner.WatchScreen.cancelled_bills'); }, short: 'Bills', icon: 'close-circle-outline' },
+  { id: 'items', get label() { return tr('owner.WatchScreen.removed_cancelled_items'); }, short: 'Items', icon: 'remove-circle-outline' },
+  { id: 'comps', get label() { return tr('common.on_the_house'); }, short: 'Free', icon: 'gift-outline' },
+  { id: 'discounts', get label() { return tr('owner.WatchScreen.discounts'); }, short: 'Discounts', icon: 'pricetag-outline' },
+  { id: 'menu', get label() { return tr('owner.WatchScreen.menu_changes'); }, short: 'Menu', icon: 'create-outline' },
+  { id: 'timeline', get label() { return tr('owner.WatchScreen.timeline'); }, short: 'Timeline', icon: 'time-outline' },
+  { id: 'requests', get label() { return tr('owner.WatchScreen.your_requests'); }, short: 'Requests', icon: 'chatbubbles-outline' },
 ];
 
 const KIND_ICON: Record<string, { icon: IconName; tone: BadgeTone }> = {
@@ -80,8 +82,8 @@ export default function WatchScreen() {
   const role = useAuth((s) => s.session?.role ?? null);
   if (role !== 'owner') {
     return (
-      <Screen title="Owner's watch">
-        <EmptyState icon="lock-closed-outline" title="Only the owner can see this page" message="Ask the owner of the business if you need something from here." />
+      <Screen title={tr('common.owner_s_watch')}>
+        <EmptyState icon="lock-closed-outline" title={tr('owner.WatchScreen.only_the_owner_can_see_this_page')} message={tr('owner.WatchScreen.ask_the_owner_of_the_business_if_you_need')} />
       </Screen>
     );
   }
@@ -160,7 +162,7 @@ function OwnerWatchView() {
   const staffName = staffId ? people.find((p) => p.id === staffId)?.name ?? 'Staff member' : null;
 
   const staffMenu: ActionMenuItem[] = [
-    { key: 'all', label: 'Everyone', icon: 'people-outline', selected: !staffId, onPress: () => setStaffId(null) },
+    { key: 'all', label: tr('common.everyone'), icon: 'people-outline', selected: !staffId, onPress: () => setStaffId(null) },
     ...people.map((p) => ({ key: p.id, label: p.name, icon: 'person-outline' as const, selected: staffId === p.id, onPress: () => setStaffId(p.id) })),
   ];
 
@@ -171,26 +173,26 @@ function OwnerWatchView() {
           {PERIODS.map((p) => (
             <Chip key={p.id} label={p.label} selected={range.preset === p.id && !customOpen} onPress={() => pickPreset(p.id)} />
           ))}
-          <Chip label={range.preset === 'custom' && !customOpen ? rangeLabel(range) : 'Custom'} icon="calendar-outline"
+          <Chip label={range.preset === 'custom' && !customOpen ? rangeLabel(range) : tr('common.custom')} icon="calendar-outline"
             selected={range.preset === 'custom' || customOpen} onPress={() => (customOpen ? setCustomOpen(false) : openCustom())} />
         </ScrollView>
         {people.length ? (
-          <ActionMenu items={staffMenu} title="Show actions by" align="end"
-            trigger={(open) => <Button title={staffName ?? 'Everyone'} icon={staffId ? 'person' : 'people-outline'} iconRight="chevron-down"
-              variant={staffId ? 'tonal' : 'outline'} onPress={open} accessibilityLabel="Filter by staff member" />} />
+          <ActionMenu items={staffMenu} title={tr('owner.WatchScreen.show_actions_by')} align="end"
+            trigger={(open) => <Button title={staffName ?? tr('common.everyone')} icon={staffId ? 'person' : 'people-outline'} iconRight="chevron-down"
+              variant={staffId ? 'tonal' : 'outline'} onPress={open} accessibilityLabel={tr('owner.WatchScreen.filter_by_staff_member')} />} />
         ) : null}
       </View>
       {customOpen ? (
         <View style={[styles.custom, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Input label="From" value={fromText} onChangeText={(v) => { setFromText(v); setCustomErrors((e) => ({ ...e, from: undefined })); }}
-            placeholder="YYYY-MM-DD" error={customErrors.from} containerStyle={styles.dateInput} maxLength={10} autoCorrect={false}
+          <Input label={tr('common.from')} value={fromText} onChangeText={(v) => { setFromText(v); setCustomErrors((e) => ({ ...e, from: undefined })); }}
+            placeholder={tr('common.yyyy_mm_dd')} error={customErrors.from} containerStyle={styles.dateInput} maxLength={10} autoCorrect={false}
             keyboardType="numbers-and-punctuation" icon="calendar-outline" />
-          <Input label="To" value={toText} onChangeText={(v) => { setToText(v); setCustomErrors((e) => ({ ...e, to: undefined })); }}
-            placeholder="YYYY-MM-DD" error={customErrors.to} containerStyle={styles.dateInput} maxLength={10} autoCorrect={false}
+          <Input label={tr('common.to')} value={toText} onChangeText={(v) => { setToText(v); setCustomErrors((e) => ({ ...e, to: undefined })); }}
+            placeholder={tr('common.yyyy_mm_dd')} error={customErrors.to} containerStyle={styles.dateInput} maxLength={10} autoCorrect={false}
             keyboardType="numbers-and-punctuation" icon="calendar-outline" returnKeyType="go" onSubmitEditing={applyCustom} />
           <View style={styles.customActions}>
-            <Button title="Cancel" variant="ghost" onPress={() => setCustomOpen(false)} />
-            <Button title="Apply" icon="checkmark" onPress={applyCustom} />
+            <Button title={tr('common.cancel')} variant="ghost" onPress={() => setCustomOpen(false)} />
+            <Button title={tr('common.apply')} icon="checkmark" onPress={applyCustom} />
           </View>
         </View>
       ) : null}
@@ -211,7 +213,7 @@ function OwnerWatchView() {
 
   const columns = useMemo<DataColumn<WatchRow>[]>(() => [
     {
-      key: 'title', title: 'What', flex: 1.6, minWidth: 180,
+      key: 'title', title: tr('owner.WatchScreen.what'), flex: 1.6, minWidth: 180,
       render: (r) => (
         <View style={styles.inline}>
           {kindIcon(r.kind, 26)}
@@ -220,10 +222,10 @@ function OwnerWatchView() {
         </View>
       ),
     },
-    { key: 'detail', title: 'Reason / change', flex: 2, minWidth: 160, render: (r) => <Text variant="small" tone="muted" numberOfLines={1}>{r.detail || '—'}</Text> },
-    { key: 'by', title: 'By', width: 140, value: (r) => r.by ?? '—' },
-    { key: 'at', title: 'When', width: 150, hideBelow: 900, value: (r) => (r.at ? formatDateTime(r.at) : '—') },
-    { key: 'amount', title: 'Amount', width: 110, numeric: true, render: (r) => (r.amount !== null ? <Text variant="money">{money(r.amount, sym)}</Text> : <Text tone="subtle">—</Text>) },
+    { key: 'detail', title: tr('owner.WatchScreen.reason_change'), flex: 2, minWidth: 160, render: (r) => <Text variant="small" tone="muted" numberOfLines={1}>{r.detail || '—'}</Text> },
+    { key: 'by', title: tr('owner.WatchScreen.by'), width: 140, value: (r) => r.by ?? '—' },
+    { key: 'at', title: tr('owner.WatchScreen.when'), width: 150, hideBelow: 900, value: (r) => (r.at ? formatDateTime(r.at) : '—') },
+    { key: 'amount', title: tr('common.amount'), width: 110, numeric: true, render: (r) => (r.amount !== null ? <Text variant="money">{money(r.amount, sym)}</Text> : <Text tone="subtle">—</Text>) },
   ], [colors, sym]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const renderCard = (r: WatchRow) => (
@@ -244,12 +246,12 @@ function OwnerWatchView() {
   const cellCount = (count: number, value: number, what: string) => (count ? `${plural(count, what)} · ${money(value, sym, true)}` : '—');
   const staffColumns = useMemo<DataColumn<WatchStaffRow>[]>(() => [
     { key: 'rank', title: '#', width: 52, render: (r) => <Rank n={staffRows.indexOf(r) + 1} /> },
-    { key: 'name', title: 'Staff', flex: 1.4, minWidth: 140, render: (r) => <Text variant="bodyStrong" numberOfLines={1}>{r.name}</Text> },
-    { key: 'bills', title: 'Cancelled bills', flex: 1, minWidth: 120, hideBelow: 760, value: (r) => cellCount(r.cancelled_bills, r.cancelled_bills_value, 'bill') },
-    { key: 'after', title: 'After kitchen', flex: 1, minWidth: 120, hideBelow: 900, value: (r) => cellCount(r.items_cancelled, r.items_cancelled_value, 'item') },
-    { key: 'before', title: 'Before kitchen', flex: 1, minWidth: 120, hideBelow: 1040, value: (r) => cellCount(r.items_removed, r.items_removed_value, 'item') },
-    { key: 'disc', title: 'Discounts', flex: 1, minWidth: 110, hideBelow: 1180, value: (r) => cellCount(r.discounts, r.discount_value, 'bill') },
-    { key: 'total', title: 'Taken off', width: 120, numeric: true, render: (r) => { const l = staffLoss(r); return <Text variant="money" tone={l ? 'danger' : 'muted'}>{money(l, sym)}</Text>; } },
+    { key: 'name', title: tr('common.staff'), flex: 1.4, minWidth: 140, render: (r) => <Text variant="bodyStrong" numberOfLines={1}>{r.name}</Text> },
+    { key: 'bills', title: tr('owner.WatchScreen.cancelled_bills'), flex: 1, minWidth: 120, hideBelow: 760, value: (r) => cellCount(r.cancelled_bills, r.cancelled_bills_value, 'bill') },
+    { key: 'after', title: tr('owner.WatchScreen.after_kitchen'), flex: 1, minWidth: 120, hideBelow: 900, value: (r) => cellCount(r.items_cancelled, r.items_cancelled_value, 'item') },
+    { key: 'before', title: tr('owner.WatchScreen.before_kitchen'), flex: 1, minWidth: 120, hideBelow: 1040, value: (r) => cellCount(r.items_removed, r.items_removed_value, 'item') },
+    { key: 'disc', title: tr('owner.WatchScreen.discounts'), flex: 1, minWidth: 110, hideBelow: 1180, value: (r) => cellCount(r.discounts, r.discount_value, 'bill') },
+    { key: 'total', title: tr('owner.WatchScreen.taken_off'), width: 120, numeric: true, render: (r) => { const l = staffLoss(r); return <Text variant="money" tone={l ? 'danger' : 'muted'}>{money(l, sym)}</Text>; } },
   ], [staffRows, sym]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const renderStaffCard = (r: WatchStaffRow) => {
@@ -265,7 +267,7 @@ function OwnerWatchView() {
               r.items_cancelled ? `${plural(r.items_cancelled, 'item')} after kitchen` : null,
               r.items_removed ? `${plural(r.items_removed, 'item')} before kitchen` : null,
               r.discounts ? plural(r.discounts, 'discount') : null,
-            ].filter(Boolean).join(' · ') || 'No changes'}
+            ].filter(Boolean).join(' · ') || tr('owner.WatchScreen.no_changes')}
           </Text>
         </View>
         <Text variant="money" tone={loss ? 'danger' : 'muted'}>{money(loss, sym)}</Text>
@@ -295,8 +297,8 @@ function OwnerWatchView() {
   const errorBanner = watch.error && view ? (
     <View style={[styles.banner, { backgroundColor: colors.warningSoft }]}>
       <Ionicons name="cloud-offline-outline" size={16} color={colors.warningText} />
-      <Text variant="small" tone="warning" style={{ flex: 1 }} numberOfLines={2}>{online ? `Could not refresh: ${watch.error}` : "You're offline"} — showing what was loaded earlier.</Text>
-      <Button title="Retry" size="sm" variant="ghost" onPress={refresh} />
+      <Text variant="small" tone="warning" style={{ flex: 1 }} numberOfLines={2}>{online ? tr('owner.WatchScreen.could_not_refresh_error', { error: watch.error }) : tr('common.you_re_offline')} {tr('owner.WatchScreen.showing_what_was_loaded_earlier')}</Text>
+      <Button title={tr('common.retry')} size="sm" variant="ghost" onPress={refresh} />
     </View>
   ) : null;
 
@@ -311,16 +313,16 @@ function OwnerWatchView() {
 
   const emptyFor = (t: WatchView): { icon: IconName; title: string; message?: string } => {
     switch (t) {
-      case 'staff': return { icon: 'checkmark-circle-outline', title: 'Nobody took anything off bills', message: 'Cancellations, removed items and discounts by each person show up here.' };
-      case 'bills': return { icon: 'checkmark-circle-outline', title: 'No cancelled bills' };
-      case 'items': return { icon: 'checkmark-circle-outline', title: 'No items cancelled or removed' };
-      case 'comps': return { icon: 'gift-outline', title: 'Nothing given on the house' };
+      case 'staff': return { icon: 'checkmark-circle-outline', title: tr('owner.WatchScreen.nobody_took_anything_off_bills'), message: tr('owner.WatchScreen.cancellations_removed_items_and_discounts') };
+      case 'bills': return { icon: 'checkmark-circle-outline', title: tr('owner.WatchScreen.no_cancelled_bills') };
+      case 'items': return { icon: 'checkmark-circle-outline', title: tr('owner.WatchScreen.no_items_cancelled_or_removed') };
+      case 'comps': return { icon: 'gift-outline', title: tr('owner.WatchScreen.nothing_given_on_the_house') };
       case 'discounts': return {
-        icon: 'pricetag-outline', title: 'No discounts given',
-        message: totals ? `${plural(totals.discounted_bills, 'paid bill')} had a manual discount (offers and coupons not included).` : undefined,
+        icon: 'pricetag-outline', title: tr('owner.WatchScreen.no_discounts_given'),
+        message: totals ? tr('owner.WatchScreen.plural_had_a_manual_discount_offers_and', { plural: plural(totals.discounted_bills, 'paid bill') }) : undefined,
       };
-      case 'menu': return { icon: 'create-outline', title: 'No menu changes', message: 'Price edits and items taken off the menu show up here.' };
-      default: return { icon: 'time-outline', title: 'Nothing happened', message: 'Cancellations, removals, discounts, splits, reprints and menu changes appear here.' };
+      case 'menu': return { icon: 'create-outline', title: tr('owner.WatchScreen.no_menu_changes'), message: tr('owner.WatchScreen.price_edits_and_items_taken_off_the_menu') };
+      default: return { icon: 'time-outline', title: tr('owner.WatchScreen.nothing_happened'), message: tr('owner.WatchScreen.cancellations_removals_discounts_splits') };
     }
   };
 
@@ -383,16 +385,16 @@ function OwnerWatchView() {
 
   return (
     <Screen
-      title="Owner's watch"
-      subtitle={`${rangeLabel(range)}${staffName ? ` · ${staffName}` : ''} · only you can see this; nothing here can be edited`}
+      title={tr('common.owner_s_watch')}
+      subtitle={tr('owner.WatchScreen.rangelabel_v_only_you_can_see_this', { rangeLabel: rangeLabel(range), v: staffName ? ` · ${staffName}` : '' })}
       scroll={false}
       contentStyle={{ flex: 1, paddingBottom: 16, gap: 12 }}
       maxWidth={isDesktop ? 1680 : 1280}
       toolbar={toolbar}
       actions={(
         <>
-          {!isPhone ? <IconButton icon="refresh" accessibilityLabel="Refresh" onPress={refresh} disabled={watch.loading} /> : null}
-          <Button title={isPhone ? 'Ask' : 'Ask Tallyko'} icon="chatbubbles-outline" variant="outline" onPress={() => setAsking(true)} />
+          {!isPhone ? <IconButton icon="refresh" accessibilityLabel={tr('common.refresh')} onPress={refresh} disabled={watch.loading} /> : null}
+          <Button title={isPhone ? tr('owner.WatchScreen.ask') : tr('owner.WatchScreen.ask_brand', { brand: brand.name })} icon="chatbubbles-outline" variant="outline" onPress={() => setAsking(true)} />
         </>
       )}
     >
@@ -401,11 +403,11 @@ function OwnerWatchView() {
         {list}
       </View>
 
-      <Sheet visible={!!openBill} onClose={() => setOpenBill(null)} width={620} title="Bill details"
-        subtitle="Removed items are listed on the owner’s watch, not on the bill.">
+      <Sheet visible={!!openBill} onClose={() => setOpenBill(null)} width={620} title={tr('owner.WatchScreen.bill_details')}
+        subtitle={tr('owner.WatchScreen.removed_items_are_listed_on_the_owner_s')}>
         {openBill ? <OrderDetail key={openBill} orderId={openBill} onClose={() => setOpenBill(null)} /> : null}
       </Sheet>
-      <AskTallykoSheet visible={asking} onClose={() => setAsking(false)} cancelled={watch.data?.cancelled_bills ?? []} symbol={sym}
+      <AskStorantSheet visible={asking} onClose={() => setAsking(false)} cancelled={watch.data?.cancelled_bills ?? []} symbol={sym}
         onSent={(r: OwnerRequest) => requests.setData([r, ...(requests.data ?? [])])} />
     </Screen>
   );
@@ -420,17 +422,17 @@ function Summary({ totals, sym, staffName, label, loading, tab, onTab }: {
   const [width, setWidth] = useState(0);
   const lost = totalLoss(totals);
   const tiles: { tab: WatchView; label: string; value: string; hint: string; icon: IconName; tone: BadgeTone; zero: boolean }[] = [
-    { tab: 'bills', label: 'Cancelled bills', value: money(totals.cancelled_bills_value, sym, true), hint: plural(totals.cancelled_bills, 'bill'),
+    { tab: 'bills', label: tr('owner.WatchScreen.cancelled_bills'), value: money(totals.cancelled_bills_value, sym, true), hint: plural(totals.cancelled_bills, 'bill'),
       icon: 'close-circle-outline', tone: 'danger', zero: !totals.cancelled_bills },
-    { tab: 'items', label: 'After kitchen', value: money(totals.items_cancelled_value, sym, true), hint: `${plural(totals.items_cancelled, 'item')} cancelled`,
+    { tab: 'items', label: tr('owner.WatchScreen.after_kitchen'), value: money(totals.items_cancelled_value, sym, true), hint: tr('owner.WatchScreen.plural_cancelled', { plural: plural(totals.items_cancelled, 'item') }),
       icon: 'flame-outline', tone: 'danger', zero: !totals.items_cancelled },
-    { tab: 'items', label: 'Before kitchen', value: money(totals.items_removed_value, sym, true), hint: `${plural(totals.items_removed, 'item')} removed`,
+    { tab: 'items', label: tr('owner.WatchScreen.before_kitchen'), value: money(totals.items_removed_value, sym, true), hint: tr('owner.WatchScreen.plural_removed', { plural: plural(totals.items_removed, 'item') }),
       icon: 'remove-circle-outline', tone: 'warning', zero: !totals.items_removed },
-    { tab: 'comps', label: 'On the house', value: money(totals.on_the_house_value, sym, true), hint: plural(totals.on_the_house, 'item'),
+    { tab: 'comps', label: tr('common.on_the_house'), value: money(totals.on_the_house_value, sym, true), hint: plural(totals.on_the_house, 'item'),
       icon: 'gift-outline', tone: 'accent', zero: !totals.on_the_house },
-    { tab: 'discounts', label: 'Discounts', value: money(totals.discount_value, sym, true), hint: plural(totals.discounted_bills, 'bill'),
+    { tab: 'discounts', label: tr('owner.WatchScreen.discounts'), value: money(totals.discount_value, sym, true), hint: plural(totals.discounted_bills, 'bill'),
       icon: 'pricetag-outline', tone: 'info', zero: !totals.discounted_bills },
-    { tab: 'menu', label: 'Menu changes', value: String(totals.menu_changes), hint: 'price & item edits',
+    { tab: 'menu', label: tr('owner.WatchScreen.menu_changes'), value: String(totals.menu_changes), hint: tr('owner.WatchScreen.price_item_edits'),
       icon: 'create-outline', tone: 'primary', zero: !totals.menu_changes },
   ];
   // Headline + 6 tiles: one row on wide desktops, 4 / 3 / 2 per row as space shrinks (never a lone tile)
@@ -442,7 +444,7 @@ function Summary({ totals, sym, staffName, label, loading, tab, onTab }: {
   return (
     <View style={styles.kpis} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <View style={[styles.kpi, { width: headlineW ?? '100%', borderColor: colors.border, backgroundColor: colors.surface, borderLeftWidth: 4, borderLeftColor: lost ? colors.danger : colors.success }]}>
-        <Text variant="caption" tone="muted" numberOfLines={1}>{staffName ? `Taken off by ${staffName}` : 'Taken off bills'}{loading ? ' · updating…' : ''}</Text>
+        <Text variant="caption" tone="muted" numberOfLines={1}>{staffName ? tr('owner.WatchScreen.taken_off_by_staffname', { staffName }) : tr('owner.WatchScreen.taken_off_bills')}{loading ? tr('owner.WatchScreen.updating') : ''}</Text>
         <Text variant="h1" tone={lost ? 'danger' : 'success'} numberOfLines={1} style={styles.num}>{money(lost, sym, true)}</Text>
         <Text variant="caption" tone="subtle" numberOfLines={1}>{label}</Text>
       </View>
@@ -451,7 +453,7 @@ function Summary({ totals, sym, staffName, label, loading, tab, onTab }: {
         const active = tab === t.tab;
         return (
           <Pressable key={t.label} onPress={() => onTab(t.tab)} accessibilityRole="button" accessibilityState={{ selected: active }}
-            accessibilityLabel={`${t.label}: ${t.value}, ${t.hint}. Show list`}
+            accessibilityLabel={tr('owner.WatchScreen.label_value_hint_show_list', { label: t.label, value: t.value, hint: t.hint })}
             style={({ hovered }: any) => [styles.kpi, {
               width: tileW ?? '47%', borderColor: active ? colors.primary : colors.border,
               backgroundColor: hovered ? colors.surfaceAlt : colors.surface,

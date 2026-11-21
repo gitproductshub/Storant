@@ -9,6 +9,7 @@ import { FormSection, Hairline } from '@/features/settings/components';
 import { useApi } from '@/hooks/useApi';
 import { ago, formatDateTime } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
+import { t } from '@/i18n';
 
 function deviceIcon(device: string): React.ComponentProps<typeof Ionicons>['name'] {
   if (/android|iphone|ipad|app/i.test(device)) return 'phone-portrait-outline';
@@ -27,15 +28,15 @@ function DeviceRow({ s, busy, onSignOut }: { s: DeviceSession; busy: boolean; on
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>{s.device || 'Unknown device'}</Text>
-          {s.current ? <Badge label="This device" tone="primary" /> : null}
+          <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>{s.device || t('subscription.DevicesSection.unknown_device')}</Text>
+          {s.current ? <Badge label={t('common.this_device')} tone="primary" /> : null}
         </View>
         <Text variant="small" tone="muted" numberOfLines={1}>
-          {s.current ? 'Active now' : `Last active ${seenText === 'just now' ? 'just now' : `${seenText} ago`}`}
-          {s.ip ? ` · ${s.ip}` : ''} · Signed in {formatDateTime(s.created_at)}
+          {s.current ? t('subscription.DevicesSection.active_now') : t('subscription.DevicesSection.last_active_v', { v: seenText === 'just now' ? t('subscription.DevicesSection.just_now') : t('subscription.DevicesSection.seentext_ago', { seenText }) })}
+          {s.ip ? ` · ${s.ip}` : ''} {t('subscription.DevicesSection.signed_in_formatdatetime', { formatDateTime: formatDateTime(s.created_at) })}
         </Text>
       </View>
-      {!s.current ? <Button title="Sign out" size="sm" variant="secondary" onPress={onSignOut} loading={busy} /> : null}
+      {!s.current ? <Button title={t('common.sign_out')} size="sm" variant="secondary" onPress={onSignOut} loading={busy} /> : null}
     </View>
   );
 }
@@ -48,9 +49,9 @@ export function DevicesSection({ refreshKey = 0 }: { refreshKey?: number }) {
 
   const signOutDevice = async (s: DeviceSession) => {
     const ok = await confirm({
-      title: 'Sign out this device?',
-      message: `${s.device || 'This device'} will be signed out right away. Bills it saved offline stay on it and sync after someone signs in there again.`,
-      confirmLabel: 'Sign out device',
+      title: t('subscription.DevicesSection.sign_out_this_device'),
+      message: t('subscription.DevicesSection.v_will_be_signed_out_right_away_bills_it', { v: s.device || t('common.this_device') }),
+      confirmLabel: t('subscription.DevicesSection.sign_out_device'),
       danger: true,
     });
     if (!ok) return;
@@ -58,7 +59,7 @@ export function DevicesSection({ refreshKey = 0 }: { refreshKey?: number }) {
     try {
       await sessionsApi.signOutDevice(s.id);
       list.setData((prev) => (prev ?? []).filter((x) => x.id !== s.id));
-      toast.success('Device signed out');
+      toast.success(t('subscription.DevicesSection.device_signed_out'));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -68,9 +69,9 @@ export function DevicesSection({ refreshKey = 0 }: { refreshKey?: number }) {
 
   const signOutOthers = async () => {
     const ok = await confirm({
-      title: `Sign out ${others.length} other device${others.length === 1 ? '' : 's'}?`,
-      message: 'Every other device using your login is signed out right away. This device stays signed in.',
-      confirmLabel: 'Sign out others',
+      title: t('subscription.DevicesSection.sign_out_length_other_device_v', { length: others.length, v: others.length === 1 ? '' : 's' }),
+      message: t('subscription.DevicesSection.every_other_device_using_your_login_is'),
+      confirmLabel: t('subscription.DevicesSection.sign_out_others'),
       danger: true,
     });
     if (!ok) return;
@@ -84,17 +85,17 @@ export function DevicesSection({ refreshKey = 0 }: { refreshKey?: number }) {
       }
     }
     setBusyId(null);
-    if (failed) toast.error(`${failed} device${failed === 1 ? '' : 's'} could not be signed out. Try again.`);
-    else toast.success('Other devices signed out');
+    if (failed) toast.error(t('subscription.DevicesSection.failed_device_v_could_not_be_signed_out', { failed, v: failed === 1 ? '' : 's' }));
+    else toast.success(t('subscription.DevicesSection.other_devices_signed_out'));
     void list.silentReload();
   };
 
   return (
-    <FormSection title="Signed-in devices" description="Where your login is signed in. Changing your password signs out every other device."
-      right={others.length > 1 ? <Button title="Sign out all others" size="sm" variant="ghost" onPress={signOutOthers} loading={busyId === 'others'} /> : undefined}>
+    <FormSection title={t('subscription.DevicesSection.signed_in_devices')} description={t('subscription.DevicesSection.where_your_login_is_signed_in_changing')}
+      right={others.length > 1 ? <Button title={t('subscription.DevicesSection.sign_out_all_others')} size="sm" variant="ghost" onPress={signOutOthers} loading={busyId === 'others'} /> : undefined}>
       {list.loading && !list.data ? <Loading /> : null}
       {list.error && !list.data ? <ErrorState message={list.error} onRetry={list.reload} /> : null}
-      {list.data && !sessions.length ? <Text tone="muted">No other devices are signed in.</Text> : null}
+      {list.data && !sessions.length ? <Text tone="muted">{t('subscription.DevicesSection.no_other_devices_are_signed_in')}</Text> : null}
       {sessions.map((s, i) => (
         <View key={s.id} style={{ gap: 10 }}>
           {i > 0 ? <Hairline /> : null}

@@ -34,10 +34,11 @@ import {
 import { useFloorAges } from './useFloorAges';
 import { useDevicePref, useLivePoll, useNow } from '@/hooks/live';
 import { AgeChip, GroupTitle, LiveStatus, WaiterAvatar, useContextMenu } from './parts';
+import { t as tr } from '@/i18n';
 
 const POLL_MS = 8_000;
 const STATE_TONE: Record<TableState, StatusTone> = { free: 'neutral', new: 'pending', occupied: 'progress', ready: 'ready', payment: 'waiting' };
-const STATE_LABEL: Record<TableState, string> = { free: 'Free', new: 'New QR order', occupied: 'Running', ready: 'Food ready', payment: 'Waiting payment' };
+const STATE_LABEL: Record<TableState, string> = { get free() { return tr('common.free'); }, get new() { return tr('ops.TablesScreen.new_qr_order'); }, get occupied() { return tr('common.running'); }, get ready() { return tr('ops.TablesScreen.food_ready'); }, get payment() { return tr('ops.TablesScreen.waiting_payment'); } };
 
 type Size = 'compact' | 'large';
 
@@ -118,14 +119,14 @@ export default function TablesScreen() {
 
   /** One tap: a single bill opens straight away; several bills let Billing ask which one; a free table starts a bill. */
   const open = useCallback((t: TableInfo) => {
-    if (!canOrder) { toast.info('Your role can view tables but not take orders'); return; }
+    if (!canOrder) { toast.info(tr('ops.TablesScreen.your_role_can_view_tables_but_not_take')); return; }
     const bills = billsOf(t);
     if (bills.length === 1) openBill(bills[0]!);
     else router.push({ pathname: '/pos', params: { table: t.id } });
   }, [canOrder, openBill]);
 
   const printTableBill = useCallback(async (t: TableInfo, bill: TableBill) => {
-    toast.info('Preparing bill…');
+    toast.info(tr('ops.TablesScreen.preparing_bill'));
     try {
       const order = await ordersApi.get(bill.id);
       await printBill({ ...order, table_label: order.table_label ?? t.table_number }, settings);
@@ -136,14 +137,14 @@ export default function TablesScreen() {
 
   const removeTable = useCallback(async (t: TableInfo) => {
     const ok = await confirm({
-      title: `Remove table ${t.table_number}?`,
-      message: 'It disappears from the floor view and its QR code stops working. Past bills are kept.',
-      confirmLabel: 'Remove table', danger: true,
+      title: tr('ops.TablesScreen.remove_table_table_number', { table_number: t.table_number }),
+      message: tr('ops.TablesScreen.it_disappears_from_the_floor_view_and_its'),
+      confirmLabel: tr('ops.TablesScreen.remove_table'), danger: true,
     });
     if (!ok) return;
     try {
       await tablesApi.remove(t.id);
-      toast.success(`Table ${t.table_number} removed`);
+      toast.success(tr('ops.TablesScreen.table_table_number_removed', { table_number: t.table_number }));
       void silentReload();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -168,46 +169,46 @@ export default function TablesScreen() {
         const progress = kitchenProgress(b.kitchen);
         items.push({
           key: `open-${b.id}`, group: 'bills', icon: b.status === 'placed' ? 'notifications-outline' : 'receipt-outline',
-          label: b.status === 'placed' ? `Review new QR order${bills.length > 1 ? ` (${billName(b, i)})` : ''}` : bills.length > 1 ? `Open ${billName(b, i)}` : 'Open bill',
+          label: b.status === 'placed' ? tr('ops.TablesScreen.review_new_qr_order_v', { v: bills.length > 1 ? ` (${billName(b, i)})` : '' }) : bills.length > 1 ? tr('ops.TablesScreen.open_billname', { billName: billName(b, i) }) : tr('ops.TablesScreen.open_bill'),
           description: [money(b.total_amount, sym), progress?.label, b.guests ? `${b.guests} guests` : null].filter(Boolean).join(' · '),
           onPress: () => openBill(b),
         });
       });
       items.push(busy
-        ? { key: 'separate', group: 'bills', icon: 'add-circle-outline', label: 'Start a separate bill', description: 'Another party pays on its own',
+        ? { key: 'separate', group: 'bills', icon: 'add-circle-outline', label: tr('ops.TablesScreen.start_a_separate_bill'), description: tr('ops.TablesScreen.another_party_pays_on_its_own'),
           onPress: () => router.push({ pathname: '/pos', params: { table: t.id, bill: 'new' } }) }
-        : { key: 'start', group: 'bills', icon: 'add-circle-outline', label: 'Start order', onPress: () => open(t) });
+        : { key: 'start', group: 'bills', icon: 'add-circle-outline', label: tr('ops.TablesScreen.start_order'), onPress: () => open(t) });
       if (busy) {
         const movable = bills.some((b) => b.status !== 'placed');
         const otherBills = tables.some((x) => x.id !== t.id && billsOf(x).length > 0) || bills.length > 1;
-        items.push({ key: 'move', group: 'floor', icon: 'swap-horizontal', label: bills.length > 1 ? 'Move a bill…' : 'Move to another table…', shortcut: 'M',
-          disabled: tables.length < 2 || !movable, disabledReason: tables.length < 2 ? 'No other tables' : 'Accept the QR order first',
+        items.push({ key: 'move', group: 'floor', icon: 'swap-horizontal', label: bills.length > 1 ? tr('ops.TablesScreen.move_a_bill') : tr('ops.TablesScreen.move_to_another_table'), shortcut: 'M',
+          disabled: tables.length < 2 || !movable, disabledReason: tables.length < 2 ? tr('ops.TablesScreen.no_other_tables_x') : tr('ops.TablesScreen.accept_the_qr_order_first_x'),
           onPress: () => setMoveFrom({ table: t, mode: 'move' }) });
-        items.push({ key: 'merge', group: 'floor', icon: 'git-merge-outline', label: 'Merge into another bill…',
-          disabled: !otherBills || !movable, disabledReason: !movable ? 'Accept the QR order first' : 'No other running bill to merge into',
+        items.push({ key: 'merge', group: 'floor', icon: 'git-merge-outline', label: tr('ops.TablesScreen.merge_into_another_bill'),
+          disabled: !otherBills || !movable, disabledReason: !movable ? tr('ops.TablesScreen.accept_the_qr_order_first_x') : tr('ops.TablesScreen.no_other_running_bill_to_merge_into_x'),
           onPress: () => setMoveFrom({ table: t, mode: 'merge' }) });
         bills.filter((b) => b.status !== 'placed').forEach((b, i) => {
-          items.push({ key: `print-${b.id}`, group: 'floor', icon: 'print-outline', label: bills.length > 1 ? `Print ${billName(b, i)}` : 'Print bill', onPress: () => void printTableBill(t, b) });
+          items.push({ key: `print-${b.id}`, group: 'floor', icon: 'print-outline', label: bills.length > 1 ? tr('ops.TablesScreen.print_billname', { billName: billName(b, i) }) : tr('common.print_bill'), onPress: () => void printTableBill(t, b) });
         });
       }
     }
     if (manager) {
-      items.push({ key: 'waiter', group: 'manage', icon: 'person-outline', label: 'Assign waiter…',
+      items.push({ key: 'waiter', group: 'manage', icon: 'person-outline', label: tr('ops.TablesScreen.assign_waiter'),
         description: t.assigned_staff_name ?? undefined, onPress: () => setWaiterFor(t) });
-      items.push({ key: 'qr', group: 'manage', icon: 'qr-code-outline', label: 'Print QR code', onPress: () => void printOneQr(t) });
-      items.push({ key: 'edit', group: 'manage', icon: 'create-outline', label: 'Edit table', onPress: () => { setEditing(t); setFormOpen(true); } });
-      items.push({ key: 'remove', group: 'danger', icon: 'trash-outline', label: 'Remove table…', danger: true,
-        disabled: busy, disabledReason: 'Close the running bill first', onPress: () => void removeTable(t) });
+      items.push({ key: 'qr', group: 'manage', icon: 'qr-code-outline', label: tr('ops.TablesScreen.print_qr_code'), onPress: () => void printOneQr(t) });
+      items.push({ key: 'edit', group: 'manage', icon: 'create-outline', label: tr('ops.TablesScreen.edit_table'), onPress: () => { setEditing(t); setFormOpen(true); } });
+      items.push({ key: 'remove', group: 'danger', icon: 'trash-outline', label: tr('ops.TablesScreen.remove_table_2'), danger: true,
+        disabled: busy, disabledReason: tr('ops.TablesScreen.close_the_running_bill_first_x'), onPress: () => void removeTable(t) });
     }
     return items;
   }, [byId, canOrder, manager, tables, sym, openBill, open, printTableBill, printOneQr, removeTable]);
 
   if (settings?.business_type === 'retail') {
     return (
-      <Screen title="Tables">
-        <EmptyState icon="grid-outline" title="Tables are for restaurants"
-          message="Your business is set up as a retail store, so there is no floor plan. Change the business type in Settings → Business if you serve customers at tables."
-          action={{ label: 'Go to Billing', onPress: () => router.push('/pos'), icon: 'receipt-outline' }} />
+      <Screen title={tr('common.tables')}>
+        <EmptyState icon="grid-outline" title={tr('ops.TablesScreen.tables_are_for_restaurants')}
+          message={tr('ops.TablesScreen.your_business_is_set_up_as_a_retail_store')}
+          action={{ label: tr('ops.TablesScreen.go_to_billing'), onPress: () => router.push('/pos'), icon: 'receipt-outline' }} />
       </Screen>
     );
   }
@@ -216,20 +217,20 @@ export default function TablesScreen() {
   const minTile = compact ? (isPhone ? 104 : 128) : (isPhone ? 150 : 184);
 
   const filters = [
-    { key: 'all', label: 'All', count: counts.all },
-    { key: 'free', label: 'Free', count: counts.free, icon: 'ellipse-outline' as const },
-    { key: 'occupied', label: 'Occupied', count: counts.occupied, icon: 'restaurant-outline' as const },
-    { key: 'ready', label: 'Ready to serve', count: counts.ready, icon: 'notifications-outline' as const },
-    { key: 'payment', label: 'Waiting payment', count: counts.payment, icon: 'wallet-outline' as const },
+    { key: 'all', label: tr('common.all'), count: counts.all },
+    { key: 'free', label: tr('common.free'), count: counts.free, icon: 'ellipse-outline' as const },
+    { key: 'occupied', label: tr('ops.TablesScreen.occupied'), count: counts.occupied, icon: 'restaurant-outline' as const },
+    { key: 'ready', label: tr('ops.TablesScreen.ready_to_serve'), count: counts.ready, icon: 'notifications-outline' as const },
+    { key: 'payment', label: tr('ops.TablesScreen.waiting_payment'), count: counts.payment, icon: 'wallet-outline' as const },
   ];
 
   const toolbar = tables.length ? (
     <View style={{ gap: 10 }}>
-      <FilterBar onSearch={setQuery} searchPlaceholder="Table, customer or bill no." filters={filters} value={filter}
+      <FilterBar onSearch={setQuery} searchPlaceholder={tr('ops.TablesScreen.table_customer_or_bill_no_x')} filters={filters} value={filter}
         onChange={(k) => setFilter(k as TableFilter)} />
       {realSections.length > 1 ? (
         <ChipRow>
-          <Chip label="All sections" count={`${occupied.length}/${tables.length}`} selected={!section} onPress={() => setSection(null)} icon="layers-outline" />
+          <Chip label={tr('ops.TablesScreen.all_sections')} count={`${occupied.length}/${tables.length}`} selected={!section} onPress={() => setSection(null)} icon="layers-outline" />
           {realSections.map((s) => (
             <Chip key={s.name} label={s.name} count={`${s.busy}/${s.total}`} selected={section === s.name} onPress={() => setSection(section === s.name ? null : s.name)} />
           ))}
@@ -240,9 +241,9 @@ export default function TablesScreen() {
 
   return (
     <Screen
-      title="Tables"
+      title={tr('common.tables')}
       subtitle={tables.length
-        ? `${occupied.length} of ${tables.length} occupied${occupied.length ? ` · ${money(runningTotal, sym, true)} running` : ''}${readyLines ? ` · ${readyLines} ready to serve` : ''}`
+        ? tr('ops.TablesScreen.length_of_length2_occupied_v_v2', { length: occupied.length, length2: tables.length, v: occupied.length ? tr('ops.TablesScreen.money_running', { money: money(runningTotal, sym, true) }) : '', v2: readyLines ? tr('ops.TablesScreen.readylines_ready_to_serve', { readyLines }) : '' })
         : undefined}
       onRefresh={reload}
       maxWidth={isDesktop ? 2400 : 1280}
@@ -250,18 +251,18 @@ export default function TablesScreen() {
         <>
           {tables.length && !isPhone ? (
             <IconButton icon={compact ? 'apps-outline' : 'grid-outline'} variant="secondary"
-              accessibilityLabel={compact ? 'Show large tiles' : 'Show compact tiles'} onPress={() => setSize(compact ? 'large' : 'compact')} />
+              accessibilityLabel={compact ? tr('ops.TablesScreen.show_large_tiles') : tr('ops.TablesScreen.show_compact_tiles')} onPress={() => setSize(compact ? 'large' : 'compact')} />
           ) : null}
-          {manager && tables.length ? <Button title={isPhone ? undefined : 'QR codes'} accessibilityLabel="Table QR codes" icon="qr-code-outline" variant="outline" onPress={() => setQrOpen(true)} /> : null}
-          {manager ? <Button title={isPhone ? 'Add' : 'Add table'} icon="add" onPress={() => { setEditing(null); setFormOpen(true); }} /> : null}
+          {manager && tables.length ? <Button title={isPhone ? undefined : tr('ops.TablesScreen.qr_codes')} accessibilityLabel={tr('ops.TablesScreen.table_qr_codes')} icon="qr-code-outline" variant="outline" onPress={() => setQrOpen(true)} /> : null}
+          {manager ? <Button title={isPhone ? tr('common.add') : tr('ops.TablesScreen.add_table')} icon="add" onPress={() => { setEditing(null); setFormOpen(true); }} /> : null}
         </>
       }
       toolbar={toolbar}
     >
       {manager && settings && !settings.qr_ordering_enabled && tables.length ? (
-        <Notice tone="neutral" icon="qr-code-outline" title="QR ordering is off"
-          message="Guests can scan a table QR to see your menu and order from their phone. Turn it on in Settings → Business."
-          action={{ label: 'Open Settings', onPress: () => router.push('/settings') }} />
+        <Notice tone="neutral" icon="qr-code-outline" title={tr('ops.TablesScreen.qr_ordering_is_off')}
+          message={tr('ops.TablesScreen.guests_can_scan_a_table_qr_to_see_your')}
+          action={{ label: tr('ops.TablesScreen.open_settings'), onPress: () => router.push('/settings') }} />
       ) : null}
 
       {loading && !data ? (
@@ -272,9 +273,9 @@ export default function TablesScreen() {
       {error && !data ? <ErrorState message={error} onRetry={reload} /> : null}
 
       {data && !tables.length ? (
-        <EmptyState icon="grid-outline" title="No tables yet"
-          message={manager ? 'Add your tables to see the floor at a glance, start dine-in bills with one tap and print QR codes for ordering.' : 'Ask a manager to add tables in this screen.'}
-          action={manager ? { label: 'Add tables', onPress: () => { setEditing(null); setFormOpen(true); }, icon: 'add' } : undefined} />
+        <EmptyState icon="grid-outline" title={tr('common.no_tables_yet')}
+          message={manager ? tr('ops.TablesScreen.add_your_tables_to_see_the_floor_at_a') : tr('ops.TablesScreen.ask_a_manager_to_add_tables_in_this_screen')}
+          action={manager ? { label: tr('common.add_tables'), onPress: () => { setEditing(null); setFormOpen(true); }, icon: 'add' } : undefined} />
       ) : null}
 
       {data && tables.length ? (
@@ -285,14 +286,14 @@ export default function TablesScreen() {
       ) : null}
 
       {data && tables.length && !visible.length ? (
-        <EmptyState icon="funnel-outline" title={q ? 'No table matches' : filter === 'free' ? 'Every table is busy' : 'No tables here'}
-          action={{ label: 'Show all tables', onPress: () => { setFilter('all'); setSection(null); } }} />
+        <EmptyState icon="funnel-outline" title={q ? tr('ops.TablesScreen.no_table_matches') : filter === 'free' ? tr('ops.TablesScreen.every_table_is_busy') : tr('ops.TablesScreen.no_tables_here')}
+          action={{ label: tr('ops.TablesScreen.show_all_tables'), onPress: () => { setFilter('all'); setSection(null); } }} />
       ) : null}
 
       {groups.map(([name, list]) => (
         <View key={name} style={{ gap: 8 }}>
           {realSections.length > 1 && !section ? (
-            <GroupTitle title={`${name} · ${list.filter((x) => x.s.bills.length > 0).length}/${list.length} occupied`} />
+            <GroupTitle title={tr('ops.TablesScreen.name_length_length2_occupied', { name, length: list.filter((x) => x.s.bills.length > 0).length, length2: list.length })} />
           ) : null}
           <Grid minItemWidth={minTile} gap={isPhone ? 8 : 10} maxColumns={16}>
             {list.map(({ t, s }) => (
@@ -305,27 +306,27 @@ export default function TablesScreen() {
 
       {data && tables.length ? (
         <Text variant="small" tone="subtle" align="center" style={{ marginTop: 4 }}>
-          Tap a table to open it in Billing · {isPhone || Platform.OS !== 'web' ? 'long-press' : 'right-click'} or ⋯ for move, merge, print and more
+          {tr('ops.TablesScreen.tap_a_table_to_open_it_in_billing')} {isPhone || Platform.OS !== 'web' ? 'long-press' : 'right-click'} {tr('ops.TablesScreen.or_for_move_merge_print_and_more')}
         </Text>
       ) : null}
 
       <MoveMergeSheet from={moveFrom?.table ?? null} mode={moveFrom?.mode ?? 'move'} tables={tables} onClose={() => setMoveFrom(null)} onDone={refreshAll} />
 
-      <ListSheet visible={!!waiterFor} onClose={() => setWaiterFor(null)} title={waiterFor ? `Waiter for table ${waiterFor.table_number}` : ''}
-        subtitle="New bills on this table are credited to this waiter"
+      <ListSheet visible={!!waiterFor} onClose={() => setWaiterFor(null)} title={waiterFor ? tr('ops.TablesScreen.waiter_for_table_table_number', { table_number: waiterFor.table_number }) : ''}
+        subtitle={tr('ops.TablesScreen.new_bills_on_this_table_are_credited_to')}
         actions={waiterActions(waiterFor, staffList, async (staffId) => {
           if (!waiterFor) return;
           try {
             await opsApi.assignWaiter(waiterFor.id, staffId);
             const picked = staffList?.find((x) => x.id === staffId);
-            toast.success(staffId ? `Table ${waiterFor.table_number} → ${picked?.full_name || picked?.email || 'waiter'}` : `Waiter removed from table ${waiterFor.table_number}`);
+            toast.success(staffId ? tr('ops.TablesScreen.table_table_number_v', { table_number: waiterFor.table_number, v: picked?.full_name || picked?.email || 'waiter' }) : tr('ops.TablesScreen.waiter_removed_from_table_table_number', { table_number: waiterFor.table_number }));
             void silentReload();
           } catch (e) {
             toast.error(errorMessage(e));
           }
         })}>
-        {staff === 'denied' ? <Notice tone="neutral" message="Your role can't see the staff list. Ask the owner to give you staff access." /> : null}
-        {staff === null && waiterFor ? <Text variant="small" tone="muted">Loading staff…</Text> : null}
+        {staff === 'denied' ? <Notice tone="neutral" message={tr('ops.TablesScreen.your_role_can_t_see_the_staff_list_ask')} /> : null}
+        {staff === null && waiterFor ? <Text variant="small" tone="muted">{tr('ops.TablesScreen.loading_staff')}</Text> : null}
       </ListSheet>
 
       <TableForm visible={formOpen} onClose={() => setFormOpen(false)} editing={editing} sections={sections.map((x) => x.name).filter((n) => n !== NO_SECTION)}
@@ -349,7 +350,7 @@ function waiterActions(table: TableInfo | null, staff: StaffOption[] | null,
       label: `${s.full_name || s.email}${s.id === table.assigned_staff_id ? '  ✓' : ''}`, icon: 'person-outline' as const,
       subtitle: s.role.charAt(0).toUpperCase() + s.role.slice(1), onPress: () => void assign(s.id),
     })),
-    ...(table.assigned_staff_id ? [{ label: 'No waiter', icon: 'person-remove-outline' as const, onPress: () => void assign(null) }] : []),
+    ...(table.assigned_staff_id ? [{ label: tr('ops.TablesScreen.no_waiter'), icon: 'person-remove-outline' as const, onPress: () => void assign(null) }] : []),
   ];
 }
 
@@ -404,7 +405,7 @@ const TableTile = React.memo(function TableTile({ table, s, sym, compact, waiter
           {busy ? (
             <>
               <Text variant={compact ? 'bodyStrong' : 'h3'} color={fg} numberOfLines={1} style={styles.num}>
-                {money(s.total, sym, true)}{s.bills.length > 1 ? <Text variant="caption" color={fg}>  · {s.bills.length} bills</Text> : null}
+                {money(s.total, sym, true)}{s.bills.length > 1 ? <Text variant="caption" color={fg}>  {tr('ops.TablesScreen.length_bills', { length: s.bills.length })}</Text> : null}
               </Text>
               <View style={styles.metaRow}>
                 <AgeChip minutes={s.minutes} tone={age} />
@@ -425,14 +426,14 @@ const TableTile = React.memo(function TableTile({ table, s, sym, compact, waiter
           ) : (
             <View style={[styles.metaRow, { marginTop: 'auto' }]}>
               <Ionicons name="people-outline" size={14} color={colors.textSubtle} />
-              <Text variant="small" tone="subtle" numberOfLines={1}>{table.capacity} · Free</Text>
+              <Text variant="small" tone="subtle" numberOfLines={1}>{table.capacity} {tr('ops.TablesScreen.free_2')}</Text>
             </View>
           )}
           {menu.length ? (
             <ActionMenu menuRef={menuRef} items={menu} align="end" style={styles.more}
-              title={`Table ${table.table_number}${busy ? ` · ${money(s.total, sym, true)} · ${formatAge(s.minutes)}` : ' · Free'}`}
+              title={tr('common.table_table_number_v', { table_number: table.table_number, v: busy ? ` · ${money(s.total, sym, true)} · ${formatAge(s.minutes)}` : tr('ops.TablesScreen.free_3') })}
               trigger={(openIt) => (isPhone ? null : (
-                <Pressable onPress={openIt} hitSlop={6} accessibilityRole="button" accessibilityLabel={`More options for table ${table.table_number}`}
+                <Pressable onPress={openIt} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('ops.TablesScreen.more_options_for_table_table_number', { table_number: table.table_number })}
                   style={({ hovered }: any) => [styles.moreBtn, { borderRadius: radius.sm }, hovered && { backgroundColor: colors.surfaceSunken },
                     Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
                   <Ionicons name="ellipsis-horizontal" size={16} color={busy ? fg : colors.textSubtle} />
@@ -452,7 +453,7 @@ function TileBody({ onPress, onMenu, a11y, style, hoverStyle, children }: {
   return (
     <Pressable ref={ref} onPress={onPress} onLongPress={onMenu} delayLongPress={350}
       accessibilityRole={Platform.OS === 'web' ? undefined : 'button'} accessibilityLabel={a11y}
-      accessibilityHint={onMenu ? 'Long-press for more options' : undefined}
+      accessibilityHint={onMenu ? tr('ops.TablesScreen.long_press_for_more_options') : undefined}
       style={({ pressed, hovered }: any) => [style, (pressed || hovered) && hoverStyle, pressed && { opacity: 0.9 },
         Platform.OS === 'web' && ({ cursor: 'pointer', userSelect: 'none', transitionDuration: '120ms' } as any)]}>
       {children}
@@ -496,7 +497,7 @@ function MoveMergeSheet({ from, mode, tables, onClose, onDone }: {
     setBusyId(to.id);
     try {
       await ordersApi.transfer(bill.id, to.id);
-      toast.success(`${label(bill)} → table ${to.table_number}${billsOf(to).length ? ' (as a separate bill)' : ''}`);
+      toast.success(tr('ops.TablesScreen.label_table_table_number_v', { label: label(bill), table_number: to.table_number, v: billsOf(to).length ? tr('ops.TablesScreen.as_a_separate_bill') : '' }));
       onDone();
       close();
     } catch (e) {
@@ -509,15 +510,15 @@ function MoveMergeSheet({ from, mode, tables, onClose, onDone }: {
   const merge = async (target: { table: TableInfo; bill: TableBill; index: number }) => {
     if (!from || !bill) return;
     const ok = await confirm({
-      title: `Merge ${label(bill)} into table ${target.table.table_number}?`,
-      message: `Its items and kitchen tickets move to ${billName(target.bill, target.index)} on table ${target.table.table_number} (${money(target.bill.total_amount, sym)}). ${label(bill)} closes as "merged".`,
-      confirmLabel: 'Merge bills',
+      title: tr('ops.TablesScreen.merge_label_into_table_table_number', { label: label(bill), table_number: target.table.table_number }),
+      message: tr('ops.TablesScreen.its_items_and_kitchen_tickets_move_to', { billName: billName(target.bill, target.index), table_number: target.table.table_number, money: money(target.bill.total_amount, sym), label: label(bill) }),
+      confirmLabel: tr('ops.TablesScreen.merge_bills'),
     });
     if (!ok) return;
     setBusyId(target.bill.id);
     try {
       await floorApi.merge(target.bill.id, bill.id);
-      toast.success(`Merged into table ${target.table.table_number}`);
+      toast.success(tr('ops.TablesScreen.merged_into_table_table_number', { table_number: target.table.table_number }));
       onDone();
       close();
     } catch (e) {
@@ -529,12 +530,12 @@ function MoveMergeSheet({ from, mode, tables, onClose, onDone }: {
 
   return (
     <Sheet visible={!!from} onClose={close} width={560}
-      title={from ? (mode === 'move' ? `Move table ${from.table_number}` : `Merge from table ${from.table_number}`) : ''}
-      subtitle={mode === 'move' ? 'The bill and its kitchen tickets move with it. On a busy table it joins as a separate bill.'
-        : 'Bring this bill\'s items into another running bill, so the party pays once.'}>
+      title={from ? (mode === 'move' ? tr('ops.TablesScreen.move_table_table_number', { table_number: from.table_number }) : tr('ops.TablesScreen.merge_from_table_table_number', { table_number: from.table_number })) : ''}
+      subtitle={mode === 'move' ? tr('ops.TablesScreen.the_bill_and_its_kitchen_tickets_move')
+        : tr('ops.TablesScreen.bring_this_bill_s_items_into_another')}>
       {bills.length > 1 ? (
         <View style={{ gap: 6 }}>
-          <Text variant="caption" tone="subtle" style={styles.caps}>Which bill?</Text>
+          <Text variant="caption" tone="subtle" style={styles.caps}>{tr('ops.TablesScreen.which_bill')}</Text>
           <ChipRow>
             {bills.map((b, i) => (
               <Chip key={b.id} label={`${billName(b, i)} · ${money(b.total_amount, sym, true)}`} selected={b.id === bill?.id} onPress={() => setBillId(b.id)} />
@@ -546,22 +547,22 @@ function MoveMergeSheet({ from, mode, tables, onClose, onDone }: {
         <>
           {free.length ? (
             <View style={{ gap: 6 }}>
-              <Text variant="caption" tone="subtle" style={styles.caps}>Free tables</Text>
+              <Text variant="caption" tone="subtle" style={styles.caps}>{tr('ops.TablesScreen.free_tables')}</Text>
               <Grid minItemWidth={88} gap={8} maxColumns={8}>
                 {free.map((t) => (
                   <Button key={t.id} title={t.table_number} variant="outline" onPress={() => void move(t)} loading={busyId === t.id}
-                    disabled={!!busyId || !bill} accessibilityLabel={`Move to table ${t.table_number}`} full />
+                    disabled={!!busyId || !bill} accessibilityLabel={tr('ops.TablesScreen.move_to_table_table_number', { table_number: t.table_number })} full />
                 ))}
               </Grid>
             </View>
-          ) : <Text variant="small" tone="muted">No free tables right now.</Text>}
+          ) : <Text variant="small" tone="muted">{tr('ops.TablesScreen.no_free_tables_right_now')}</Text>}
           {busyTables.length ? (
             <View style={{ gap: 6 }}>
-              <Text variant="caption" tone="subtle" style={styles.caps}>Join a busy table (separate bill)</Text>
+              <Text variant="caption" tone="subtle" style={styles.caps}>{tr('ops.TablesScreen.join_a_busy_table_separate_bill')}</Text>
               <Grid minItemWidth={88} gap={8} maxColumns={8}>
                 {busyTables.map((t) => (
                   <Button key={t.id} title={t.table_number} variant="tonal" icon="people-outline" onPress={() => void move(t)} loading={busyId === t.id}
-                    disabled={!!busyId || !bill} accessibilityLabel={`Move to busy table ${t.table_number} as a separate bill`} full />
+                    disabled={!!busyId || !bill} accessibilityLabel={tr('ops.TablesScreen.move_to_busy_table_table_number_as_a', { table_number: t.table_number })} full />
                 ))}
               </Grid>
             </View>
@@ -569,15 +570,15 @@ function MoveMergeSheet({ from, mode, tables, onClose, onDone }: {
         </>
       ) : targets.length ? (
         <View style={{ gap: 6 }}>
-          <Text variant="caption" tone="subtle" style={styles.caps}>Merge into</Text>
+          <Text variant="caption" tone="subtle" style={styles.caps}>{tr('ops.TablesScreen.merge_into')}</Text>
           {targets.map((x) => (
             <Button key={x.bill.id} variant="outline" icon="git-merge-outline" full loading={busyId === x.bill.id} disabled={!!busyId || !bill}
-              title={`Table ${x.table.table_number} · ${billName(x.bill, x.index)} · ${money(x.bill.total_amount, sym, true)}`}
+              title={tr('ops.TablesScreen.table_table_number_billname_money', { table_number: x.table.table_number, billName: billName(x.bill, x.index), money: money(x.bill.total_amount, sym, true) })}
               onPress={() => void merge(x)} style={{ justifyContent: 'flex-start' }} />
           ))}
         </View>
-      ) : <Text variant="small" tone="muted">No other running bill to merge into.</Text>}
-      {!others.length && mode === 'move' ? <EmptyState icon="grid-outline" title="No other tables" message="Add more tables to move bills between them." /> : null}
+      ) : <Text variant="small" tone="muted">{tr('ops.TablesScreen.no_other_running_bill_to_merge_into')}</Text>}
+      {!others.length && mode === 'move' ? <EmptyState icon="grid-outline" title={tr('ops.TablesScreen.no_other_tables')} message={tr('ops.TablesScreen.add_more_tables_to_move_bills_between_them')} /> : null}
     </Sheet>
   );
 }
@@ -605,36 +606,36 @@ function QrSheet({ visible, onClose, tables, tenantId, businessName, qrEnabled }
     }
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title="Table QR codes" subtitle="Guests scan to see the menu and order from their phone" width={760}
+    <Sheet visible={visible} onClose={onClose} title={tr('ops.TablesScreen.table_qr_codes')} subtitle={tr('ops.TablesScreen.guests_scan_to_see_the_menu_and_order')} width={760}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Close" variant="outline" onPress={onClose} />
-          <Button title={`Print all (${tables.length})`} icon="print-outline" onPress={printAll} loading={printing} disabled={!tables.length} />
+          <Button title={tr('common.close')} variant="outline" onPress={onClose} />
+          <Button title={tr('ops.TablesScreen.print_all_length', { length: tables.length })} icon="print-outline" onPress={printAll} loading={printing} disabled={!tables.length} />
         </View>
       }>
       {!qrEnabled ? (
-        <Notice tone="warning" title="QR ordering is off" message="Codes will open your menu, but guests can't place orders until you turn on QR ordering in Settings → Business."
-          action={{ label: 'Open Settings', onPress: () => { onClose(); router.push('/settings'); } }} />
+        <Notice tone="warning" title={tr('ops.TablesScreen.qr_ordering_is_off')} message={tr('ops.TablesScreen.codes_will_open_your_menu_but_guests_can')}
+          action={{ label: tr('ops.TablesScreen.open_settings'), onPress: () => { onClose(); router.push('/settings'); } }} />
       ) : null}
       {visible ? (
         <ScrollView style={{ maxHeight: 560 }}>
           <Grid minItemWidth={150} gap={12}>
             {tables.map((t) => (
-              <Pressable key={t.id} onPress={() => void one(t)} accessibilityRole="button" accessibilityLabel={`Print QR code for table ${t.table_number}`}
+              <Pressable key={t.id} onPress={() => void one(t)} accessibilityRole="button" accessibilityLabel={tr('ops.TablesScreen.print_qr_code_for_table_table_number', { table_number: t.table_number })}
                 style={({ hovered }: any) => [styles.qrCard, { borderColor: hovered ? colors.borderStrong : colors.border, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt }]}>
                 <QrCode value={tableOrderUrl(tenantId, t.id)} size={124} margin={3} style={{ borderRadius: radius.sm, overflow: 'hidden' }} />
-                <Text variant="h3" numberOfLines={1}>Table {t.table_number}</Text>
+                <Text variant="h3" numberOfLines={1}>{tr('ops.TablesScreen.table')} {t.table_number}</Text>
                 {t.section ? <Text variant="small" tone="subtle" numberOfLines={1}>{t.section}</Text> : null}
                 <View style={styles.metaRow}>
                   <Ionicons name="print-outline" size={13} color={colors.textMuted} />
-                  <Text variant="caption" tone="muted">Print</Text>
+                  <Text variant="caption" tone="muted">{tr('ops.TablesScreen.print')}</Text>
                 </View>
               </Pressable>
             ))}
           </Grid>
         </ScrollView>
       ) : null}
-      <Text variant="small" tone="subtle">Tip: print on thick paper or laminate it, and stick one on each table.</Text>
+      <Text variant="small" tone="subtle">{tr('ops.TablesScreen.tip_print_on_thick_paper_or_laminate_it')}</Text>
     </Sheet>
   );
 }

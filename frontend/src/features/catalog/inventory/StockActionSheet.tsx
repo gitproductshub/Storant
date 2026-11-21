@@ -8,6 +8,7 @@ import { Button, Input, Segmented, Sheet, Text, toast } from '@/components/ui';
 import { money } from '@/lib/format';
 import { ChoiceChips, Field } from '../components';
 import { moneyInput, parseIntOrNull, parseMoney, sanitizeInt, sanitizeMoney } from '../utils';
+import { t as tr } from '@/i18n';
 
 export type StockAction = 'restock' | 'wastage' | 'adjust';
 
@@ -38,11 +39,11 @@ export function StockActionSheet({ row, action, symbol, onClose, onDone }: {
 
   const submit = async () => {
     setError(null);
-    if (n === null || qty.trim() === '' || qty === '-') return setError('Enter a quantity.');
+    if (n === null || qty.trim() === '' || qty === '-') return setError(tr('catalog.inventory_StockActionSheet.enter_a_quantity'));
     if (change === null) {
-      return setError(action === 'adjust' && adjustMode === 'delta' ? 'Enter a number other than 0 (use − to remove).' : 'Quantity must be more than 0.');
+      return setError(action === 'adjust' && adjustMode === 'delta' ? tr('catalog.inventory_StockActionSheet.enter_a_number_other_than_0_use_to_remove') : tr('catalog.inventory_StockActionSheet.quantity_must_be_more_than_0'));
     }
-    if (change === 0) return setError('That matches the current stock — nothing to change.');
+    if (change === 0) return setError(tr('catalog.inventory_StockActionSheet.that_matches_the_current_stock_nothing_to'));
     const unitCost = action === 'restock' ? parseMoney(cost) : null;
     const parts: string[] = [];
     if (action === 'wastage') parts.push(wasteReason);
@@ -72,18 +73,18 @@ export function StockActionSheet({ row, action, symbol, onClose, onDone }: {
     <Sheet visible onClose={busy ? () => {} : onClose} title={title} subtitle={row.name} width={480} dismissable={!busy}
       footer={
         <View style={styles.footer}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={busy} />
+          <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={busy} />
           <Button title={title} variant={action === 'wastage' ? 'danger' : 'primary'} onPress={submit} loading={busy} disabled={busy || change === null || change === 0} />
         </View>
       }>
       <View style={[styles.now, { backgroundColor: colors.surfaceSunken }]}>
         <View style={{ flex: 1 }}>
-          <Text variant="small" tone="muted">In stock now</Text>
+          <Text variant="small" tone="muted">{tr('catalog.inventory_StockActionSheet.in_stock_now')}</Text>
           <Text variant="h2">{row.stock} {unit}</Text>
         </View>
         {after !== null && change !== 0 ? (
           <View style={{ alignItems: 'flex-end' }}>
-            <Text variant="small" tone="muted">After</Text>
+            <Text variant="small" tone="muted">{tr('catalog.inventory_StockActionSheet.after')}</Text>
             <Text variant="h2" tone={after < 0 ? 'danger' : after <= row.low_stock_threshold ? 'warning' : 'success'}>{after} {unit}</Text>
           </View>
         ) : null}
@@ -91,39 +92,39 @@ export function StockActionSheet({ row, action, symbol, onClose, onDone }: {
 
       {action === 'adjust' ? (
         <Segmented<'count' | 'delta'> value={adjustMode} onChange={(v) => { setAdjustMode(v); setQty(''); setError(null); }}
-          options={[{ value: 'count', label: 'Set counted quantity' }, { value: 'delta', label: 'Add / remove' }]} />
+          options={[{ value: 'count', label: tr('catalog.inventory_StockActionSheet.set_counted_quantity') }, { value: 'delta', label: tr('catalog.inventory_StockActionSheet.add_remove') }]} />
       ) : null}
 
       <Input
-        label={action === 'restock' ? `Quantity received (${unit})` : action === 'wastage' ? `Quantity wasted (${unit})` : adjustMode === 'count' ? `Counted quantity (${unit})` : `Change (${unit}) — use − to remove`}
+        label={action === 'restock' ? tr('catalog.inventory_StockActionSheet.quantity_received_unit', { unit }) : action === 'wastage' ? tr('catalog.inventory_StockActionSheet.quantity_wasted_unit', { unit }) : adjustMode === 'count' ? tr('catalog.inventory_StockActionSheet.counted_quantity_unit', { unit }) : tr('catalog.inventory_StockActionSheet.change_unit_use_to_remove', { unit })}
         required
         autoFocus
         keyboardType={action === 'adjust' && adjustMode === 'delta' ? 'numbers-and-punctuation' : 'number-pad'}
-        placeholder={action === 'adjust' && adjustMode === 'delta' ? 'e.g. -2 or 5' : '0'}
+        placeholder={action === 'adjust' && adjustMode === 'delta' ? tr('catalog.inventory_StockActionSheet.e_g_2_or_5') : '0'}
         value={qty}
         onChangeText={(t) => { setQty(sanitizeInt(t, action === 'adjust' && adjustMode === 'delta')); setError(null); }}
         onSubmitEditing={submit}
         error={error}
         hint={
           action === 'adjust' && adjustMode === 'count' && change !== null
-            ? change === 0 ? 'Matches current stock' : `Difference: ${change > 0 ? '+' : ''}${change} ${unit}`
-            : action === 'wastage' && n !== null && n > row.stock ? 'More than what is in stock — stock will go below zero.' : undefined
+            ? change === 0 ? tr('catalog.inventory_StockActionSheet.matches_current_stock') : tr('catalog.inventory_StockActionSheet.difference_v_change_unit', { v: change > 0 ? '+' : '', change, unit })
+            : action === 'wastage' && n !== null && n > row.stock ? tr('catalog.inventory_StockActionSheet.more_than_what_is_in_stock_stock_will_go') : undefined
         }
       />
 
       {action === 'restock' ? (
-        <Input label="Cost per unit" prefix={symbol} placeholder="Optional" keyboardType="decimal-pad" value={cost}
+        <Input label={tr('catalog.inventory_StockActionSheet.cost_per_unit')} prefix={symbol} placeholder={tr('common.optional')} keyboardType="decimal-pad" value={cost}
           onChangeText={(t) => setCost(sanitizeMoney(t))}
-          hint={parseMoney(cost) !== null && n ? `Total ${money((parseMoney(cost) ?? 0) * n, symbol)} · updates the item's cost price` : 'Updates the item’s cost price for stock value and profit'} />
+          hint={parseMoney(cost) !== null && n ? tr('catalog.inventory_StockActionSheet.total_money_updates_the_item_s_cost_price', { money: money((parseMoney(cost) ?? 0) * n, symbol) }) : tr('catalog.inventory_StockActionSheet.updates_the_item_s_cost_price_for_stock')} />
       ) : null}
 
       {action === 'wastage' ? (
-        <Field label="Reason">
+        <Field label={tr('common.reason')}>
           <ChoiceChips<string> value={wasteReason} onChange={setWasteReason} options={WASTE_REASONS.map((r) => ({ value: r, label: r }))} />
         </Field>
       ) : null}
 
-      <Input label="Note" placeholder={action === 'restock' ? 'e.g. Supplier, bill no.' : action === 'wastage' ? 'Optional details' : 'e.g. Monthly stock count'}
+      <Input label={tr('catalog.inventory_StockActionSheet.note')} placeholder={action === 'restock' ? tr('catalog.inventory_StockActionSheet.e_g_supplier_bill_no') : action === 'wastage' ? tr('catalog.inventory_StockActionSheet.optional_details') : tr('catalog.inventory_StockActionSheet.e_g_monthly_stock_count')}
         value={note} onChangeText={setNote} maxLength={120} />
     </Sheet>
   );

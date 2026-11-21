@@ -1,6 +1,7 @@
 import type { PublicMenu } from '@/api/types';
 import { money, uuid } from '@/lib/format';
 import type { PaymentChoice, PublicOrder, QrPaymentOptions } from './api';
+import { t } from '@/i18n';
 
 export type MenuProduct = PublicMenu['products'][number];
 export type OrderMode = 'QR' | 'ONLINE';
@@ -160,11 +161,11 @@ export type ItemTone = 'neutral' | 'primary' | 'warning' | 'success' | 'info';
 /** Customer-friendly kitchen status of one line. */
 export function itemStatus(status: string | null | undefined, orderStatus: string): { label: string; tone: ItemTone } {
   switch (status) {
-    case 'served': return { label: 'Served', tone: 'success' };
-    case 'ready': return { label: 'Ready', tone: 'info' };
-    case 'preparing': return { label: 'Preparing', tone: 'warning' };
-    case 'pending': return { label: 'In the kitchen', tone: 'primary' };
-    default: return orderStatus === 'placed' ? { label: 'Waiting', tone: 'neutral' } : { label: 'Ordered', tone: 'neutral' };
+    case 'served': return { label: t('common.served'), tone: 'success' };
+    case 'ready': return { label: t('common.ready'), tone: 'info' };
+    case 'preparing': return { label: t('common.preparing'), tone: 'warning' };
+    case 'pending': return { label: t('common.in_the_kitchen'), tone: 'primary' };
+    default: return orderStatus === 'placed' ? { label: t('common.waiting'), tone: 'neutral' } : { label: t('public.store_model.ordered'), tone: 'neutral' };
   }
 }
 

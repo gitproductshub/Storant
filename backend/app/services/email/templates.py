@@ -68,7 +68,7 @@ DEFAULTS: dict[str, dict] = {
     },
 }
 
-DEFAULT_ACCENT = "#0F766E"
+DEFAULT_ACCENT = "#51218A"
 _HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
 
@@ -131,7 +131,7 @@ def render(template: dict, values: dict, business: dict) -> tuple[str, str, str]
       To stop offer emails, reply to this email or tell us at the counter.</div>
     </td></tr>
   </table>
-  <div style="font-size:11px;color:#94a3b8;margin-top:14px;">Sent with Tallyko</div>
+  <div style="font-size:11px;color:#94a3b8;margin-top:14px;">Sent with Storant</div>
 </td></tr></table></body></html>"""
     text = f"{heading}\n\n{body}\n\n{button_text + ': ' + button_url if button_text and button_url else ''}\n\n— {business.get('name') or ''}".strip()
     return subject, page, text

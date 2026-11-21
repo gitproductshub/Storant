@@ -11,6 +11,7 @@ import { useNet } from '@/lib/sync';
 import { fonts } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 import { formatRate } from '@/api/taxes';
+import { t as tr, currentLocale } from '@/i18n';
 
 /** True when the user may change tax settings (falls back to the built-in role rules until /access/me loads). */
 export function useCanManageTaxes(): boolean {
@@ -41,9 +42,9 @@ const isLocalMidnight = (d: Date) => d.getHours() === 0 && d.getMinutes() === 0;
 export function formatEffective(value: string | Date, withTime: boolean | 'auto' = 'auto'): string {
   const d = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return '';
-  const date = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const date = d.toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
   const showTime = withTime === 'auto' ? !isLocalMidnight(d) : withTime;
-  return showTime ? `${date}, ${d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}` : date;
+  return showTime ? `${date}, ${d.toLocaleTimeString(currentLocale(), { hour: 'numeric', minute: '2-digit' })}` : date;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -91,8 +92,8 @@ export function DateTimeField({ value, onChange, error, disabled }: {
   const tomorrow = tomorrowMidnight();
   const nextMonth = firstOfNextMonth();
   const quick = [
-    { label: 'Tomorrow', date: tomorrow },
-    ...(nextMonth.getTime() !== tomorrow.getTime() ? [{ label: `1 ${nextMonth.toLocaleDateString('en-IN', { month: 'short' })}`, date: nextMonth }] : []),
+    { label: tr('settings.taxes_shared.tomorrow'), date: tomorrow },
+    ...(nextMonth.getTime() !== tomorrow.getTime() ? [{ label: `1 ${nextMonth.toLocaleDateString(currentLocale(), { month: 'short' })}`, date: nextMonth }] : []),
   ];
 
   const emit = (dText: string, tText: string) => {
@@ -109,7 +110,7 @@ export function DateTimeField({ value, onChange, error, disabled }: {
 
   return (
     <View style={{ gap: 8 }}>
-      <Text variant="smallStrong" tone="muted">Starts from</Text>
+      <Text variant="smallStrong" tone="muted">{tr('settings.taxes_shared.starts_from')}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {quick.map((q) => (
           <Chip key={q.label} label={q.label} selected={!!value && value.getTime() === q.date.getTime()} onPress={disabled ? undefined : () => onChange(q.date)} />
@@ -139,16 +140,16 @@ export function DateTimeField({ value, onChange, error, disabled }: {
         </View>
       ) : (
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Input containerStyle={{ flex: 1 }} accessibilityLabel="Date" placeholder="DD/MM/YYYY" value={dateText} editable={!disabled}
+          <Input containerStyle={{ flex: 1 }} accessibilityLabel={tr('settings.taxes_shared.date')} placeholder={tr('settings.taxes_shared.dd_mm_yyyy')} value={dateText} editable={!disabled}
             keyboardType="numbers-and-punctuation" maxLength={10}
             onChangeText={(t) => { setDateText(t); emit(t, timeText); }} icon="calendar-outline" />
-          <Input containerStyle={{ width: 120 }} accessibilityLabel="Time" placeholder="HH:MM" value={timeText} editable={!disabled}
+          <Input containerStyle={{ width: 120 }} accessibilityLabel={tr('settings.taxes_shared.time')} placeholder={tr('settings.taxes_shared.hh_mm')} value={timeText} editable={!disabled}
             keyboardType="numbers-and-punctuation" maxLength={5}
             onChangeText={(t) => { setTimeText(t); emit(dateText, t); }} icon="time-outline" />
         </View>
       )}
       {error ? <Text variant="small" tone="danger">{error}</Text> : (
-        <Text variant="small" tone="subtle">Your device's time zone. Most GST changes start at midnight (00:00).</Text>
+        <Text variant="small" tone="subtle">{tr('settings.taxes_shared.your_device_s_time_zone_most_gst_changes')}</Text>
       )}
     </View>
   );

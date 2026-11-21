@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Chip, IconButton, Input, Text } from '@/components/ui';
 import { VARIANT_PRESETS, localKey, sanitizeMoney } from './utils';
+import { t as tr } from '@/i18n';
 
 export interface VariantDraft { key: string; id?: string; name: string; price: string }
 export type VariantErrors = Record<string, { name?: string; price?: string }>;
@@ -29,7 +30,7 @@ export function VariantsEditor({ variants, onChange, errors, symbol, compact }: 
     <View style={{ gap: 10 }}>
       {variants.length === 0 ? (
         <Text variant="small" tone="muted">
-          Add options when one item is sold in different sizes or portions — like Half / Full plate or Small / Large cup. Each option has its own price.
+          {tr('catalog.VariantsEditor.add_options_when_one_item_is_sold_in')}
         </Text>
       ) : (
         <View style={{ gap: 8 }}>
@@ -39,12 +40,12 @@ export function VariantsEditor({ variants, onChange, errors, symbol, compact }: 
               <View key={v.key} style={styles.row}>
                 <Input
                   containerStyle={{ flex: 1.4 }}
-                  placeholder={i === 0 ? 'e.g. Half' : 'Option name'}
+                  placeholder={i === 0 ? tr('catalog.VariantsEditor.e_g_half') : tr('catalog.VariantsEditor.option_name')}
                   value={v.name}
                   onChangeText={(t) => update(v.key, { name: t })}
                   error={err?.name}
                   maxLength={40}
-                  accessibilityLabel={`Option ${i + 1} name`}
+                  accessibilityLabel={tr('catalog.VariantsEditor.option_v_name', { v: i + 1 })}
                 />
                 <Input
                   containerStyle={{ flex: 1 }}
@@ -54,24 +55,24 @@ export function VariantsEditor({ variants, onChange, errors, symbol, compact }: 
                   onChangeText={(t) => update(v.key, { price: sanitizeMoney(t) })}
                   keyboardType="decimal-pad"
                   error={err?.price}
-                  accessibilityLabel={`Option ${i + 1} price`}
+                  accessibilityLabel={tr('catalog.VariantsEditor.option_v_price', { v: i + 1 })}
                 />
-                <IconButton icon="close" accessibilityLabel={`Remove option ${v.name || i + 1}`} onPress={() => remove(v.key)} />
+                <IconButton icon="close" accessibilityLabel={tr('catalog.VariantsEditor.remove_option_v', { v: v.name || i + 1 })} onPress={() => remove(v.key)} />
               </View>
             );
           })}
         </View>
       )}
       <View style={[styles.presets, compact && { gap: 6 }]}>
-        <Button title="Add option" icon="add" size="sm" variant="secondary" onPress={() => add()} disabled={variants.length >= MAX_VARIANTS} />
+        <Button title={tr('catalog.VariantsEditor.add_option')} icon="add" size="sm" variant="secondary" onPress={() => add()} disabled={variants.length >= MAX_VARIANTS} />
         {VARIANT_PRESETS.map((p) => (
           <Chip key={p.label} label={p.label} icon="flash-outline" onPress={() => applyPreset(p.names)} />
         ))}
       </View>
-      {variants.length >= MAX_VARIANTS ? <Text variant="small" tone="warning">You can add up to {MAX_VARIANTS} options.</Text> : null}
+      {variants.length >= MAX_VARIANTS ? <Text variant="small" tone="warning">{tr('catalog.VariantsEditor.you_can_add_up_to_max_variants_options', { MAX_VARIANTS })}</Text> : null}
       {variants.length > 0 ? (
         <View style={[styles.note, { backgroundColor: colors.infoSoft }]}>
-          <Text variant="small" tone="info">Prices are the full selling price of each option (not an add-on).</Text>
+          <Text variant="small" tone="info">{tr('catalog.VariantsEditor.prices_are_the_full_selling_price_of_each')}</Text>
         </View>
       ) : null}
     </View>

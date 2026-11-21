@@ -9,6 +9,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { Sheet, ShortcutHint, Text } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { NavItem } from './navItems';
+import { t } from '@/i18n';
 
 const SEQUENCE_MS = 1500;
 /** Faster than any person types: a scanner burst */
@@ -71,15 +72,15 @@ export function useGoShortcuts({ enabled, onGo, onHelp, onToggleSidebar }: {
 }
 
 const SCREEN_KEYS: { keys: string; label: string }[] = [
-  { keys: '/', label: 'Search the list or menu' },
-  { keys: 'F2', label: 'Search (billing)' },
-  { keys: 'Enter', label: 'Add the highlighted item' },
-  { keys: '+', label: 'One more of the last item' },
-  { keys: '-', label: 'One less' },
-  { keys: 'F9', label: 'Send KOT to the kitchen' },
-  { keys: 'F8', label: 'Pay' },
-  { keys: 'Ctrl+S', label: 'Save settings' },
-  { keys: 'Esc', label: 'Close a panel or menu' },
+  { keys: '/', get label() { return t('nav.shortcuts.search_the_list_or_menu'); } },
+  { keys: 'F2', get label() { return t('nav.shortcuts.search_billing'); } },
+  { keys: 'Enter', get label() { return t('nav.shortcuts.add_the_highlighted_item'); } },
+  { keys: '+', get label() { return t('nav.shortcuts.one_more_of_the_last_item'); } },
+  { keys: '-', get label() { return t('nav.shortcuts.one_less'); } },
+  { keys: 'F9', get label() { return t('nav.shortcuts.send_kot_to_the_kitchen'); } },
+  { keys: 'F8', get label() { return t('common.pay'); } },
+  { keys: 'Ctrl+S', get label() { return t('nav.shortcuts.save_settings'); } },
+  { keys: 'Esc', get label() { return t('nav.shortcuts.close_a_panel_or_menu'); } },
 ];
 
 export function ShortcutsSheet({ visible, onClose, items, extra }: {
@@ -94,15 +95,15 @@ export function ShortcutsSheet({ visible, onClose, items, extra }: {
     </View>
   );
   return (
-    <Sheet visible={visible} onClose={onClose} title="Keyboard shortcuts" subtitle="Press ? any time to see this list" width={720}>
+    <Sheet visible={visible} onClose={onClose} title={t('nav.shortcuts.keyboard_shortcuts')} subtitle={t('nav.shortcuts.press_any_time_to_see_this_list')} width={720}>
       <View style={styles.cols}>
         <View style={[styles.col, { borderColor: colors.border, borderRadius: radius.lg }]}>
-          <Text variant="caption" tone="subtle" style={styles.head}>GO TO</Text>
-          {go.map((i) => row(<><ShortcutHint keys="G" force /><Text variant="caption" tone="subtle">then</Text><ShortcutHint keys={i.goKey!.toUpperCase()} force /></>, i.label, i.label))}
+          <Text variant="caption" tone="subtle" style={styles.head}>{t('nav.shortcuts.go_to')}</Text>
+          {go.map((i) => row(<><ShortcutHint keys="G" force /><Text variant="caption" tone="subtle">{t('nav.shortcuts.then')}</Text><ShortcutHint keys={i.goKey!.toUpperCase()} force /></>, i.label, i.label))}
           {row(<ShortcutHint keys="[" force />, 'Collapse or expand the sidebar', 'sidebar')}
         </View>
         <View style={[styles.col, { borderColor: colors.border, borderRadius: radius.lg }]}>
-          <Text variant="caption" tone="subtle" style={styles.head}>ON A SCREEN</Text>
+          <Text variant="caption" tone="subtle" style={styles.head}>{t('nav.shortcuts.on_a_screen')}</Text>
           {[...(extra ?? []), ...SCREEN_KEYS].map((s) => row(<ShortcutHint keys={s.keys} force />, s.label, s.keys + s.label))}
         </View>
       </View>

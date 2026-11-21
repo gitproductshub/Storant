@@ -1,5 +1,5 @@
 /**
- * Owner requests: businesses can't delete their own records, so owners ask Tallyko to archive or permanently delete bills
+ * Owner requests: businesses can't delete their own records, so owners ask Storant to archive or permanently delete bills
  * (or ask something else). Review the bills, then archive, delete or decline with a response the owner sees.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -16,19 +16,21 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout } from '@/features/settings/components';
 import { BillRow, DeleteConfirm, billsSummary } from './BusinessRecords';
 import { AdminListFrame, ReadOnlyNote, goTo, plural, setPendingOwnerRequests, useCanEdit, useOnline } from './shared';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 type Filter = OwnerRequestStatus | 'all';
 const PAGE = 50;
 type Resolution = 'archive' | 'delete' | 'none';
 
 const FILTERS: { value: Filter; label: string }[] = [
-  { value: 'pending', label: 'Pending' }, { value: 'done', label: 'Done' }, { value: 'rejected', label: 'Declined' }, { value: 'all', label: 'All' },
+  { value: 'pending', get label() { return tr('common.pending'); } }, { value: 'done', get label() { return tr('common.done'); } }, { value: 'rejected', get label() { return tr('admin.OwnerRequestsScreen.declined'); } }, { value: 'all', get label() { return tr('common.all'); } },
 ];
-const KIND_LABEL: Record<OwnerRequestKind, string> = { archive_bills: 'Archive bills', delete_bills: 'Delete bills', other: 'Other request' };
+const KIND_LABEL: Record<OwnerRequestKind, string> = { get archive_bills() { return tr('common.archive_bills'); }, get delete_bills() { return tr('admin.OwnerRequestsScreen.delete_bills'); }, get other() { return tr('admin.OwnerRequestsScreen.other_request'); } };
 const KIND_TONE: Record<OwnerRequestKind, BadgeTone> = { archive_bills: 'warning', delete_bills: 'danger', other: 'info' };
-const STATUS_LABEL: Record<OwnerRequestStatus, string> = { pending: 'Waiting', done: 'Done', rejected: 'Declined' };
+const STATUS_LABEL: Record<OwnerRequestStatus, string> = { get pending() { return tr('common.waiting'); }, get done() { return tr('common.done'); }, get rejected() { return tr('admin.OwnerRequestsScreen.declined'); } };
 const STATUS_TONE: Record<OwnerRequestStatus, BadgeTone> = { pending: 'warning', done: 'success', rejected: 'neutral' };
-const TAKEN_LABEL: Record<string, string> = { archived: 'Bills archived', deleted: 'Bills permanently deleted', none: 'No change made' };
+const TAKEN_LABEL: Record<string, string> = { get archived() { return tr('admin.OwnerRequestsScreen.bills_archived'); }, get deleted() { return tr('admin.OwnerRequestsScreen.bills_permanently_deleted'); }, get none() { return tr('admin.OwnerRequestsScreen.no_change_made'); } };
 
 /** Bills an owner request names, fetched by id (GET /platform/businesses/{id}/orders?ids=…), once per request per screen load. */
 type BillsCache = Map<string, Promise<AdminBill[]>>;
@@ -105,7 +107,7 @@ export default function OwnerRequestsScreen() {
       setViewing(null);
       setResolving({ request: r, bills, action });
     } catch (e) {
-      toast.error(`Couldn't load the bills: ${errorMessage(e)}`);
+      toast.error(tr('admin.OwnerRequestsScreen.couldn_t_load_the_bills_errormessage', { errorMessage: errorMessage(e) }));
     } finally {
       setOpeningId(null);
     }
@@ -117,46 +119,46 @@ export default function OwnerRequestsScreen() {
     }
     const hasBills = r.order_ids.length > 0;
     const primary: Resolution = !hasBills ? 'none' : r.kind === 'delete_bills' ? 'delete' : 'archive';
-    const label = primary === 'archive' ? 'Archive' : primary === 'delete' ? 'Delete…' : 'Reply';
+    const label = primary === 'archive' ? tr('admin.OwnerRequestsScreen.archive') : primary === 'delete' ? tr('admin.OwnerRequestsScreen.delete') : tr('admin.OwnerRequestsScreen.reply');
     return (
       <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
         <Button title={isPhone ? undefined : label} accessibilityLabel={`${label} ${r.business_name}`} size="sm"
           icon={primary === 'archive' ? 'archive-outline' : primary === 'delete' ? 'trash-outline' : 'send-outline'}
           variant={primary === 'delete' ? 'dangerOutline' : 'tonal'} loading={openingId === r.id}
-          onPress={() => void resolve(r, primary)} disabled={!online} disabledReason="You're offline" />
+          onPress={() => void resolve(r, primary)} disabled={!online} disabledReason={tr('admin.OwnerRequestsScreen.you_re_offline_x')} />
         <ActionMenu align="end" title={r.business_name}
           items={[
-            { key: 'view', label: 'Open request', icon: 'eye-outline', onPress: () => setViewing(r) },
-            { key: 'biz', label: 'Open business', icon: 'storefront-outline', onPress: () => goTo(`/admin/businesses/${r.business_id}`) },
+            { key: 'view', label: tr('admin.OwnerRequestsScreen.open_request'), icon: 'eye-outline', onPress: () => setViewing(r) },
+            { key: 'biz', label: tr('common.open_business'), icon: 'storefront-outline', onPress: () => goTo(`/admin/businesses/${r.business_id}`) },
             ...(hasBills ? [
-              { key: 'archive', label: 'Archive bills', icon: 'archive-outline' as const, group: 'act', hidden: primary === 'archive', disabled: !online, onPress: () => void resolve(r, 'archive') },
-              { key: 'delete', label: 'Delete permanently…', icon: 'trash-outline' as const, group: 'act', danger: true, hidden: primary === 'delete', disabled: !online, onPress: () => void resolve(r, 'delete') },
+              { key: 'archive', label: tr('common.archive_bills'), icon: 'archive-outline' as const, group: 'act', hidden: primary === 'archive', disabled: !online, onPress: () => void resolve(r, 'archive') },
+              { key: 'delete', label: tr('admin.OwnerRequestsScreen.delete_permanently'), icon: 'trash-outline' as const, group: 'act', danger: true, hidden: primary === 'delete', disabled: !online, onPress: () => void resolve(r, 'delete') },
             ] : []),
-            { key: 'none', label: hasBills ? 'Decline…' : 'Reply & close…', icon: 'close-circle-outline', group: 'act', hidden: primary === 'none', disabled: !online, onPress: () => void resolve(r, 'none') },
+            { key: 'none', label: hasBills ? tr('admin.OwnerRequestsScreen.decline') : tr('admin.OwnerRequestsScreen.reply_close'), icon: 'close-circle-outline', group: 'act', hidden: primary === 'none', disabled: !online, onPress: () => void resolve(r, 'none') },
           ]} />
       </View>
     );
   }, [canEdit, online, openingId, isPhone, resolve]);
 
   const columns = useMemo<DataColumn<OwnerRequest>[]>(() => [
-    { key: 'business', title: 'Request', flex: 3, render: (r) => (
+    { key: 'business', title: tr('admin.OwnerRequestsScreen.request'), flex: 3, render: (r) => (
       <View style={{ minWidth: 0 }}>
         <Text variant="bodyStrong" numberOfLines={1}>{r.business_name}</Text>
         <Text variant="small" tone="muted" numberOfLines={1}>{r.message}</Text>
       </View>
     ) },
-    { key: 'kind', title: 'Asks to', width: 150, render: (r) => <Badge label={KIND_LABEL[r.kind] ?? r.kind} tone={KIND_TONE[r.kind] ?? 'neutral'}
+    { key: 'kind', title: tr('admin.OwnerRequestsScreen.asks_to'), width: 150, render: (r) => <Badge label={KIND_LABEL[r.kind] ?? r.kind} tone={KIND_TONE[r.kind] ?? 'neutral'}
       icon={r.kind === 'delete_bills' ? 'trash-outline' : r.kind === 'archive_bills' ? 'archive-outline' : 'chatbubble-outline'} /> },
-    { key: 'bills', title: 'Bills', width: 70, numeric: true, hideBelow: 760, value: (r) => (r.order_ids.length ? r.order_ids.length : '—') },
-    { key: 'sent', title: 'Sent', width: 100, hideBelow: 880, value: (r) => `${ago(r.created_at)} ago` },
-    { key: 'status', title: 'Status', width: 110, hideBelow: 1040, render: (r) => <Badge label={STATUS_LABEL[r.status] ?? r.status} tone={STATUS_TONE[r.status] ?? 'neutral'} /> },
+    { key: 'bills', title: tr('common.bills'), width: 70, numeric: true, hideBelow: 760, value: (r) => (r.order_ids.length ? r.order_ids.length : '—') },
+    { key: 'sent', title: tr('common.sent'), width: 100, hideBelow: 880, value: (r) => `${ago(r.created_at)} ago` },
+    { key: 'status', title: tr('common.status'), width: 110, hideBelow: 1040, render: (r) => <Badge label={STATUS_LABEL[r.status] ?? r.status} tone={STATUS_TONE[r.status] ?? 'neutral'} /> },
   ], []);
 
   const renderCard = useCallback((r: OwnerRequest) => (
     <View style={{ gap: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{r.business_name}</Text>
-        <Text variant="caption" tone="subtle">{ago(r.created_at)} ago</Text>
+        <Text variant="caption" tone="subtle">{ago(r.created_at)} {tr('admin.OwnerRequestsScreen.ago')}</Text>
       </View>
       <Text variant="small" tone="muted" numberOfLines={1}>{r.message}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -169,11 +171,11 @@ export default function OwnerRequestsScreen() {
 
   return (
     <AdminListFrame
-      title="Owner requests"
-      subtitle="Businesses can't delete their own records. Owners ask here to archive or delete bills; your reply is shown to them."
+      title={tr('common.owner_requests')}
+      subtitle={tr('admin.OwnerRequestsScreen.businesses_can_t_delete_their_own_records')}
       toolbar={
         <View style={{ gap: 8 }}>
-          <FilterBar onSearch={setQuery} searchPlaceholder="Business, message or email"
+          <FilterBar onSearch={setQuery} searchPlaceholder={tr('admin.OwnerRequestsScreen.business_message_or_email_x')}
             filters={FILTERS.map((f) => ({ key: f.value, label: f.label, count: statusCounts ? (statusCounts[f.value] ?? 0) : undefined }))}
             value={filter} onChange={changeFilter} />
           {!canEdit ? <ReadOnlyNote what="archive or delete records" /> : null}
@@ -203,12 +205,12 @@ export default function OwnerRequestsScreen() {
         rowActionsWidth={isPhone ? 100 : 170}
         extraData={openingId}
         empty={filter === 'pending' && !q
-          ? { icon: 'checkmark-done-outline', title: 'All caught up', message: 'No owner is waiting. Requests appear here when an owner asks Tallyko to archive or delete bills.' }
-          : { icon: 'mail-outline', title: 'Nothing here', message: q ? 'No request matches that search.' : 'No requests with this status yet.' }}
+          ? { icon: 'checkmark-done-outline', title: tr('common.all_caught_up'), message: tr('admin.OwnerRequestsScreen.no_owner_is_waiting_requests_appear_here', { brand: brand.name }) }
+          : { icon: 'mail-outline', title: tr('admin.OwnerRequestsScreen.nothing_here'), message: q ? tr('admin.OwnerRequestsScreen.no_request_matches_that_search') : tr('admin.OwnerRequestsScreen.no_requests_with_this_status_yet') }}
       />
 
       {viewing ? (
-        <Sheet visible onClose={() => setViewing(null)} title={viewing.business_name} subtitle={KIND_LABEL[viewing.kind] ?? 'Request'} width={820}>
+        <Sheet visible onClose={() => setViewing(null)} title={viewing.business_name} subtitle={KIND_LABEL[viewing.kind] ?? tr('admin.OwnerRequestsScreen.request')} width={820}>
           <RequestCard request={viewing} cache={cache.current} canEdit={canEdit}
             onResolve={(action, bills) => { setViewing(null); setResolving({ request: viewing, bills, action }); }} />
         </Sheet>
@@ -243,7 +245,7 @@ function RequestCard({ request: r, cache, canEdit, onResolve }: {
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <Pressable onPress={() => goTo(`/admin/businesses/${r.business_id}`)} accessibilityRole="link" accessibilityLabel={`Open ${r.business_name}`}
+        <Pressable onPress={() => goTo(`/admin/businesses/${r.business_id}`)} accessibilityRole="link" accessibilityLabel={tr('admin.OwnerRequestsScreen.open_business_name', { business_name: r.business_name })}
           style={({ hovered }: any) => [{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }, hovered && { opacity: 0.75 },
             Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
           <Text variant="h3" numberOfLines={1} style={{ flexShrink: 1 }}>{r.business_name}</Text>
@@ -251,7 +253,7 @@ function RequestCard({ request: r, cache, canEdit, onResolve }: {
         </Pressable>
         <Badge label={KIND_LABEL[r.kind] ?? r.kind} tone={KIND_TONE[r.kind] ?? 'neutral'} icon={r.kind === 'delete_bills' ? 'trash-outline' : r.kind === 'archive_bills' ? 'archive-outline' : 'chatbubble-outline'} />
         <Badge label={STATUS_LABEL[r.status] ?? r.status} tone={STATUS_TONE[r.status] ?? 'neutral'} />
-        <Text variant="small" tone="subtle">{ago(r.created_at)} ago{r.requested_by ? ` · ${r.requested_by}` : ''}</Text>
+        <Text variant="small" tone="subtle">{ago(r.created_at)} {tr('admin.OwnerRequestsScreen.ago')}{r.requested_by ? ` · ${r.requested_by}` : ''}</Text>
       </View>
 
       <View style={{ padding: 12, borderRadius: radius.md, backgroundColor: colors.surfaceSunken, flexDirection: 'row', gap: 8 }}>
@@ -263,12 +265,12 @@ function RequestCard({ request: r, cache, canEdit, onResolve }: {
         <View style={{ gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text variant="smallStrong" tone="muted" style={{ flex: 1 }}>
-              {bills.bills ? billsSummary(found) : `${plural(r.order_ids.length, 'bill')} in this request`}
+              {bills.bills ? billsSummary(found) : tr('admin.OwnerRequestsScreen.plural_in_this_request', { plural: plural(r.order_ids.length, 'bill') })}
             </Text>
-            {!pending ? <Button title={showBills ? 'Hide bills' : 'Show bills'} size="sm" variant="ghost" onPress={() => setShowBills((v) => !v)} /> : null}
+            {!pending ? <Button title={showBills ? tr('admin.OwnerRequestsScreen.hide_bills') : tr('admin.OwnerRequestsScreen.show_bills')} size="sm" variant="ghost" onPress={() => setShowBills((v) => !v)} /> : null}
           </View>
           {showBills && bills.loading ? <Loading /> : null}
-          {showBills && bills.error ? <Text variant="small" tone="danger">Couldn't load the bills: {bills.error}</Text> : null}
+          {showBills && bills.error ? <Text variant="small" tone="danger">{tr('admin.OwnerRequestsScreen.couldn_t_load_the_bills')} {bills.error}</Text> : null}
           {showBills && found.length ? (
             <Card padded={false} style={{ overflow: 'hidden' }}>
               {found.map((b, i) => <BillRow key={b.id} bill={b} first={i === 0} />)}
@@ -276,15 +278,15 @@ function RequestCard({ request: r, cache, canEdit, onResolve }: {
           ) : null}
           {showBills && missing > 0 ? (
             <Text variant="small" tone="subtle">
-              {`${plural(missing, 'bill')} not found: already deleted.`}
+              {tr('admin.OwnerRequestsScreen.plural_not_found_already_deleted', { plural: plural(missing, 'bill') })}
             </Text>
           ) : null}
         </View>
       ) : null}
 
       {!pending ? (
-        <Callout tone={r.status === 'done' ? 'success' : 'neutral'} title={TAKEN_LABEL[r.action_taken ?? 'none'] ?? 'Handled'}>
-          {`${r.response ? `“${r.response}”` : 'No response.'}${r.handled_by ? ` · ${r.handled_by}` : ''}${r.handled_at ? ` · ${formatDateTime(r.handled_at)}` : ''}`}
+        <Callout tone={r.status === 'done' ? 'success' : 'neutral'} title={TAKEN_LABEL[r.action_taken ?? 'none'] ?? tr('admin.OwnerRequestsScreen.handled')}>
+          {`${r.response ? `“${r.response}”` : tr('admin.OwnerRequestsScreen.no_response')}${r.handled_by ? ` · ${r.handled_by}` : ''}${r.handled_at ? ` · ${formatDateTime(r.handled_at)}` : ''}`}
         </Callout>
       ) : null}
 
@@ -292,13 +294,13 @@ function RequestCard({ request: r, cache, canEdit, onResolve }: {
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
           {r.order_ids.length ? (
             <>
-              <Button title="Archive bills" icon="archive-outline" size="sm" variant={r.kind === 'delete_bills' ? 'secondary' : 'primary'}
+              <Button title={tr('common.archive_bills')} icon="archive-outline" size="sm" variant={r.kind === 'delete_bills' ? 'secondary' : 'primary'}
                 onPress={() => onResolve('archive', found)} disabled={!online || !ready} />
-              <Button title={isPhone ? 'Delete' : 'Delete permanently'} icon="trash-outline" size="sm" variant="danger"
+              <Button title={isPhone ? tr('common.delete_2') : tr('admin.OwnerRequestsScreen.delete_permanently_2')} icon="trash-outline" size="sm" variant="danger"
                 onPress={() => onResolve('delete', found)} disabled={!online || !ready} />
             </>
           ) : null}
-          <Button title={r.order_ids.length ? 'Decline' : 'Reply & close'} icon={r.order_ids.length ? 'close' : 'send-outline'} size="sm" variant="secondary"
+          <Button title={r.order_ids.length ? tr('admin.OwnerRequestsScreen.decline_2') : tr('admin.OwnerRequestsScreen.reply_close_2')} icon={r.order_ids.length ? 'close' : 'send-outline'} size="sm" variant="secondary"
             onPress={() => onResolve('none', found)} disabled={!online} />
         </View>
       ) : null}
@@ -324,8 +326,8 @@ function ResolveSheet({ request: r, bills, initial, onClose, onDone }: {
   const [formError, setFormError] = useState<string | null>(null);
   const hasBills = r.order_ids.length > 0;
   const options: { value: Resolution; label: string }[] = hasBills
-    ? [{ value: 'archive', label: 'Archive' }, { value: 'delete', label: 'Delete' }, { value: 'none', label: 'Decline' }]
-    : [{ value: 'none', label: 'Reply & close' }];
+    ? [{ value: 'archive', label: tr('admin.OwnerRequestsScreen.archive') }, { value: 'delete', label: tr('common.delete_2') }, { value: 'none', label: tr('admin.OwnerRequestsScreen.decline_2') }]
+    : [{ value: 'none', label: tr('admin.OwnerRequestsScreen.reply_close_2') }];
   const errors = {
     response: response.trim().length < 2 ? 'Write a short response; the owner sees it.' : undefined,
     typed: action === 'delete' && typed !== 'DELETE' ? 'Type DELETE in capitals.' : undefined,
@@ -340,7 +342,7 @@ function ResolveSheet({ request: r, bills, initial, onClose, onDone }: {
       const res = await platformApi.resolveOwnerRequest(r.id, {
         action, response: response.trim(), ...(action === 'delete' ? { confirm: 'DELETE' as const } : {}),
       });
-      toast.success(action === 'archive' ? 'Bills archived · owner notified' : action === 'delete' ? 'Bills deleted · owner notified' : 'Reply sent to the owner');
+      toast.success(action === 'archive' ? tr('admin.OwnerRequestsScreen.bills_archived_owner_notified') : action === 'delete' ? tr('admin.OwnerRequestsScreen.bills_deleted_owner_notified') : tr('admin.OwnerRequestsScreen.reply_sent_to_the_owner'));
       if (res.warning) toast.warning(res.warning);
       onDone();
     } catch (e) {
@@ -350,13 +352,13 @@ function ResolveSheet({ request: r, bills, initial, onClose, onDone }: {
     }
   };
 
-  const title = action === 'archive' ? 'Archive requested bills' : action === 'delete' ? 'Delete requested bills permanently' : hasBills ? 'Decline request' : 'Reply to owner';
+  const title = action === 'archive' ? tr('admin.OwnerRequestsScreen.archive_requested_bills') : action === 'delete' ? tr('admin.OwnerRequestsScreen.delete_requested_bills_permanently') : hasBills ? tr('admin.OwnerRequestsScreen.decline_request') : tr('admin.OwnerRequestsScreen.reply_to_owner');
   return (
     <Sheet visible onClose={onClose} title={title} subtitle={`${r.business_name}${hasBills ? ` · ${billsSummary(bills)}` : ''}`} width={640}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title={action === 'archive' ? 'Archive & reply' : action === 'delete' ? 'Delete & reply' : 'Send reply'}
+          <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={action === 'archive' ? tr('admin.OwnerRequestsScreen.archive_reply') : action === 'delete' ? tr('admin.OwnerRequestsScreen.delete_reply') : tr('admin.OwnerRequestsScreen.send_reply')}
             icon={action === 'archive' ? 'archive-outline' : action === 'delete' ? 'trash-outline' : 'send-outline'}
             variant={action === 'delete' ? 'danger' : 'primary'} onPress={submit} loading={saving}
             disabled={!online || (action === 'delete' && typed !== 'DELETE')} />
@@ -370,20 +372,20 @@ function ResolveSheet({ request: r, bills, initial, onClose, onDone }: {
       ) : null}
       {hasBills && bills.length < r.order_ids.length ? (
         <Callout tone="warning">
-          {`${plural(r.order_ids.length - bills.length, 'requested bill')} couldn't be found. If a bill was already deleted, ${action === 'none' ? 'declining still works' : 'the action fails: decline and explain instead'}.`}
+          {tr('admin.OwnerRequestsScreen.plural_couldn_t_be_found_if_a_bill_was', { plural: plural(r.order_ids.length - bills.length, 'requested bill'), v: action === 'none' ? tr('admin.OwnerRequestsScreen.declining_still_works') : tr('admin.OwnerRequestsScreen.the_action_fails_decline_and_explain') })}
         </Callout>
       ) : null}
       {action === 'archive' ? (
-        <Callout tone="info" icon="archive-outline">Archived bills leave the owner's lists and reports but stay on record (GST-safe) and can be restored from the business page.</Callout>
+        <Callout tone="info" icon="archive-outline">{tr('admin.OwnerRequestsScreen.archived_bills_leave_the_owner_s_lists')}</Callout>
       ) : null}
       {action === 'delete' ? (
         <DeleteConfirm bills={bills} typed={typed} onTyped={setTyped} error={submitted ? errors.typed : undefined}
           onArchiveInstead={() => { setAction('archive'); setTyped(''); }} />
       ) : null}
-      {action === 'none' && hasBills ? <Callout tone="neutral">Nothing changes. The request is closed as declined and the owner sees your response.</Callout> : null}
-      <Input label="Response to the owner" required value={response} onChangeText={setResponse} maxLength={500} multiline
+      {action === 'none' && hasBills ? <Callout tone="neutral">{tr('admin.OwnerRequestsScreen.nothing_changes_the_request_is_closed_as')}</Callout> : null}
+      <Input label={tr('admin.OwnerRequestsScreen.response_to_the_owner')} required value={response} onChangeText={setResponse} maxLength={500} multiline
         error={submitted ? errors.response : undefined} style={{ minHeight: 72, textAlignVertical: 'top', paddingTop: 10 }}
-        placeholder="Shown to the owner in the app" />
+        placeholder={tr('admin.OwnerRequestsScreen.shown_to_the_owner_in_the_app')} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {RESPONSES[action].map((t) => <Button key={t} title={t} size="sm" variant={response === t ? 'soft' : 'secondary'} onPress={() => setResponse(t)} />)}
       </View>

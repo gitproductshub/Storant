@@ -20,7 +20,8 @@ import { useAuth, can } from '@/store/auth';
 import { useData } from '@/store/data';
 import { useAccessInfo } from '@/store/access';
 import { printBill, printErrorMessage } from '@/lib/billing';
-import { ORDER_TYPE_LABEL, formatDate, formatTime, money } from '@/lib/format';
+import { formatDate, formatTime, money } from '@/lib/format';
+import { ORDER_TYPE_UI } from '@/lib/uiLabels';
 import { ChannelTile, billNo, channelLabel } from './common';
 import { OrderDetail } from './OrderDetail';
 import { OfflineBills } from './OfflineBills';
@@ -28,6 +29,7 @@ import { usePagedOrders, type OrderQuery } from './usePagedOrders';
 import {
   DATE_PRESETS, ORDER_STATUS_FILTERS, datePresetRange, paymentPillStatus, type DatePreset, type OrderStatusFilter,
 } from './floorLogic';
+import { t, currentLocale } from '@/i18n';
 
 const PANEL_MIN_WIDTH = 900;
 
@@ -36,7 +38,7 @@ type Row = OrderSummaryRow;
 function whereLabel(o: Row): string {
   if (o.table_label) return `Table ${o.table_label}${o.bill_label ? ` · ${o.bill_label}` : ''}`;
   if (o.channel !== 'POS') return `${channelLabel(o.channel)}${o.external_order_id ? ` · ${o.external_order_id}` : ''}`;
-  return `${ORDER_TYPE_LABEL[o.type] ?? o.type}${o.token_no ? ` · Token ${o.token_no}` : ''}`;
+  return `${ORDER_TYPE_UI[o.type] ?? o.type}${o.token_no ? ` · Token ${o.token_no}` : ''}`;
 }
 
 function whenLabel(iso: string): string {
@@ -106,30 +108,30 @@ export default function OrdersScreen() {
   }, [settings]);
 
   const rowMenu = useCallback((o: Row): ActionMenuItem[] => [
-    { key: 'open', label: 'View bill', icon: 'document-text-outline', onPress: () => setSelected(o) },
-    { key: 'print', label: o.status === 'completed' ? 'Reprint' : 'Print bill', icon: 'print-outline', hidden: o.status === 'merged', onPress: () => void reprint(o) },
-    { key: 'pos', label: o.payment_status !== 'paid' && can(role, 'bill') ? 'Settle in Billing' : 'Open in Billing', icon: 'receipt-outline',
+    { key: 'open', label: t('ops.OrdersScreen.view_bill'), icon: 'document-text-outline', onPress: () => setSelected(o) },
+    { key: 'print', label: o.status === 'completed' ? t('ops.OrdersScreen.reprint') : t('common.print_bill'), icon: 'print-outline', hidden: o.status === 'merged', onPress: () => void reprint(o) },
+    { key: 'pos', label: o.payment_status !== 'paid' && can(role, 'bill') ? t('ops.OrdersScreen.settle_in_billing') : t('common.open_in_billing'), icon: 'receipt-outline',
       hidden: o.status !== 'open' || !can(role, 'order'), onPress: () => router.push({ pathname: '/pos', params: { order: o.id } }) },
-    { key: 'online', label: 'Review in Online orders', icon: 'bicycle-outline', hidden: o.status !== 'placed', onPress: () => router.push('/online') },
+    { key: 'online', label: t('ops.OrdersScreen.review_in_online_orders'), icon: 'bicycle-outline', hidden: o.status !== 'placed', onPress: () => router.push('/online') },
   ], [reprint, role]);
 
   const columns = useMemo<DataColumn<Row>[]>(() => [
-    { key: 'time', title: 'Time', width: date === 'today' && !q ? 88 : 140, value: (o) => whenLabel(o.created_at) },
-    { key: 'bill', title: 'Bill', flex: 1, minWidth: 110,
+    { key: 'time', title: t('ops.OrdersScreen.time'), width: date === 'today' && !q ? 88 : 140, value: (o) => whenLabel(o.created_at) },
+    { key: 'bill', title: t('common.bill'), flex: 1, minWidth: 110,
       render: (o) => <Text variant="smallStrong" numberOfLines={1} style={o.status === 'cancelled' ? styles.strike : undefined}>{billNo(o)}</Text> },
-    { key: 'where', title: 'Table / channel', flex: 1.4, minWidth: 140, hideBelow: 720, value: whereLabel },
-    { key: 'customer', title: 'Customer', flex: 1.2, minWidth: 120, hideBelow: 880, value: (o) => o.customer_name || o.customer_phone || '—' },
-    { key: 'items', title: 'Items', width: 64, numeric: true, hideBelow: 1180, value: (o) => (o.item_count ? String(o.item_count) : '—') },
-    { key: 'waiter', title: 'Waiter', width: 120, hideBelow: 1080, value: (o) => o.waiter_name || '—' },
-    { key: 'amount', title: 'Amount', width: 108, numeric: true,
+    { key: 'where', title: t('ops.OrdersScreen.table_channel'), flex: 1.4, minWidth: 140, hideBelow: 720, value: whereLabel },
+    { key: 'customer', title: t('common.customer'), flex: 1.2, minWidth: 120, hideBelow: 880, value: (o) => o.customer_name || o.customer_phone || '—' },
+    { key: 'items', title: t('common.items'), width: 64, numeric: true, hideBelow: 1180, value: (o) => (o.item_count ? String(o.item_count) : '—') },
+    { key: 'waiter', title: t('common.waiter'), width: 120, hideBelow: 1080, value: (o) => o.waiter_name || '—' },
+    { key: 'amount', title: t('common.amount'), width: 108, numeric: true,
       render: (o) => (
         <Text variant="smallStrong" numberOfLines={1} style={[styles.num, o.status === 'cancelled' && styles.strike]} tone={o.status === 'cancelled' ? 'subtle' : 'default'}>
           {money(o.total_amount, sym)}
         </Text>
       ) },
-    { key: 'payment', title: 'Payment', width: 116, hideBelow: 620,
-      render: (o) => { const p = paymentPillStatus(o); return p ? <StatusPill status={p} label={p === 'claim' ? 'UPI claim' : undefined} /> : null; } },
-    { key: 'status', title: 'Status', width: 118, render: (o) => <StatusPill status={o.status} /> },
+    { key: 'payment', title: t('ops.OrdersScreen.payment'), width: 116, hideBelow: 620,
+      render: (o) => { const p = paymentPillStatus(o); return p ? <StatusPill status={p} label={p === 'claim' ? t('ops.OrdersScreen.upi_claim') : undefined} /> : null; } },
+    { key: 'status', title: t('common.status'), width: 118, render: (o) => <StatusPill status={o.status} /> },
   ], [sym, date, q]);
 
   const renderCard = useCallback((o: Row) => {
@@ -149,32 +151,32 @@ export default function OrdersScreen() {
         </View>
         <View style={{ alignItems: 'flex-end', gap: 4 }}>
           <Text variant="money" numberOfLines={1} style={o.status === 'cancelled' ? [styles.strike, { color: colors.textSubtle }] : undefined}>{money(o.total_amount, sym)}</Text>
-          {p ? <StatusPill status={p} label={p === 'claim' ? 'UPI claim' : undefined} /> : null}
+          {p ? <StatusPill status={p} label={p === 'claim' ? t('ops.OrdersScreen.upi_claim') : undefined} /> : null}
         </View>
       </View>
     );
   }, [sym, colors.textSubtle]);
 
-  const rowActions = useCallback((o: Row) => <ActionMenu items={rowMenu(o)} align="end" title={`Bill ${billNo(o)}`} />, [rowMenu]);
+  const rowActions = useCallback((o: Row) => <ActionMenu items={rowMenu(o)} align="end" title={t('ops.OrdersScreen.bill_billno', { billNo: billNo(o) })} />, [rowMenu]);
 
   const dateLabel = q ? 'All dates' : DATE_PRESETS.find((d) => d.key === date)?.label ?? 'Today';
   const dateMenu = (
-    <ActionMenu align="end" title="Date"
+    <ActionMenu align="end" title={t('ops.OrdersScreen.date')}
       items={DATE_PRESETS.map((d) => ({ key: d.key, label: d.label, selected: !q && date === d.key, onPress: () => setDate(d.key) }))}
       trigger={(open) => <Button title={isPhone ? undefined : dateLabel} icon="calendar-outline" iconRight={isPhone ? undefined : 'chevron-down'} size={isPhone ? 'md' : 'sm'}
-        variant={date !== 'today' && !q ? 'tonal' : 'outline'} onPress={open} accessibilityLabel={`Date: ${dateLabel}`} />} />
+        variant={date !== 'today' && !q ? 'tonal' : 'outline'} onPress={open} accessibilityLabel={t('ops.OrdersScreen.date_datelabel', { dateLabel })} />} />
   );
   const channelMenu = (
-    <ActionMenu align="end" title="Channel" width={240}
+    <ActionMenu align="end" title={t('common.channel')} width={240}
       items={[
-        { key: 'all', label: 'All channels', selected: channel === null, onPress: () => setChannel(null), group: 'ch' },
+        { key: 'all', label: t('ops.OrdersScreen.all_channels'), selected: channel === null, onPress: () => setChannel(null), group: 'ch' },
         ...channelOptions.map((c) => ({ key: c, label: channelLabel(c), selected: channel === c, onPress: () => setChannel(c), group: 'ch' })),
-        { key: 'archived', label: archived ? 'Hide archived bills' : 'Include archived bills', icon: 'archive-outline' as const, group: 'opts',
+        { key: 'archived', label: archived ? t('ops.OrdersScreen.hide_archived_bills') : t('ops.OrdersScreen.include_archived_bills'), icon: 'archive-outline' as const, group: 'opts',
           hidden: !isOwner, selected: archived, onPress: () => setArchived(!archived) },
       ]}
-      trigger={(open) => <Button title={isPhone ? undefined : channel ? channelLabel(channel) : 'All channels'} icon="funnel-outline"
+      trigger={(open) => <Button title={isPhone ? undefined : channel ? channelLabel(channel) : t('ops.OrdersScreen.all_channels')} icon="funnel-outline"
         iconRight={isPhone ? undefined : 'chevron-down'} size={isPhone ? 'md' : 'sm'} variant={channel || archived ? 'tonal' : 'outline'} onPress={open}
-        accessibilityLabel={`Channel: ${channel ? channelLabel(channel) : 'all'}`} />} />
+        accessibilityLabel={t('ops.OrdersScreen.channel_v', { v: channel ? channelLabel(channel) : 'all' })} />} />
   );
 
   const filters = ORDER_STATUS_FILTERS
@@ -186,10 +188,10 @@ export default function OrdersScreen() {
       <OfflineBills />
       <View style={styles.summary}>
         <Text variant="small" tone="muted" numberOfLines={1} style={{ flex: 1 }}>
-          {list.loading ? 'Loading…' : `${list.total.toLocaleString('en-IN')} bill${list.total === 1 ? '' : 's'}${q ? ` matching “${q}”` : ` · ${dateLabel.toLowerCase()}`}`}
-          {!list.loading && list.items.length < list.total ? ` · showing ${list.items.length.toLocaleString('en-IN')}` : ''}
+          {list.loading ? t('ops.OrdersScreen.loading') : t('ops.OrdersScreen.tolocalestring_bill_v_v2', { toLocaleString: list.total.toLocaleString(currentLocale()), v: list.total === 1 ? '' : 's', v2: q ? t('ops.OrdersScreen.matching_q', { q }) : ` · ${dateLabel.toLowerCase()}` })}
+          {!list.loading && list.items.length < list.total ? t('ops.OrdersScreen.showing_tolocalestring', { toLocaleString: list.items.length.toLocaleString(currentLocale()) }) : ''}
         </Text>
-        {filtersActive ? <Button title="Clear filters" size="sm" variant="ghost" onPress={clearFilters} /> : null}
+        {filtersActive ? <Button title={t('common.clear_filters')} size="sm" variant="ghost" onPress={clearFilters} /> : null}
       </View>
       <DataList<Row>
         data={list.items}
@@ -203,11 +205,11 @@ export default function OrdersScreen() {
         onRetry={list.reload}
         empty={{
           icon: 'receipt-outline',
-          title: q ? 'No matching bills' : status === 'active' ? 'No running orders' : 'No orders here yet',
-          message: q ? 'Try a bill number, the last digits of a phone number, or a customer name.'
-            : filtersActive ? 'Nothing matches these filters. Try another date or channel.' : 'Bills you create in Billing show up here.',
-          action: filtersActive ? { label: 'Clear filters', onPress: clearFilters, icon: 'funnel-outline' }
-            : can(role, 'order') ? { label: 'New bill', onPress: () => router.push('/pos'), icon: 'add' } : undefined,
+          title: q ? t('ops.OrdersScreen.no_matching_bills') : status === 'active' ? t('ops.OrdersScreen.no_running_orders') : t('ops.OrdersScreen.no_orders_here_yet'),
+          message: q ? t('ops.OrdersScreen.try_a_bill_number_the_last_digits_of_a')
+            : filtersActive ? t('ops.OrdersScreen.nothing_matches_these_filters_try_another') : t('ops.OrdersScreen.bills_you_create_in_billing_show_up_here'),
+          action: filtersActive ? { label: t('common.clear_filters'), onPress: clearFilters, icon: 'funnel-outline' }
+            : can(role, 'order') ? { label: t('common.new_bill'), onPress: () => router.push('/pos'), icon: 'add' } : undefined,
         }}
         refreshing={list.refreshing}
         onRefresh={() => void list.reload()}
@@ -226,13 +228,13 @@ export default function OrdersScreen() {
   );
 
   return (
-    <Screen title="Orders" scroll={false} maxWidth={2400}
+    <Screen title={t('common.orders')} scroll={false} maxWidth={2400}
       toolbar={
-        <FilterBar onSearch={setQ} search={q} searchPlaceholder={isPhone ? 'Bill no, phone or name' : 'Bill no, phone, name or aggregator ID'}
+        <FilterBar onSearch={setQ} search={q} searchPlaceholder={isPhone ? t('ops.OrdersScreen.bill_no_phone_or_name_x') : t('ops.OrdersScreen.bill_no_phone_name_or_aggregator_id_x')}
           searching={list.loading && !!q} filters={filters} value={status} onChange={onStatus}
           right={<>{dateMenu}{channelMenu}</>} />
       }
-      actions={can(role, 'order') ? <Button title={isPhone ? 'New' : 'New bill'} icon="add" onPress={() => router.push('/pos')} /> : undefined}
+      actions={can(role, 'order') ? <Button title={isPhone ? t('common.new') : t('common.new_bill')} icon="add" onPress={() => router.push('/pos')} /> : undefined}
       contentStyle={{ flex: 1, paddingBottom: 12 }}>
       {panel ? (
         <View style={styles.split}>
@@ -240,8 +242,8 @@ export default function OrdersScreen() {
           {selected ? (
             <View style={[styles.pane, { width: width >= 1400 ? 460 : 400, backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[styles.paneHead, { borderBottomColor: colors.divider }]}>
-                <Text variant="h3" style={{ flex: 1 }} numberOfLines={1}>Bill details</Text>
-                <IconButton icon="close" accessibilityLabel="Close bill details" onPress={() => setSelected(null)} />
+                <Text variant="h3" style={{ flex: 1 }} numberOfLines={1}>{t('ops.OrdersScreen.bill_details')}</Text>
+                <IconButton icon="close" accessibilityLabel={t('ops.OrdersScreen.close_bill_details')} onPress={() => setSelected(null)} />
               </View>
               <ScrollView contentContainerStyle={{ padding: 16 }}>
                 <OrderDetail key={selected.id} orderId={selected.id} onChanged={onChanged} />
@@ -252,7 +254,7 @@ export default function OrdersScreen() {
       ) : (
         <>
           {listView}
-          <Sheet visible={!!selected} onClose={() => setSelected(null)} width={620} title="Bill details">
+          <Sheet visible={!!selected} onClose={() => setSelected(null)} width={620} title={t('ops.OrdersScreen.bill_details')}>
             {selected ? (
               <OrderDetail key={selected.id} orderId={selected.id} onClose={() => setSelected(null)} onChanged={onChanged} />
             ) : null}

@@ -1,5 +1,5 @@
 /**
- * Shell of the Tallyko platform console (super admin / support). No POS here: businesses, payment claims, subscription offers,
+ * Shell of the Storant platform console (super admin / support). No POS here: businesses, payment claims, subscription offers,
  * plans, GST library, platform settings, audit.
  *  - Desktop (≥1100dp): full sidebar with logo, navigation and the signed-in admin.
  *  - Tablet: icon-only sidebar.
@@ -15,6 +15,8 @@ import { ListRow, Sheet, Text } from '@/components/ui';
 import { signOut } from '@/lib/signOut';
 import { useAuth } from '@/store/auth';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
+import { ThemeToggle } from '@/theme/ThemeToggle';
+import { LanguageMenu } from '@/i18n/LanguageSwitcher';
 import { useNavPrefs } from '@/components/nav/navPrefs';
 import { refreshPendingPayments, useOnline, usePendingOwnerRequests, usePendingPayments, useWatchNetwork } from './shared';
 
@@ -32,15 +34,15 @@ interface AdminNavItem {
 }
 
 const NAV: AdminNavItem[] = [
-  { key: 'overview', label: 'Overview', short: 'Overview', href: '/admin', icon: 'grid-outline', iconActive: 'grid', tab: true },
-  { key: 'businesses', label: 'Businesses', short: 'Businesses', href: '/admin/businesses', icon: 'storefront-outline', iconActive: 'storefront', tab: true },
-  { key: 'payments', label: 'Payment requests', short: 'Payments', href: '/admin/payments', icon: 'wallet-outline', iconActive: 'wallet', tab: true },
-  { key: 'requests', label: 'Owner requests', short: 'Requests', href: '/admin/requests', icon: 'mail-unread-outline', iconActive: 'mail-unread' },
-  { key: 'offers', label: 'Subscription offers', short: 'Offers', href: '/admin/offers', icon: 'pricetags-outline', iconActive: 'pricetags' },
-  { key: 'plans', label: 'Plans & features', short: 'Plans', href: '/admin/plans', icon: 'layers-outline', iconActive: 'layers', tab: true },
-  { key: 'tax', label: 'GST rate library', short: 'GST', href: '/admin/tax', icon: 'receipt-outline', iconActive: 'receipt' },
-  { key: 'settings', label: 'Platform settings', short: 'Settings', href: '/admin/settings', icon: 'settings-outline', iconActive: 'settings' },
-  { key: 'audit', label: 'Audit log', short: 'Audit', href: '/admin/audit', icon: 'time-outline', iconActive: 'time' },
+  { key: 'overview', get label() { return t('common.overview'); }, short: 'Overview', href: '/admin', icon: 'grid-outline', iconActive: 'grid', tab: true },
+  { key: 'businesses', get label() { return t('common.businesses'); }, short: 'Businesses', href: '/admin/businesses', icon: 'storefront-outline', iconActive: 'storefront', tab: true },
+  { key: 'payments', get label() { return t('admin.AdminLayout.payment_requests'); }, short: 'Payments', href: '/admin/payments', icon: 'wallet-outline', iconActive: 'wallet', tab: true },
+  { key: 'requests', get label() { return t('common.owner_requests'); }, short: 'Requests', href: '/admin/requests', icon: 'mail-unread-outline', iconActive: 'mail-unread' },
+  { key: 'offers', get label() { return t('admin.AdminLayout.subscription_offers'); }, short: 'Offers', href: '/admin/offers', icon: 'pricetags-outline', iconActive: 'pricetags' },
+  { key: 'plans', get label() { return t('admin.AdminLayout.plans_features'); }, short: 'Plans', href: '/admin/plans', icon: 'layers-outline', iconActive: 'layers', tab: true },
+  { key: 'tax', get label() { return t('common.gst_rate_library'); }, short: 'GST', href: '/admin/tax', icon: 'receipt-outline', iconActive: 'receipt' },
+  { key: 'settings', get label() { return t('admin.AdminLayout.platform_settings'); }, short: 'Settings', href: '/admin/settings', icon: 'settings-outline', iconActive: 'settings' },
+  { key: 'audit', get label() { return t('admin.AdminLayout.audit_log'); }, short: 'Audit', href: '/admin/audit', icon: 'time-outline', iconActive: 'time' },
 ];
 
 /** Count badges per nav item (pending payment claims, pending owner requests). */
@@ -56,7 +58,7 @@ function useNavBadges(): Record<string, number> {
 function NavBadge({ count, floating }: { count: number; floating?: boolean }) {
   const { colors, radius } = useTheme();
   return (
-    <View accessibilityLabel={`${count} pending`}
+    <View accessibilityLabel={t('admin.AdminLayout.count_pending', { count })}
       style={[
         { minWidth: 20, height: 20, paddingHorizontal: 6, borderRadius: radius.pill, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
         floating && { position: 'absolute', top: 2, left: '50%', marginLeft: 4, minWidth: 18, height: 18, paddingHorizontal: 4 },
@@ -66,7 +68,7 @@ function NavBadge({ count, floating }: { count: number; floating?: boolean }) {
   );
 }
 
-const ROLE_LABEL = { super_admin: 'Super admin', support: 'Support · read-only' } as const;
+const ROLE_LABEL = { get super_admin() { return t('admin.AdminLayout.super_admin'); }, get support() { return t('admin.AdminLayout.support_read_only'); } } as const;
 
 function activeKey(pathname: string): string {
   const rest = pathname.replace(/^\/admin\/?/, '');
@@ -75,6 +77,8 @@ function activeKey(pathname: string): string {
 }
 
 import { initials } from '@/lib/initials';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 function go(item: AdminNavItem) {
   router.navigate(item.href as Href);
@@ -140,20 +144,20 @@ function SideNav() {
   const compact = !isDesktop || collapsed;
 
   return (
-    <View style={[styles.side, { backgroundColor: colors.sidebar, width: compact ? 84 : 256, paddingTop: insets.top + 18, paddingBottom: insets.bottom + 12 }]}
+    <View style={[styles.side, { backgroundColor: colors.sidebar, borderRightWidth: 1, borderRightColor: colors.sidebarBorder, width: compact ? 84 : 256, paddingTop: insets.top + 18, paddingBottom: insets.bottom + 12 }]}
       accessibilityRole="menu">
       <View style={[styles.sideHeader, compact && { justifyContent: 'center', paddingHorizontal: 0 }]}>
         <LogoMark size={34} />
         {!compact ? (
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text variant="bodyStrong" color="#F8FAFC" numberOfLines={1}>Tallyko</Text>
-            <Text variant="caption" color={colors.sidebarMuted} numberOfLines={1}>PLATFORM CONSOLE</Text>
+            <Text variant="bodyStrong" color={colors.sidebarText} numberOfLines={1}>{brand.name}</Text>
+            <Text variant="caption" color={colors.sidebarMuted} numberOfLines={1}>{t('admin.AdminLayout.platform_console')}</Text>
           </View>
         ) : null}
       </View>
 
       <View style={{ flex: 1, paddingHorizontal: compact ? 10 : 12, gap: 2, marginTop: 22 }}>
-        {!compact ? <Text variant="caption" color={colors.sidebarMuted} style={{ paddingHorizontal: 12, marginBottom: 4 }}>MANAGE TALLYKO</Text> : null}
+        {!compact ? <Text variant="caption" color={colors.sidebarMuted} style={{ paddingHorizontal: 12, marginBottom: 4 }}>{t('admin.AdminLayout.manage')} {brand.name.toUpperCase()}</Text> : null}
         {NAV.map((item) => {
           const isActive = item.key === active;
           return (
@@ -161,7 +165,7 @@ function SideNav() {
               style={({ hovered }: any) => [
                 styles.sideItem,
                 compact && { justifyContent: 'center', paddingHorizontal: 0 },
-                { backgroundColor: isActive ? colors.sidebarActive : hovered ? 'rgba(255,255,255,0.05)' : 'transparent' },
+                { backgroundColor: isActive ? colors.sidebarActive : hovered ? colors.sidebarHover : 'transparent' },
                 Platform.OS === 'web' && ({ cursor: 'pointer' } as any),
               ]}>
               <Ionicons name={isActive ? item.iconActive : item.icon} size={20} color={isActive ? colors.sidebarActiveText : colors.sidebarText} />
@@ -172,7 +176,12 @@ function SideNav() {
         })}
       </View>
 
-      <View style={[styles.account, { borderTopColor: 'rgba(255,255,255,0.08)' }, compact && { flexDirection: 'column', paddingHorizontal: 0 }]}>
+      <View style={[styles.prefs, compact && { flexDirection: 'column', alignItems: 'center', paddingHorizontal: 0 }]}>
+        <LanguageMenu tone="sidebar" compact={compact} />
+        <ThemeToggle tone="sidebar" compact={compact} />
+      </View>
+
+      <View style={[styles.account, { borderTopColor: colors.sidebarLine }, compact && { flexDirection: 'column', paddingHorizontal: 0 }]}>
         <View style={[styles.avatar, { backgroundColor: colors.sidebarActive }]}>
           <Text variant="smallStrong" color={colors.sidebarActiveText}>{initials(me.name)}</Text>
         </View>
@@ -185,16 +194,16 @@ function SideNav() {
             </View>
           </View>
         ) : null}
-        <Pressable onPress={() => void signOut()} accessibilityRole="button" accessibilityLabel="Sign out"
-          style={({ hovered }: any) => [styles.logout, hovered && { backgroundColor: 'rgba(255,255,255,0.08)' }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
+        <Pressable onPress={() => void signOut()} accessibilityRole="button" accessibilityLabel={t('common.sign_out')}
+          style={({ hovered }: any) => [styles.logout, hovered && { backgroundColor: colors.sidebarLine }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
           <Ionicons name="log-out-outline" size={20} color={colors.sidebarText} />
         </Pressable>
       </View>
       {isDesktop ? (
         <Pressable onPress={() => useNavPrefs.getState().set({ sidebarCollapsed: !collapsed })} accessibilityRole="button"
-          accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          accessibilityLabel={collapsed ? t('admin.AdminLayout.expand_sidebar') : t('admin.AdminLayout.collapse_sidebar')}
           style={({ hovered }: any) => [styles.logout, { alignSelf: compact ? 'center' : 'flex-end', marginRight: compact ? 0 : 12, width: 36, height: 36 },
-            hovered && { backgroundColor: 'rgba(255,255,255,0.08)' }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
+            hovered && { backgroundColor: colors.sidebarLine }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
           <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-back'} size={18} color={colors.sidebarMuted} />
         </Pressable>
       ) : null}
@@ -208,17 +217,19 @@ function TopBar() {
   const online = useOnline();
   const me = useAdminIdentity();
   return (
-    <View style={[styles.top, { backgroundColor: colors.sidebar, paddingTop: insets.top + 8 }]}>
+    <View style={[styles.top, { backgroundColor: colors.sidebar, borderBottomWidth: 1, borderBottomColor: colors.sidebarBorder, paddingTop: insets.top + 8 }]}>
       <LogoMark size={30} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text variant="smallStrong" color="#F8FAFC" numberOfLines={1}>Tallyko platform console</Text>
+        <Text variant="smallStrong" color={colors.sidebarText} numberOfLines={1}>{brand.name} {t('admin.AdminLayout.platform_console_2')}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <View style={[styles.dot, { backgroundColor: online ? colors.success : colors.warning }]} />
           <Text variant="caption" color={colors.sidebarMuted} numberOfLines={1}>{me.name} · {me.roleLabel}</Text>
         </View>
       </View>
-      <Pressable onPress={() => void signOut()} accessibilityRole="button" accessibilityLabel="Sign out"
-        style={({ pressed }) => [styles.logout, pressed && { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+      <LanguageMenu tone="sidebar" compact />
+      <ThemeToggle tone="sidebar" compact />
+      <Pressable onPress={() => void signOut()} accessibilityRole="button" accessibilityLabel={t('common.sign_out')}
+        style={({ pressed }) => [styles.logout, pressed && { backgroundColor: colors.sidebarLine }]}>
         <Ionicons name="log-out-outline" size={22} color={colors.sidebarText} />
       </Pressable>
     </View>
@@ -247,12 +258,12 @@ function BottomNav() {
           </Pressable>
         );
       })}
-      <Pressable onPress={() => setMore(true)} accessibilityRole="tab" accessibilityLabel="More" accessibilityState={{ selected: moreActive }} style={styles.bottomItem}>
+      <Pressable onPress={() => setMore(true)} accessibilityRole="tab" accessibilityLabel={t('common.more')} accessibilityState={{ selected: moreActive }} style={styles.bottomItem}>
         <Ionicons name={moreActive ? 'ellipsis-horizontal-circle' : 'ellipsis-horizontal-circle-outline'} size={22} color={moreActive ? colors.primary : colors.textSubtle} />
-        <Text variant="caption" color={moreActive ? colors.primary : colors.textSubtle} numberOfLines={1}>More</Text>
+        <Text variant="caption" color={moreActive ? colors.primary : colors.textSubtle} numberOfLines={1}>{t('common.more')}</Text>
         {restBadge ? <NavBadge count={restBadge} floating /> : null}
       </Pressable>
-      <Sheet visible={more} onClose={() => setMore(false)} title="More">
+      <Sheet visible={more} onClose={() => setMore(false)} title={t('common.more')}>
         {rest.map((item) => (
           <ListRow key={item.key} title={item.label} icon={item.key === active ? item.iconActive : item.icon}
             right={badges[item.key] ? <NavBadge count={badges[item.key]!} /> : undefined}
@@ -267,6 +278,7 @@ const styles = StyleSheet.create({
   side: { height: '100%' },
   sideHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20 },
   sideItem: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44, paddingHorizontal: 12, borderRadius: 10 },
+  prefs: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', paddingHorizontal: 16, paddingTop: 10 },
   account: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 12, marginTop: 6, borderTopWidth: 1 },
   avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   logout: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

@@ -14,6 +14,7 @@ import { money } from '@/lib/format';
 import { saveTextFile } from '@/features/reports/saveFile';
 import { copyText } from '@/features/settings/components';
 import { channelMenuCsv, channelMenuText, channelShortName, formatPct, sourceLabel } from './channelPricing';
+import { t } from '@/i18n';
 
 const SOURCE_TONE: Record<ChannelMenuItem['price_source'], BadgeTone> = { item: 'primary', markup: 'info', counter: 'neutral' };
 
@@ -58,42 +59,42 @@ export function ChannelMenuSheet({ channel, onClose, symbol = '₹' }: { channel
 
   const footer = (
     <View style={styles.footer}>
-      <Button title={isPhone ? 'Edit prices' : 'Edit prices in Menu'} variant="ghost" icon="create-outline"
+      <Button title={isPhone ? t('catalog.ChannelMenuSheet.edit_prices') : t('catalog.ChannelMenuSheet.edit_prices_in_menu')} variant="ghost" icon="create-outline"
         onPress={() => { onClose(); router.navigate('/menu' as Href); }} />
       <View style={{ flex: 1 }} />
-      <Button title="Copy" icon="copy-outline" variant="secondary" disabled={!menu} onPress={() => menu && copyText(channelMenuText(menu, symbol), `${name} menu`)} />
-      <Button title="Export CSV" icon="download-outline" disabled={!menu} loading={exporting} onPress={exportCsv} />
+      <Button title={t('common.copy')} icon="copy-outline" variant="secondary" disabled={!menu} onPress={() => menu && copyText(channelMenuText(menu, symbol), `${name} menu`)} />
+      <Button title={t('catalog.ChannelMenuSheet.export_csv')} icon="download-outline" disabled={!menu} loading={exporting} onPress={exportCsv} />
     </View>
   );
 
   return (
-    <Sheet visible onClose={onClose} title={`${live.name} menu`} subtitle="What this channel sells, and at which price" width={820} footer={footer} scroll={false}>
-      {loading && !menu ? <Loading label={`Loading the ${name} menu…`} /> : null}
+    <Sheet visible onClose={onClose} title={t('catalog.ChannelMenuSheet.name_menu', { name: live.name })} subtitle={t('catalog.ChannelMenuSheet.what_this_channel_sells_and_at_which_price')} width={820} footer={footer} scroll={false}>
+      {loading && !menu ? <Loading label={t('catalog.ChannelMenuSheet.loading_the_name_menu', { name })} /> : null}
       {error && !menu ? <ErrorState message={error} onRetry={() => setAttempt((n) => n + 1)} /> : null}
       {menu ? (
         <View style={{ gap: 12, flexShrink: 1, minHeight: 0 }}>
           <View style={styles.stats}>
-            <StatTile label="On the menu" value={String(menu.available_count)} />
-            <StatTile label={`Not on ${name}`} value={String(menu.hidden_count)} tone={menu.hidden_count ? 'warning' : undefined} />
-            <StatTile label="Own prices" value={String(ownPrices)} />
-            <StatTile label="Mark-up" value={pct ? formatPct(pct) : 'None'} />
+            <StatTile label={t('catalog.ChannelMenuSheet.on_the_menu')} value={String(menu.available_count)} />
+            <StatTile label={t('catalog.ChannelMenuSheet.not_on_name', { name })} value={String(menu.hidden_count)} tone={menu.hidden_count ? 'warning' : undefined} />
+            <StatTile label={t('catalog.ChannelMenuSheet.own_prices')} value={String(ownPrices)} />
+            <StatTile label={t('catalog.ChannelMenuSheet.mark_up')} value={pct ? formatPct(pct) : 'None'} />
           </View>
           <Text variant="small" tone="muted">
             {pct
-              ? `An item’s own ${name} price wins; every other item is your counter price ${formatPct(pct)} (the channel mark-up). Options add their extra cost on top.`
-              : `An item’s own ${name} price wins; every other item sells at your counter price. Options add their extra cost on top.`}
+              ? t('catalog.ChannelMenuSheet.an_item_s_own_name_price_wins_every_other', { name, formatPct: formatPct(pct) })
+              : t('catalog.ChannelMenuSheet.an_item_s_own_name_price_wins_every_other_2', { name })}
           </Text>
           <Segmented<'on' | 'off'> value={tab} onChange={setTab} size="sm" options={[
-            { value: 'on', label: `On the menu (${menu.available_count})` },
-            { value: 'off', label: `Not on ${name} (${menu.hidden_count})` },
+            { value: 'on', label: t('catalog.ChannelMenuSheet.on_the_menu_available_count', { available_count: menu.available_count }) },
+            { value: 'off', label: t('catalog.ChannelMenuSheet.not_on_name_hidden_count', { name, hidden_count: menu.hidden_count }) },
           ]} />
           <View style={[styles.table, { borderColor: colors.border }]}>
             {!isPhone ? (
               <View style={[styles.row, styles.headRow, { backgroundColor: colors.surfaceAlt, borderBottomColor: colors.border }]}>
                 <Text variant="caption" tone="subtle" style={{ flex: 1 }}>ITEM</Text>
-                <Text variant="caption" tone="subtle" style={styles.num}>COUNTER</Text>
+                <Text variant="caption" tone="subtle" style={styles.num}>{t('catalog.ChannelMenuSheet.counter')}</Text>
                 <Text variant="caption" tone="subtle" style={styles.num} numberOfLines={1}>{name.toUpperCase()}</Text>
-                <Text variant="caption" tone="subtle" style={styles.src}>PRICE FROM</Text>
+                <Text variant="caption" tone="subtle" style={styles.src}>{t('catalog.ChannelMenuSheet.price_from')}</Text>
               </View>
             ) : null}
             <FlatList
@@ -102,7 +103,7 @@ export function ChannelMenuSheet({ channel, onClose, symbol = '₹' }: { channel
               style={{ flexGrow: 0 }}
               ListEmptyComponent={
                 <View style={{ padding: 24, alignItems: 'center' }}>
-                  <Text tone="muted" align="center">{tab === 'on' ? `Nothing is on the ${name} menu yet.` : `Every item is on ${name}.`}</Text>
+                  <Text tone="muted" align="center">{tab === 'on' ? t('catalog.ChannelMenuSheet.nothing_is_on_the_name_menu_yet', { name }) : t('catalog.ChannelMenuSheet.every_item_is_on_name', { name })}</Text>
                 </View>
               }
               renderItem={({ item }) => <MenuItemRow item={item} symbol={symbol} pct={pct} phone={isPhone} />}
@@ -142,7 +143,7 @@ function MenuItemRow({ item, symbol, pct, phone }: { item: ChannelMenuItem; symb
       {phone ? (
         <View style={{ alignItems: 'flex-end' }}>
           <Text variant="money">{money(item.price, symbol)}</Text>
-          {item.price !== item.counter_price ? <Text variant="caption" tone="subtle">counter {money(item.counter_price, symbol)}</Text> : null}
+          {item.price !== item.counter_price ? <Text variant="caption" tone="subtle">{t('catalog.ChannelMenuSheet.counter_2')} {money(item.counter_price, symbol)}</Text> : null}
         </View>
       ) : (
         <>

@@ -9,6 +9,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeColors } from '@/theme/tokens';
 import { Text } from '@/components/ui';
 import { formatAge, type AgeTone } from './floorLogic';
+import { t, currentLocale } from '@/i18n';
 
 export function ageColors(colors: ThemeColors, tone: AgeTone): { bg: string; fg: string; solid: string } {
   if (tone === 'late') return { bg: colors.dangerSoft, fg: colors.dangerText, solid: colors.danger };
@@ -24,7 +25,7 @@ export function AgeChip({ minutes, tone, size = 'sm', label, style }: {
   const c = ageColors(colors, tone);
   const h = size === 'lg' ? 34 : size === 'md' ? 28 : 22;
   return (
-    <View accessibilityLabel={`${label ?? formatAge(minutes)}${tone === 'late' ? ', running late' : tone === 'warn' ? ', getting late' : ''}`}
+    <View accessibilityLabel={`${label ?? formatAge(minutes)}${tone === 'late' ? t('ops.parts.running_late') : tone === 'warn' ? t('ops.parts.getting_late') : ''}`}
       style={[styles.age, { height: h, paddingHorizontal: size === 'sm' ? 7 : 10, borderRadius: radius.pill, backgroundColor: c.bg }, style]}>
       <Ionicons name={tone === 'late' ? 'alert-circle' : 'time-outline'} size={size === 'lg' ? 18 : size === 'md' ? 15 : 13} color={c.fg} />
       <Text variant={size === 'lg' ? 'h3' : size === 'md' ? 'smallStrong' : 'caption'} color={c.fg} numberOfLines={1} style={styles.num}>
@@ -37,11 +38,11 @@ export function AgeChip({ minutes, tone, size = 'sm', label, style }: {
 /** Green dot "Live · 12:04:10", amber while reconnecting, red when offline with data from earlier. */
 export function LiveStatus({ updatedAt, error, paused, intervalLabel }: { updatedAt: number | null; error: string | null; paused?: boolean; intervalLabel?: string }) {
   const { colors } = useTheme();
-  const time = updatedAt ? new Date(updatedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : null;
+  const time = updatedAt ? new Date(updatedAt).toLocaleTimeString(currentLocale(), { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : null;
   const tone = error ? colors.danger : paused ? colors.textSubtle : colors.success;
   const text = error
-    ? `Can't reach the server${time ? ` · showing ${time}` : ''} · retrying`
-    : paused ? 'Paused while hidden' : `Live${intervalLabel ? ` · every ${intervalLabel}` : ''}${time ? ` · ${time}` : ''}`;
+    ? t('ops.parts.can_t_reach_the_server_v_retrying', { v: time ? t('ops.parts.showing_time', { time }) : '' })
+    : paused ? t('ops.parts.paused_while_hidden') : t('ops.parts.live_v_v2', { v: intervalLabel ? t('ops.parts.every_intervallabel', { intervalLabel }) : '', v2: time ? ` · ${time}` : '' });
   return (
     <View style={styles.live} accessibilityLiveRegion="polite">
       <View style={[styles.dot, { backgroundColor: tone }]} />
@@ -55,7 +56,7 @@ export function WaiterAvatar({ initials, name, size = 22 }: { initials: string; 
   const { colors } = useTheme();
   if (!initials) return null;
   return (
-    <View accessibilityLabel={`Waiter ${name ?? initials}`}
+    <View accessibilityLabel={t('ops.parts.waiter_v', { v: name ?? initials })}
       style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' }}>
       <Text variant="caption" color={colors.text} style={{ fontSize: size * 0.45, lineHeight: size * 0.6, letterSpacing: 0 }}>{initials}</Text>
     </View>

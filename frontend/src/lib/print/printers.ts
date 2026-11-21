@@ -24,6 +24,7 @@ import {
   type PaperWidth,
   type ReceiptData,
 } from './receipt';
+import { brand } from '@/config/brand';
 
 export type PrinterKind = 'bt-classic' | 'ble' | 'web-bluetooth' | 'system';
 
@@ -62,9 +63,9 @@ export type PrinterErrorCode =
   | 'PRINT_FAILED';
 
 const DEFAULT_MESSAGES: Record<PrinterErrorCode, string> = {
-  UNAVAILABLE: 'Bluetooth printing is not available here. Install the Tallyko app build (Bluetooth does not work in Expo Go).',
+  UNAVAILABLE: `Bluetooth printing is not available here. Install the ${brand.name} app build (Bluetooth does not work in Expo Go).`,
   UNSUPPORTED: 'This printer type is not supported on this device.',
-  PERMISSION_DENIED: 'Bluetooth permission was denied. Allow "Nearby devices" for Tallyko in Settings and try again.',
+  PERMISSION_DENIED: `Bluetooth permission was denied. Allow "Nearby devices" for ${brand.name} in Settings and try again.`,
   BLUETOOTH_OFF: 'Bluetooth is turned off. Turn it on and try again.',
   NOT_FOUND: 'Printer not found. Make sure it is switched on, nearby and paired.',
   CANCELLED: 'Printer selection was cancelled.',
@@ -457,7 +458,7 @@ async function scanWeb(opts: ScanOptions): Promise<PrinterDevice[]> {
     const name = (e as { name?: string })?.name;
     if (name === 'NotFoundError' || name === 'AbortError') return []; // user cancelled the chooser
     if (name === 'SecurityError') {
-      throw new PrinterError('PERMISSION_DENIED', 'Bluetooth access was blocked. Open Tallyko over HTTPS and tap the button again.', e);
+      throw new PrinterError('PERMISSION_DENIED', `Bluetooth access was blocked. Open ${brand.name} over HTTPS and tap the button again.`, e);
     }
     if (name === 'NotAllowedError') throw new PrinterError('PERMISSION_DENIED', undefined, e);
     throw new PrinterError('UNAVAILABLE', 'Bluetooth is not available in this browser or is turned off.', e);

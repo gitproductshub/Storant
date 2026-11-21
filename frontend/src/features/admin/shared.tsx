@@ -12,6 +12,7 @@ import type { BusinessType } from '@/api/types';
 import { Badge, Text, type BadgeTone } from '@/components/ui';
 import { useAuth } from '@/store/auth';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
+import { t, currentLocale } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -42,50 +43,50 @@ export function useOnline(): boolean {
 // ---------------------------------------------------------------------------
 
 export const BUSINESS_TYPE_LABEL: Record<string, string> = {
-  restaurant: 'Restaurant', cafe: 'Café', cloud_kitchen: 'Cloud kitchen', retail: 'Retail shop',
+  get restaurant() { return t('common.restaurant'); }, get cafe() { return t('common.caf'); }, get cloud_kitchen() { return t('common.cloud_kitchen'); }, get retail() { return t('common.retail_shop'); },
 };
 export const BUSINESS_TYPE_ICON: Record<string, IconName> = {
   restaurant: 'restaurant-outline', cafe: 'cafe-outline', cloud_kitchen: 'flame-outline', retail: 'storefront-outline',
 };
 export const BUSINESS_TYPES: BusinessType[] = ['restaurant', 'cafe', 'cloud_kitchen', 'retail'];
 
-export const STATUS_LABEL: Record<BusinessStatus, string> = { active: 'Active', suspended: 'Suspended', deleted: 'Closed' };
+export const STATUS_LABEL: Record<BusinessStatus, string> = { get active() { return t('common.active'); }, get suspended() { return t('common.suspended'); }, get deleted() { return t('admin.shared.closed'); } };
 const STATUS_TONE: Record<BusinessStatus, BadgeTone> = { active: 'success', suspended: 'danger', deleted: 'neutral' };
 
-export const SUBSCRIPTION_LABEL: Record<SubscriptionStatus, string> = { none: 'No payment yet', active: 'Paid', expired: 'Expired' };
+export const SUBSCRIPTION_LABEL: Record<SubscriptionStatus, string> = { get none() { return t('admin.shared.no_payment_yet'); }, get active() { return t('common.paid'); }, get expired() { return t('common.expired'); } };
 const SUBSCRIPTION_TONE: Record<SubscriptionStatus, BadgeTone> = { none: 'neutral', active: 'success', expired: 'warning' };
 
-export const LIMIT_LABEL: Record<LimitKey, string> = { max_staff: 'Staff logins', max_products: 'Products', max_locations: 'Locations' };
+export const LIMIT_LABEL: Record<LimitKey, string> = { get max_staff() { return t('common.staff_logins'); }, get max_products() { return t('admin.shared.products'); }, get max_locations() { return t('admin.shared.locations'); } };
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: 'upi', label: 'UPI' }, { value: 'bank_transfer', label: 'Bank transfer' }, { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' }, { value: 'cheque', label: 'Cheque' }, { value: 'free', label: 'Free / trial' }, { value: 'other', label: 'Other' },
+  { value: 'upi', label: 'UPI' }, { value: 'bank_transfer', get label() { return t('common.bank_transfer'); } }, { value: 'cash', get label() { return t('common.cash'); } },
+  { value: 'card', get label() { return t('common.card'); } }, { value: 'cheque', get label() { return t('common.cheque'); } }, { value: 'free', get label() { return t('admin.shared.free_trial'); } }, { value: 'other', get label() { return t('common.other'); } },
 ];
 export const PAYMENT_METHOD_LABEL = Object.fromEntries(PAYMENT_METHODS.map((m) => [m.value, m.label])) as Record<PaymentMethod, string>;
 
 export const ACTION_LABEL: Record<string, string> = {
-  'business.create': 'Onboarded business',
-  'business.update': 'Changed business',
-  'business.reset_owner_password': 'Reset owner password',
-  'subscription.record': 'Recorded payment',
-  'plan.save': 'Saved plan',
-  'tax.preset_create': 'Added GST preset',
-  'tax.publish_rate': 'Scheduled GST rate',
-  'subscription.demo': 'Gave free demo',
-  'subscription.development': 'Changed development access',
-  'subscription.approve_request': 'Approved payment claim',
-  'subscription.reject_request': 'Rejected payment claim',
-  'subscription.lapsed': 'Locked: subscription ended',
-  'subscription_offer.create': 'Created subscription offer',
-  'subscription_offer.update': 'Changed subscription offer',
-  'business.sign_out': 'Signed out all devices',
-  'session.revoke': 'Signed out a device',
-  'platform.settings': 'Changed platform settings',
-  'jobs.subscription_check': 'Ran subscription check',
-  'records.archive': 'Archived bills',
-  'records.unarchive': 'Restored archived bills',
-  'records.delete': 'Permanently deleted bills',
-  'owner_request.resolve': 'Handled owner request',
+  get 'business.create'() { return t('admin.shared.onboarded_business'); },
+  get 'business.update'() { return t('admin.shared.changed_business'); },
+  get 'business.reset_owner_password'() { return t('admin.shared.reset_owner_password'); },
+  get 'subscription.record'() { return t('admin.shared.recorded_payment'); },
+  get 'plan.save'() { return t('admin.shared.saved_plan'); },
+  get 'tax.preset_create'() { return t('admin.shared.added_gst_preset'); },
+  get 'tax.publish_rate'() { return t('admin.shared.scheduled_gst_rate'); },
+  get 'subscription.demo'() { return t('admin.shared.gave_free_demo'); },
+  get 'subscription.development'() { return t('admin.shared.changed_development_access'); },
+  get 'subscription.approve_request'() { return t('admin.shared.approved_payment_claim'); },
+  get 'subscription.reject_request'() { return t('admin.shared.rejected_payment_claim'); },
+  get 'subscription.lapsed'() { return t('admin.shared.locked_subscription_ended'); },
+  get 'subscription_offer.create'() { return t('admin.shared.created_subscription_offer'); },
+  get 'subscription_offer.update'() { return t('admin.shared.changed_subscription_offer'); },
+  get 'business.sign_out'() { return t('admin.shared.signed_out_all_devices'); },
+  get 'session.revoke'() { return t('admin.shared.signed_out_a_device'); },
+  get 'platform.settings'() { return t('admin.shared.changed_platform_settings'); },
+  get 'jobs.subscription_check'() { return t('admin.shared.ran_subscription_check'); },
+  get 'records.archive'() { return t('admin.shared.archived_bills'); },
+  get 'records.unarchive'() { return t('admin.shared.restored_archived_bills'); },
+  get 'records.delete'() { return t('admin.shared.permanently_deleted_bills'); },
+  get 'owner_request.resolve'() { return t('admin.shared.handled_owner_request'); },
 };
 
 export function actionLabel(action: string): string {
@@ -101,14 +102,14 @@ export function SubscriptionBadge({ status }: { status: SubscriptionStatus }) {
 }
 
 export const ACCESS_LABEL: Record<AccessState, string> = {
-  trial: 'Demo', development: 'Development', active: 'Active', grace: 'Grace', lapsed: 'Locked',
+  get trial() { return t('common.demo'); }, get development() { return t('admin.shared.development'); }, get active() { return t('common.active'); }, get grace() { return t('admin.shared.grace'); }, get lapsed() { return t('common.locked'); },
 };
 const ACCESS_TONE: Record<AccessState, BadgeTone> = { trial: 'info', development: 'accent', active: 'success', grace: 'warning', lapsed: 'danger' };
 const ACCESS_ICON: Record<AccessState, IconName> = {
   trial: 'hourglass-outline', development: 'construct-outline', active: 'checkmark-circle-outline', grace: 'alert-circle-outline', lapsed: 'lock-closed',
 };
 
-export const KIND_LABEL: Record<SubscriptionKind, string> = { trial: 'Free demo', paid: 'Paid', complimentary: 'Complimentary', development: 'Development' };
+export const KIND_LABEL: Record<SubscriptionKind, string> = { get trial() { return t('common.free_demo'); }, get paid() { return t('common.paid'); }, get complimentary() { return t('common.complimentary'); }, get development() { return t('admin.shared.development'); } };
 export const KIND_TONE: Record<SubscriptionKind, BadgeTone> = { trial: 'info', paid: 'success', complimentary: 'accent', development: 'accent' };
 
 /** Demo / Development / Active / Grace / Locked, optionally with the days left. */
@@ -130,7 +131,7 @@ export function accessDaysText(access: AccessInfo | null | undefined): string {
 }
 
 export function plural(n: number, word: string, many = `${word}s`): string {
-  return `${n.toLocaleString('en-IN')} ${n === 1 ? word : many}`;
+  return `${n.toLocaleString(currentLocale())} ${n === 1 ? word : many}`;
 }
 
 export function PlanBadge({ name }: { name: string }) {
@@ -138,13 +139,13 @@ export function PlanBadge({ name }: { name: string }) {
 }
 
 export function limitText(value: number | null | undefined): string {
-  return value === null || value === undefined ? 'Unlimited' : value.toLocaleString('en-IN');
+  return value === null || value === undefined ? 'Unlimited' : value.toLocaleString(currentLocale());
 }
 
 /** "3 Nov 2026"; an em dash when there is no date. */
 export function shortDate(iso: string | null | undefined): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function daysUntil(iso: string | null | undefined, now = Date.now()): number | null {
@@ -181,7 +182,7 @@ export function goTo(href: string) {
 
 /** Owners' "I've paid" claims waiting for review; shown as a badge on the Payments nav item. */
 export const usePendingPayments = create<{ count: number | null }>(() => ({ count: null }));
-/** Owners' archive / delete requests waiting for Tallyko; badge on the Owner requests nav item. */
+/** Owners' archive / delete requests waiting for Storant; badge on the Owner requests nav item. */
 export const usePendingOwnerRequests = create<{ count: number | null }>(() => ({ count: null }));
 
 export function setPendingPayments(count: number) {
@@ -201,7 +202,7 @@ export async function refreshPendingPayments(): Promise<void> {
 }
 
 export const BILL_STATUS_LABEL: Record<string, string> = {
-  placed: 'Placed', open: 'Running', completed: 'Paid', cancelled: 'Cancelled', merged: 'Merged',
+  get placed() { return t('admin.shared.placed'); }, get open() { return t('common.running'); }, get completed() { return t('common.paid'); }, get cancelled() { return t('common.cancelled'); }, get merged() { return t('common.merged'); },
 };
 export const BILL_STATUS_TONE: Record<string, BadgeTone> = {
   placed: 'info', open: 'warning', completed: 'success', cancelled: 'neutral', merged: 'neutral',
@@ -295,7 +296,7 @@ export function OfflineStrip() {
     <View accessibilityRole="alert" style={{ backgroundColor: colors.warningSoft, paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <Ionicons name="cloud-offline" size={16} color={colors.warningText} />
       <Text variant="smallStrong" color={colors.warningText} style={{ flex: 1 }}>
-        You're offline. The console shows the last loaded data; changes can't be saved until you're back online.
+        {t('admin.shared.you_re_offline_the_console_shows_the_last')}
       </Text>
     </View>
   );
@@ -307,7 +308,7 @@ export function ReadOnlyNote({ what = 'make changes' }: { what?: string }) {
   return (
     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', padding: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.surfaceSunken }}>
       <Ionicons name="eye-outline" size={16} color={colors.textMuted} />
-      <Text variant="small" tone="muted" style={{ flex: 1 }}>Read-only access. Only a super admin can {what}.</Text>
+      <Text variant="small" tone="muted" style={{ flex: 1 }}>{t('admin.shared.read_only_access_only_a_super_admin_can', { what })}</Text>
     </View>
   );
 }
@@ -321,7 +322,7 @@ export function ShareBar({ label, value, total, color, icon }: { label: string; 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         {icon ? <Ionicons name={icon} size={16} color={colors.textMuted} /> : null}
         <Text variant="smallStrong" style={{ flex: 1 }} numberOfLines={1}>{label}</Text>
-        <Text variant="smallStrong">{value.toLocaleString('en-IN')}</Text>
+        <Text variant="smallStrong">{value.toLocaleString(currentLocale())}</Text>
         <Text variant="small" tone="subtle" style={{ width: 40, textAlign: 'right' }}>{pct}%</Text>
       </View>
       <View style={{ height: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceSunken, overflow: 'hidden' }}>

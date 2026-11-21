@@ -16,7 +16,7 @@ export interface TaxRateVersion {
   total_rate: number;
   components: TaxComponent[];
   note: string | null;
-  /** preset = copied from the Tallyko GST library; manual = set by the business */
+  /** preset = copied from the Storant GST library; manual = set by the business */
   source: 'preset' | 'manual' | string;
   upcoming: boolean;
   current: boolean;
@@ -28,7 +28,7 @@ export interface TaxClass {
   code: string;
   hsn_sac: string | null;
   preset_key: string | null;
-  /** Gets government rate changes from the Tallyko GST library automatically */
+  /** Gets government rate changes from the Storant GST library automatically */
   follow_preset: boolean;
   is_active: boolean;
   is_default: boolean;

@@ -4,6 +4,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Sheet, Text, VegMark } from '@/components/ui';
 import { price, type MenuProduct } from './model';
 import { Stepper } from './parts';
+import { t } from '@/i18n';
 
 /** Pick a size/option for an item that has variants, then add it to the cart. */
 export function VariantSheet({ visible, product, symbol, onClose, onAdd }: {
@@ -23,11 +24,11 @@ export function VariantSheet({ visible, product, symbol, onClose, onAdd }: {
   const variant = product?.variants.find((v) => v.id === variantId) ?? null;
 
   return (
-    <Sheet visible={visible && !!product} onClose={onClose} title={product?.name ?? ''} subtitle="Choose an option" width={480}
+    <Sheet visible={visible && !!product} onClose={onClose} title={product?.name ?? ''} subtitle={t('public.store_VariantSheet.choose_an_option')} width={480}
       footer={
         <View style={styles.footer}>
           <Stepper value={qty} onChange={setQty} min={1} label={product?.name ?? 'item'} />
-          <Button title={variant ? `Add · ${price(variant.price * qty, symbol)}` : 'Add'} onPress={() => variant && onAdd(variant.id, qty)}
+          <Button title={variant ? t('public.store_VariantSheet.add_price', { price: price(variant.price * qty, symbol) }) : t('common.add')} onPress={() => variant && onAdd(variant.id, qty)}
             disabled={!variant} style={{ flex: 1 }} size="lg" />
         </View>
       }>

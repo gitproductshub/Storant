@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Tallyko POS",
-    "slug": "tallyko-pos",
+    "name": "Storant",
+    "slug": "storant",
     "version": "2.0.0",
     "description": "Point of sale for restaurants, cafés, cloud kitchens and retail stores.",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "tallyko",
+    "scheme": "storant",
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.tallyko.pos",
@@ -15,10 +15,10 @@
       "requireFullScreen": false,
       "config": { "usesNonExemptEncryption": false },
       "infoPlist": {
-        "NSBluetoothAlwaysUsageDescription": "Tallyko connects to your Bluetooth receipt printer to print bills and kitchen tickets.",
-        "NSCameraUsageDescription": "Tallyko uses the camera to scan product barcodes and to photograph menus so items can be added automatically.",
-        "NSPhotoLibraryUsageDescription": "Tallyko lets you choose a photo of a menu so its items and prices can be added to your catalog.",
-        "NSLocalNetworkUsageDescription": "Tallyko connects to your shop's Tallyko server or printer on the local Wi-Fi network.",
+        "NSBluetoothAlwaysUsageDescription": "Storant connects to your Bluetooth receipt printer to print bills and kitchen tickets.",
+        "NSCameraUsageDescription": "Storant uses the camera to scan product barcodes and to photograph menus so items can be added automatically.",
+        "NSPhotoLibraryUsageDescription": "Storant lets you choose a photo of a menu so its items and prices can be added to your catalog.",
+        "NSLocalNetworkUsageDescription": "Storant connects to your shop's Storant server or printer on the local Wi-Fi network.",
         "NSAppTransportSecurity": { "NSAllowsLocalNetworking": true },
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -44,10 +44,8 @@
       "package": "com.tallyko.pos",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#0F766E",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FBF9FF",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "permissions": [
         "android.permission.CAMERA",
@@ -77,12 +75,12 @@
       "expo-secure-store",
       [
         "expo-splash-screen",
-        { "backgroundColor": "#0F766E", "image": "./assets/images/splash-icon.png", "imageWidth": 96 }
+        { "backgroundColor": "#FBF9FF", "image": "./assets/images/splash-icon.png", "imageWidth": 96 }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Tallyko uses the camera to scan product barcodes and to photograph menus so items can be added automatically.",
+          "cameraPermission": "Storant uses the camera to scan product barcodes and to photograph menus so items can be added automatically.",
           "microphonePermission": false,
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
@@ -91,8 +89,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Tallyko lets you choose a photo of a menu so its items and prices can be added to your catalog.",
-          "cameraPermission": "Tallyko uses the camera to photograph menus so items can be added automatically.",
+          "photosPermission": "Storant lets you choose a photo of a menu so its items and prices can be added to your catalog.",
+          "cameraPermission": "Storant uses the camera to photograph menus so items can be added automatically.",
           "microphonePermission": false
         }
       ],
@@ -102,7 +100,7 @@
           "isBackgroundEnabled": false,
           "modes": [],
           "neverForLocation": true,
-          "bluetoothAlwaysPermission": "Tallyko connects to your Bluetooth receipt printer to print bills and kitchen tickets."
+          "bluetoothAlwaysPermission": "Storant connects to your Bluetooth receipt printer to print bills and kitchen tickets."
         }
       ],
       [

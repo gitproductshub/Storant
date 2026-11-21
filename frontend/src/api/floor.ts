@@ -88,7 +88,7 @@ export interface OrderListQuery {
   date_to?: string;
   table_id?: string;
   waiter_id?: string;
-  /** Owners only: include bills Tallyko archived on request. */
+  /** Owners only: include bills Storant archived on request. */
   include_archived?: boolean;
   limit?: number;
   offset?: number;

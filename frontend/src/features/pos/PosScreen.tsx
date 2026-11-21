@@ -28,7 +28,8 @@ import { useBadges } from '@/store/badges';
 import { usePrefs } from '@/store/prefs';
 import { useNet } from '@/lib/sync';
 import { availableOn, kotFromOrder, printBill, printErrorMessage, printKitchenTicket } from '@/lib/billing';
-import { CHANNEL_LABEL, money, ORDER_TYPE_LABEL, round2, uuid } from '@/lib/format';
+import { money, round2, uuid } from '@/lib/format';
+import { CHANNEL_UI, ORDER_TYPE_UI } from '@/lib/uiLabels';
 import { getDraft, useCart, useDraft, type AttachedCustomer } from './cart';
 import { CartPanel, type CartOfferInfo } from './CartPanel';
 import { OfferSheet } from './OfferSheet';
@@ -43,6 +44,9 @@ import { billName, itemsLocked } from './runningBill';
 import { usePosPrefs } from './posPrefs';
 import { cartWidthFor, isLikelyCode } from './posLayout';
 import { saveOnDevice, buildCreatePayload, buildLocalOrder, channelAdjust, findByCode, isAggregator, matchesQuery, priceDraft, validateDraft, type PricedDraft, type PreviewOffer } from './totals';
+import { brand } from '@/config/brand';
+import { LanguageMenu } from '@/i18n/LanguageSwitcher';
+import { t as tr } from '@/i18n';
 
 type SheetName = 'pay' | 'table' | 'channel' | 'customer' | 'discount' | 'scan' | 'running' | 'offer' | 'billDetails' | 'merge';
 
@@ -71,9 +75,9 @@ export function PosScreen() {
   if (role === 'kitchen') {
     return (
       <Shell>
-        <EmptyState icon="flame-outline" title="Billing isn't available for kitchen accounts"
-          message="Kitchen accounts see orders on the Kitchen screen. Ask a manager or cashier to take bills."
-          action={{ label: 'Open kitchen screen', icon: 'arrow-forward', onPress: () => router.navigate('/kitchen') }} />
+        <EmptyState icon="flame-outline" title={tr('pos.PosScreen.billing_isn_t_available_for_kitchen')}
+          message={tr('pos.PosScreen.kitchen_accounts_see_orders_on_the')}
+          action={{ label: tr('pos.PosScreen.open_kitchen_screen'), icon: 'arrow-forward', onPress: () => router.navigate('/kitchen') }} />
       </Shell>
     );
   }
@@ -197,7 +201,7 @@ function Pos() {
 
   const pick = useCallback((p: Product) => {
     const channel = getDraft().channel;
-    if (!availableOn(p, channel)) { toast.warning(`${p.name} isn't on the ${CHANNEL_LABEL[channel] ?? channel} menu`); return; }
+    if (!availableOn(p, channel)) { toast.warning(tr('pos.PosScreen.name_isn_t_on_the_v_menu', { name: p.name, v: CHANNEL_UI[channel] ?? channel })); return; }
     tap();
     if (p.variants.length > 0) setVariantProduct(p);
     else addToCart(p, null, 1);
@@ -233,7 +237,7 @@ function Pos() {
       setQuery('');
       return;
     }
-    toast.warning(`No item with code “${text}”`);
+    toast.warning(tr('pos.PosScreen.no_item_with_code_text', { text }));
   }, [products, pick, lookupCode]);
 
   /** One less of a product (list stepper): the most recently added line of it. */
@@ -254,8 +258,8 @@ function Pos() {
 
   const onCameraCode = useCallback(async (code: string) => {
     const p = await lookupCode(code);
-    if (!p) { toast.warning(`No item with barcode ${code}`); return; }
-    if (!availableOn(p, getDraft().channel)) { toast.warning(`${p.name} isn't on this channel's menu`); return; }
+    if (!p) { toast.warning(tr('pos.PosScreen.no_item_with_barcode_code', { code })); return; }
+    if (!availableOn(p, getDraft().channel)) { toast.warning(tr('pos.PosScreen.name_isn_t_on_this_channel_s_menu', { name: p.name })); return; }
     if (p.variants.length) { setVariantProduct(p); return; }
     addToCart(p, null, 1);
     tap();
@@ -275,18 +279,18 @@ function Pos() {
   const hasUnsaved = () => getDraft().lines.length > 0;
 
   const openOrder = useCallback(async (orderId: string, opts: { keepLines?: boolean } = {}) => {
-    if (!online) { toast.error('Running bills need an internet connection. Try again when you are back online.'); return; }
+    if (!online) { toast.error(tr('pos.PosScreen.running_bills_need_an_internet_connection')); return; }
     const current = getDraft();
     if (current.resume?.id === orderId) { setSheet(null); return; }
-    if (current.lines.length && !opts.keepLines && !(await confirm({ title: 'Discard the current bill?', message: `${current.lines.length} unsaved item(s) will be removed.`, confirmLabel: 'Discard', danger: true }))) return;
+    if (current.lines.length && !opts.keepLines && !(await confirm({ title: tr('pos.PosScreen.discard_the_current_bill'), message: tr('pos.PosScreen.length_unsaved_item_s_will_be_removed', { length: current.lines.length }), confirmLabel: tr('common.discard'), danger: true }))) return;
     try {
       const order = await ordersApi.get(orderId);
-      if (order.status === 'completed') { toast.info(`Bill ${order.invoice_no ?? order.code} is already paid`); return; }
-      if (order.status === 'cancelled') { toast.info('That order was cancelled'); return; }
-      if (order.status === 'merged') { toast.info(order.cancel_reason ?? 'That bill was merged into another one'); return; }
+      if (order.status === 'completed') { toast.info(tr('pos.PosScreen.bill_v_is_already_paid', { v: order.invoice_no ?? order.code })); return; }
+      if (order.status === 'cancelled') { toast.info(tr('pos.PosScreen.that_order_was_cancelled')); return; }
+      if (order.status === 'merged') { toast.info(order.cancel_reason ?? tr('pos.PosScreen.that_bill_was_merged_into_another_one')); return; }
       loadOrder(order, { keepLines: opts.keepLines });
       setSheet(null);
-      if (opts.keepLines && current.lines.length) toast.info(`New items will go on ${order.bill_label ?? (order.table_label ? `Table ${order.table_label}` : 'this bill')} — send them to the kitchen`);
+      if (opts.keepLines && current.lines.length) toast.info(tr('pos.PosScreen.new_items_will_go_on_v_send_them_to_the', { v: order.bill_label ?? (order.table_label ? tr('pos.PosScreen.table_table_label', { table_label: order.table_label }) : tr('pos.PosScreen.this_bill')) }));
     } catch (e) {
       toast.error(errorMessage(e));
     }
@@ -357,10 +361,10 @@ function Pos() {
     const targetName = target.bill_label ?? 'the other bill';
     if (source.status === 'merged') {
       loadOrder({ ...target, table_label: label }, { keepLines: true });
-      toast.success(`Everything moved to ${targetName} — this bill is closed`);
+      toast.success(tr('pos.PosScreen.everything_moved_to_targetname_this_bill', { targetName }));
     } else {
       patch({ resume: { ...source, table_label: source.table_label ?? label } });
-      toast.success(`Moved to ${targetName}`);
+      toast.success(tr('pos.PosScreen.moved_to_targetname', { targetName }));
     }
     void loadTableBills(source.table_id ?? target.table_id);
   }, [loadOrder, patch, loadTableBills]);
@@ -372,7 +376,7 @@ function Pos() {
       setSheet(null);
       return;
     }
-    if (!online) { toast.error('Changing a running bill needs an internet connection'); return; }
+    if (!online) { toast.error(tr('pos.PosScreen.changing_a_running_bill_needs_an_internet')); return; }
     try {
       const updated = await floorApi.setDetails(d.resume.id, { bill_label: details.label || null, guests: details.guests });
       onResumeChange(updated, 'Bill updated');
@@ -399,22 +403,22 @@ function Pos() {
   /** Running bill options, in a menu anchored to the bill's "⋯" button. */
   const billMenu: ActionMenuItem[] = (() => {
     const r = draft.resume;
-    const acts: ActionMenuItem[] = [{ key: 'details', label: r ? 'Bill name & guests' : 'Name this bill', icon: 'create-outline', onPress: () => setSheet('billDetails'),
-      disabled: !!r && !online, disabledReason: 'Needs internet' }];
+    const acts: ActionMenuItem[] = [{ key: 'details', label: r ? tr('pos.PosScreen.bill_name_guests') : tr('pos.PosScreen.name_this_bill'), icon: 'create-outline', onPress: () => setSheet('billDetails'),
+      disabled: !!r && !online, disabledReason: tr('pos.PosScreen.needs_internet_x') }];
     if (r && r.table_id) {
       const others = tableBills.filter((b) => b.id !== r.id);
-      acts.push({ key: 'merge', label: 'Merge another bill into this one', icon: 'git-merge-outline', onPress: () => setSheet('merge'),
-        disabled: !online || !others.length || itemsLocked(r), description: 'Tables joined, one person pays',
-        disabledReason: !online ? 'Needs internet' : !others.length ? 'No other bill on this table' : 'This bill has a payment' });
-      acts.push({ key: 'separate', label: 'Start a separate bill on this table', icon: 'add-circle-outline',
+      acts.push({ key: 'merge', label: tr('pos.PosScreen.merge_another_bill_into_this_one'), icon: 'git-merge-outline', onPress: () => setSheet('merge'),
+        disabled: !online || !others.length || itemsLocked(r), description: tr('pos.PosScreen.tables_joined_one_person_pays'),
+        disabledReason: !online ? tr('pos.PosScreen.needs_internet_x') : !others.length ? tr('pos.PosScreen.no_other_bill_on_this_table_x') : tr('pos.PosScreen.this_bill_has_a_payment_x') });
+      acts.push({ key: 'separate', label: tr('pos.PosScreen.start_a_separate_bill_on_this_table'), icon: 'add-circle-outline',
         onPress: () => startSeparateBill(r.table_id!, r.table_label ?? draft.tableLabel ?? ''),
-        disabled: !online, description: 'Another party at the same table', disabledReason: 'Needs internet' });
+        disabled: !online, description: tr('pos.PosScreen.another_party_at_the_same_table'), disabledReason: tr('pos.PosScreen.needs_internet_x') });
     }
     return acts;
   })();
 
   const exitResume = useCallback(async () => {
-    if (hasUnsaved() && !(await confirm({ title: 'Leave this running bill?', message: 'New items you added but did not send will be removed.', confirmLabel: 'Leave', danger: true }))) return;
+    if (hasUnsaved() && !(await confirm({ title: tr('pos.PosScreen.leave_this_running_bill'), message: tr('pos.PosScreen.new_items_you_added_but_did_not_send_will'), confirmLabel: tr('pos.PosScreen.leave'), danger: true }))) return;
     resetCart({ orderType: defaultType });
   }, [resetCart, defaultType]);
 
@@ -429,8 +433,8 @@ function Pos() {
         const current = getDraft().resume;
         if (!current || current.id !== fresh.id) return;
         if (fresh.status === 'completed' || fresh.status === 'cancelled' || fresh.status === 'merged') {
-          toast.info(fresh.status === 'merged' ? (fresh.cancel_reason ?? 'This bill was merged into another one')
-            : `Bill ${fresh.invoice_no ?? fresh.code} was ${fresh.status === 'completed' ? 'already paid' : 'cancelled'}`);
+          toast.info(fresh.status === 'merged' ? (fresh.cancel_reason ?? tr('pos.PosScreen.this_bill_was_merged_into_another_one'))
+            : tr('pos.PosScreen.bill_v_was_v2', { v: fresh.invoice_no ?? fresh.code, v2: fresh.status === 'completed' ? tr('pos.PosScreen.already_paid') : 'cancelled' }));
           resetCart({ orderType: defaultType });
         } else {
           patch({ resume: { ...fresh, table_label: fresh.table_label ?? current.table_label } });
@@ -455,7 +459,7 @@ function Pos() {
         const ch = useData.getState().channels.find((c) => c.code === code);
         if (ch && (ch.enabled || code === 'POS')) {
           patch({ channel: code, ...(isAggregator(code) && !isRetail ? { orderType: 'DELIVERY' as OrderType } : {}) });
-        } else toast.warning(`${code} orders are turned off in Settings`);
+        } else toast.warning(tr('pos.PosScreen.code_orders_are_turned_off_in_settings', { code }));
       }
       if (params.order) await openOrder(String(params.order));
       else if (params.table) {
@@ -465,7 +469,7 @@ function Pos() {
           try { table = (await tablesApi.list()).find((t) => t.id === id) ?? table; } catch { /* use cache */ }
         }
         const busy = !!table && (table.current_order || (table.open_bills?.length ?? 0) > 0);
-        if (!table) toast.error('That table was not found');
+        if (!table) toast.error(tr('pos.PosScreen.that_table_was_not_found'));
         else if (busy && params.bill === 'new') startSeparateBill(table.id, table.table_number);
         else if (busy) await chooseBill(table);
         else {
@@ -486,7 +490,7 @@ function Pos() {
 
   const onClear = async () => {
     if (!draft.lines.length) return;
-    if (!(await confirm({ title: draft.resume ? 'Remove the new items?' : 'Clear this bill?', message: `${priced.newCount} item(s) will be removed.`, confirmLabel: 'Clear', danger: true }))) return;
+    if (!(await confirm({ title: draft.resume ? tr('pos.PosScreen.remove_the_new_items') : tr('pos.PosScreen.clear_this_bill'), message: tr('pos.PosScreen.newcount_item_s_will_be_removed', { newCount: priced.newCount }), confirmLabel: tr('common.clear'), danger: true }))) return;
     if (draft.resume) patch({ lines: [] });
     else resetCart({ orderType: draft.orderType ?? defaultType, channel: draft.channel });
   };
@@ -495,7 +499,7 @@ function Pos() {
   const pickCustomer = async (c: AttachedCustomer | null) => {
     const order = getDraft().resume;
     if (!order) { patch({ customer: c, redeemPoints: 0 }); setSheet(null); return; }
-    if (!online) { toast.error('Changing the customer on a running bill needs an internet connection'); return; }
+    if (!online) { toast.error(tr('pos.PosScreen.changing_the_customer_on_a_running_bill')); return; }
     try {
       const updated = await ordersApi.setCustomer(order.id, { customer_id: c?.id ?? null, customer_name: c?.name ?? null, customer_phone: c?.phone ?? null });
       patch({ resume: { ...updated, table_label: updated.table_label ?? order.table_label }, customer: c, redeemPoints: 0 });
@@ -556,23 +560,23 @@ function Pos() {
     setSubmitting('kot');
     try {
       if (d.resume) {
-        if (!online) { toast.error('Adding items to a running bill needs an internet connection'); return; }
+        if (!online) { toast.error(tr('pos.PosScreen.adding_items_to_a_running_bill_needs_an')); return; }
         const before = new Set(d.resume.items.map((i) => i.id));
         const order = await ordersApi.addItems(d.resume.id, itemsInput(), true);
         const added = order.items.filter((i) => !before.has(i.id));
         void printKotSafe({ ...order, table_label: order.table_label ?? d.resume.table_label }, added); // printing never holds the till
-        toast.success(`${added.reduce((s, i) => s + i.quantity, 0)} item(s) added${d.resume.table_label ? ` to Table ${d.resume.table_label}` : ''}`);
+        toast.success(tr('pos.PosScreen.reduce_item_s_added_v', { reduce: added.reduce((s, i) => s + i.quantity, 0), v: d.resume.table_label ? tr('pos.PosScreen.to_table_table_label', { table_label: d.resume.table_label }) : '' }));
         afterBill(d.orderType);
         return;
       }
-      if (d.orderType === 'DINE_IN' && !online) { toast.error('Tables need an internet connection. Bill it as Takeaway, or take payment now.'); return; }
+      if (d.orderType === 'DINE_IN' && !online) { toast.error(tr('pos.PosScreen.tables_need_an_internet_connection_bill')); return; }
       const id = ensureId();
       const createdAt = new Date().toISOString();
       try {
         const order = await ordersApi.create(buildCreatePayload(d, { id, createdAt, sendToKitchen: true, offerId: offerForNewBill() }));
         void printKotSafe({ ...order, table_label: order.table_label ?? d.tableLabel });
         const where = d.tableLabel && d.orderType === 'DINE_IN' ? `Table ${d.tableLabel}` : order.token_no ? `Token #${order.token_no}` : order.code;
-        toast.success(isRetail ? `Bill held · ${where}` : `KOT sent · ${where}`);
+        toast.success(isRetail ? tr('pos.PosScreen.bill_held_where', { where }) : tr('pos.PosScreen.kot_sent_where', { where }));
         afterBill(d.orderType);
       } catch (e) {
         if (tableBusy(e) && d.tableId) {
@@ -587,10 +591,10 @@ function Pos() {
         queueOffline(payload, d.orderType, plain);
         void printKotSafe(buildLocalOrder(payload, plain, d, 0));
         toast.warning(why === 'lapsed'
-          ? 'Your Tallyko plan has ended. This bill is saved on this device and reaches the server after you renew.'
+          ? tr('pos.PosScreen.your_brand_plan_has_ended_this_bill_is', { brand: brand.name })
           : applied
-            ? 'Saved offline without the offer — it reaches the kitchen screen when you are back online'
-            : 'Saved offline — it reaches the kitchen screen when you are back online');
+            ? tr('pos.PosScreen.saved_offline_without_the_offer_it')
+            : tr('pos.PosScreen.saved_offline_it_reaches_the_kitchen'));
         afterBill(d.orderType);
       }
     } catch (e) {
@@ -613,19 +617,19 @@ function Pos() {
       id: payload.id!, tenantId, payload,
       preview: {
         total: p.preview.total, itemCount: p.itemCount,
-        label: `${ORDER_TYPE_LABEL[type ?? 'TAKEAWAY']}${d.tableLabel && type === 'DINE_IN' ? ` · Table ${d.tableLabel}` : ''}${d.customer?.name ? ` · ${d.customer.name}` : ''}`,
+        label: `${ORDER_TYPE_UI[type ?? 'TAKEAWAY']}${d.tableLabel && type === 'DINE_IN' ? tr('pos.PosScreen.table_tablelabel', { tableLabel: d.tableLabel }) : ''}${d.customer?.name ? ` · ${d.customer.name}` : ''}`,
       },
       createdAt: payload.created_at!,
     });
   };
 
   const openPay = async () => {
-    if (!canBill) { toast.warning('Only cashiers and managers can take payment'); return; }
+    if (!canBill) { toast.warning(tr('pos.PosScreen.only_cashiers_and_managers_can_take')); return; }
     if (lock.current) return;
     const d = getDraft();
     const err = validateDraft(d, priced, { requireLines: !d.resume });
     if (err) { toast.warning(err); return; }
-    if (d.resume && !online) { toast.error('Paying a running bill needs an internet connection'); return; }
+    if (d.resume && !online) { toast.error(tr('pos.PosScreen.paying_a_running_bill_needs_an_internet')); return; }
     if (offers.pending) {
       // Let the offer check for the latest cart finish (briefly) so the amount due is final
       lock.current = true;
@@ -693,7 +697,7 @@ function Pos() {
         if (paid.payment_status !== 'paid') {
           patch({ resume: result, discount: null, redeemPoints: 0 });
           setSheet(null);
-          toast.warning(`${money(paid.balance_due, currency)} still due on this bill`);
+          toast.warning(tr('pos.PosScreen.money_still_due_on_this_bill', { money: money(paid.balance_due, currency) }));
           return;
         }
         showReceipt(result, false, paid.change ?? change, d.orderType);
@@ -710,7 +714,7 @@ function Pos() {
           // Server total differed from the preview (e.g. a price changed) — keep it open so nothing is lost
           loadOrder(result);
           setSheet(null);
-          toast.warning(`Prices changed — ${money(order.balance_due, currency)} still due. Collect the rest to close the bill.`);
+          toast.warning(tr('pos.PosScreen.prices_changed_money_still_due_collect', { money: money(order.balance_due, currency) }));
           return;
         }
         const tendered = payments.reduce((s, p) => s + p.amount, 0);
@@ -730,12 +734,12 @@ function Pos() {
           // same bill id: if the server did get the first attempt, the offline copy replays as that bill (no duplicate)
           patch({ offerMode: 'none', offerId: null, offerName: null, offerCode: null, draftId: id });
           setSheet(null);
-          toast.warning(`${why === 'lapsed' ? 'Your Tallyko plan has ended.' : 'Internet connection lost.'} Offers can't be used on bills saved on this device, so the bill is now ${money(pricedPlain().preview.total, currency)}. Take payment again.`);
+          toast.warning(tr('pos.PosScreen.v_offers_can_t_be_used_on_bills_saved_on', { v: why === 'lapsed' ? tr('pos.PosScreen.your_brand_plan_has_ended', { brand: brand.name }) : tr('pos.PosScreen.internet_connection_lost'), money: money(pricedPlain().preview.total, currency) }));
           return;
         }
         const payload = buildCreatePayload(d, { id, createdAt, payments, sendToKitchen: true, offline: true });
         queueOffline(payload, d.orderType);
-        if (why === 'lapsed') toast.warning('Your Tallyko plan has ended. This bill is saved on this device and reaches the server after you renew.');
+        if (why === 'lapsed') toast.warning(tr('pos.PosScreen.your_brand_plan_has_ended_this_bill_is', { brand: brand.name }));
         const local = buildLocalOrder(payload, priced, d, change);
         void printKotSafe(local);
         showReceipt(local, true, change, d.orderType);
@@ -815,20 +819,25 @@ function Pos() {
   // ------------------------------------------------------------------ render
 
   const emptyMenu = !lastSyncedAt && allProducts.length === 0 ? (
-    <Loading label="Loading your menu…" />
+    <Loading label={tr('pos.PosScreen.loading_your_menu')} />
   ) : (
-    <EmptyState icon="fast-food-outline" title="Your menu is empty"
+    <EmptyState icon="fast-food-outline" title={tr('pos.PosScreen.your_menu_is_empty')}
       message={canManage
-        ? 'Add your items with prices to start billing. You can type them in, or snap a photo of your printed menu and Tallyko will read the items and prices for you.'
-        : 'Ask the owner or a manager to add items in Menu & items, then they will show up here.'}
-      action={canManage ? { label: 'Add menu items', icon: 'add-circle-outline', onPress: () => router.navigate('/menu') } : undefined} />
+        ? tr('pos.PosScreen.add_your_items_with_prices_to_start', { brand: brand.name })
+        : tr('pos.PosScreen.ask_the_owner_or_a_manager_to_add_items')}
+      action={canManage ? { label: tr('pos.PosScreen.add_menu_items'), icon: 'add-circle-outline', onPress: () => router.navigate('/menu') } : undefined} />
   );
 
-  const headerActions = (dense: boolean) => (!isRetail || draft.resume ? (
-    dense
-      ? <IconButton icon="time-outline" accessibilityLabel="Running bills" variant="secondary" onPress={() => setSheet('running')} />
-      : <Button title="Running" icon="time-outline" variant="secondary" onPress={() => setSheet('running')} />
-  ) : null);
+  const headerActions = (dense: boolean) => (
+    <>
+      {isPhone ? <LanguageMenu /> : null}
+      {!isRetail || draft.resume ? (
+        dense
+          ? <IconButton icon="time-outline" accessibilityLabel={tr('pos.PosScreen.running_bills')} variant="secondary" onPress={() => setSheet('running')} />
+          : <Button title={tr('common.running')} icon="time-outline" variant="secondary" onPress={() => setSheet('running')} />
+      ) : null}
+    </>
+  );
 
   const lastBillCard = lastBill && !draft.resume ? (
     <LastBillCard receipt={lastBill} settings={settings} onView={() => setReceiptOpen(true)} onDismiss={() => setLastBill(null)} />
@@ -882,7 +891,7 @@ function Pos() {
               <Text variant="smallStrong" color={colors.primarySoftText} numberOfLines={1} style={{ flex: 1 }}>
                 {runningLabel} · {money(draft.resume.total_amount, currency)}
               </Text>
-              <Pressable onPress={() => void exitResume()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Exit running bill">
+              <Pressable onPress={() => void exitResume()} hitSlop={12} accessibilityRole="button" accessibilityLabel={tr('pos.PosScreen.exit_running_bill')}>
                 <Ionicons name="close" size={18} color={colors.primarySoftText} />
               </Pressable>
             </Pressable>
@@ -898,7 +907,7 @@ function Pos() {
         <View style={[styles.barWrap, { bottom: 10 }]} pointerEvents="box-none">
           <View style={[styles.bar, shadow(3), { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.lg }]}>
             <Pressable onPress={() => setCartOpen(true)} accessibilityRole="button" testID="pos-cart-bar"
-              accessibilityLabel={`${priced.itemCount} items, ${money(barDue, currency)}. Open the bill`}
+              accessibilityLabel={tr('pos.PosScreen.itemcount_items_money_open_the_bill', { itemCount: priced.itemCount, money: money(barDue, currency) })}
               style={({ pressed }) => [styles.barMain, { borderRadius: radius.md, backgroundColor: pressed ? colors.surfaceSunken : 'transparent' }]}>
               <View style={[styles.barCount, { backgroundColor: colors.primary }]}>
                 <Text variant="smallStrong" color={colors.primaryText} style={styles.num}>{priced.itemCount}</Text>
@@ -906,17 +915,17 @@ function Pos() {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text variant="bodyStrong" numberOfLines={1} style={styles.num}>{money(barDue, currency, Math.abs(barDue % 1) < 0.005)}</Text>
                 <Text variant="caption" tone="muted" numberOfLines={1}>
-                  {runningLabel ?? (draft.tableLabel ? `Table ${draft.tableLabel}` : 'View bill')}
+                  {runningLabel ?? (draft.tableLabel ? tr('pos.PosScreen.table_tablelabel_2', { tableLabel: draft.tableLabel }) : tr('pos.PosScreen.view_bill'))}
                 </Text>
               </View>
             </Pressable>
             {!isRetail && hasNew ? (
               <Button title="KOT" icon="flame" variant="kitchen" badge={priced.newCount} onPress={() => void sendKot()}
-                loading={submitting === 'kot'} disabled={submitting !== null} accessibilityLabel={`Send ${priced.newCount} to the kitchen`} testID="pos-bar-kot" />
+                loading={submitting === 'kot'} disabled={submitting !== null} accessibilityLabel={tr('pos.PosScreen.send_newcount_to_the_kitchen', { newCount: priced.newCount })} testID="pos-bar-kot" />
             ) : null}
             {canBill ? (
-              <Button title="Pay" icon="card" variant="success" onPress={() => void openPay()} loading={submitting === 'pay'}
-                disabled={(!hasNew && !draft.resume) || submitting !== null} accessibilityLabel={`Pay ${money(barDue, currency)}`} testID="pos-bar-pay" />
+              <Button title={tr('common.pay')} icon="card" variant="success" onPress={() => void openPay()} loading={submitting === 'pay'}
+                disabled={(!hasNew && !draft.resume) || submitting !== null} accessibilityLabel={tr('pos.PosScreen.pay_money', { money: money(barDue, currency) })} testID="pos-bar-pay" />
             ) : null}
           </View>
         </View>
@@ -927,7 +936,7 @@ function Pos() {
       ) : null}
 
       {isPhone ? (
-        <Sheet visible={cartOpen} onClose={() => setCartOpen(false)} title={draft.resume ? 'Running bill' : 'Current bill'} scroll={false} width={560}>
+        <Sheet visible={cartOpen} onClose={() => setCartOpen(false)} title={draft.resume ? tr('pos.PosScreen.running_bill') : tr('pos.PosScreen.current_bill')} scroll={false} width={560}>
           <View style={{ height: Math.max(360, height * 0.78), marginHorizontal: -20, marginVertical: -20 }}>{cartPanel(true)}</View>
         </Sheet>
       ) : null}
@@ -936,7 +945,7 @@ function Pos() {
       <TableSheet visible={sheet === 'table'} onClose={() => setSheet(null)} selectedId={draft.tableId} online={online} currency={currency}
         onPick={(t) => { patch({ orderType: 'DINE_IN', tableId: t.id, tableLabel: t.table_number, newBill: false, billLabel: '', guests: null }); setSheet(null); }}
         onOpenRunning={(t) => {
-          if (!online) { toast.error('Busy tables need an internet connection to add to their bill'); return; }
+          if (!online) { toast.error(tr('pos.PosScreen.busy_tables_need_an_internet_connection')); return; }
           void chooseBill(t);
         }} />
       <TableBillsSheet visible={!!billChoice} onClose={() => setBillChoice(null)} tableLabel={billChoice?.tableLabel ?? ''} bills={billChoice?.bills ?? []}
@@ -944,9 +953,9 @@ function Pos() {
         onAddTo={(id) => { setBillChoice(null); void openOrder(id, { keepLines: true }); }}
         onSeparate={(details) => { if (billChoice) startSeparateBill(billChoice.tableId, billChoice.tableLabel, details); }} />
       <BillDetailsSheet visible={sheet === 'billDetails'} onClose={() => setSheet(null)}
-        title={draft.resume ? 'Bill name & guests' : 'Separate bill'}
+        title={draft.resume ? tr('pos.PosScreen.bill_name_guests') : tr('common.separate_bill')}
         label={draft.resume ? draft.resume.bill_label ?? '' : draft.billLabel} guests={draft.resume ? draft.resume.guests ?? null : draft.guests}
-        placeholder={`e.g. Rahul, or Bill ${Math.max(1, (draft.resume ? tableBills.findIndex((b) => b.id === draft.resume!.id) : tableBills.length) + 1)}`}
+        placeholder={tr('pos.PosScreen.e_g_rahul_or_bill_max', { max: Math.max(1, (draft.resume ? tableBills.findIndex((b) => b.id === draft.resume!.id) : tableBills.length) + 1) })}
         onSave={saveBillDetails} />
       <MergeBillsSheet visible={sheet === 'merge'} onClose={() => setSheet(null)} current={draft.resume}
         currentName={draft.resume ? billName(draft.resume, Math.max(0, tableBills.findIndex((b) => b.id === draft.resume!.id))) : ''}
@@ -962,7 +971,7 @@ function Pos() {
       <PaymentSheet visible={sheet === 'pay'} onClose={() => { setSheet(null); focusSearch(); }} due={priced.due} currency={currency} settings={settings}
         hasCustomer={!!draft.customer?.phone || !!draft.customer?.id} aggregator={isAggregator(draft.channel)} loyalty={loyalty}
         submitting={submitting === 'pay'} onConfirm={(p, c) => void confirmPay(p, c)} offerNote={offerNote}
-        title={draft.resume?.table_label ? `Collect payment · Table ${draft.resume.table_label}` : undefined} />
+        title={draft.resume?.table_label ? tr('pos.PosScreen.collect_payment_table_table_label', { table_label: draft.resume.table_label }) : undefined} />
       <OfferSheet visible={sheet === 'offer'} onClose={() => setSheet(null)} offers={offers} mode={draft.offerMode} offerId={draft.offerId}
         code={draft.offerCode} online={online} currency={currency} onChoose={chooseOffer} />
       <ReceiptSheet receipt={receiptOpen ? lastBill : null} settings={settings} onNewBill={() => {

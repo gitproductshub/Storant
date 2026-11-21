@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text, VegMark } from '@/components/ui';
 import { MAX_QTY, type MenuProduct, price } from './model';
+import { t } from '@/i18n';
 
 const webPointer = Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null;
 
@@ -14,14 +15,14 @@ export function Stepper({ value, onChange, label, compact, min = 0 }: { value: n
   return (
     <View style={[styles.stepper, { borderColor: colors.primary, borderRadius: radius.md, backgroundColor: colors.primarySoft }]}>
       <Pressable onPress={() => onChange(Math.max(min, value - 1))} disabled={value <= min} accessibilityRole="button"
-        accessibilityLabel={min === 0 && value <= 1 ? `Remove ${label}` : `Remove one ${label}`} hitSlop={4}
+        accessibilityLabel={min === 0 && value <= 1 ? t('public.store_parts.remove_label', { label }) : t('public.store_parts.remove_one_label', { label })} hitSlop={4}
         style={({ hovered }: any) => [styles.stepBtn, { width: size, height: size, opacity: value <= min ? 0.4 : 1 }, hovered && { backgroundColor: colors.surfaceSunken }, webPointer]}>
         <Ionicons name={min === 0 && value <= 1 ? 'trash-outline' : 'remove'} size={18} color={colors.primary} />
       </Pressable>
       <Text variant="bodyStrong" tone="primary" style={{ minWidth: 24, textAlign: 'center', fontVariant: ['tabular-nums'] }}
-        accessibilityLiveRegion="polite" accessibilityLabel={`${value} in cart`}>{value}</Text>
+        accessibilityLiveRegion="polite" accessibilityLabel={t('public.store_parts.value_in_cart', { value })}>{value}</Text>
       <Pressable onPress={() => onChange(Math.min(MAX_QTY, value + 1))} disabled={value >= MAX_QTY} accessibilityRole="button"
-        accessibilityLabel={`Add one more ${label}`} hitSlop={4}
+        accessibilityLabel={t('public.store_parts.add_one_more_label', { label })} hitSlop={4}
         style={({ hovered }: any) => [styles.stepBtn, { width: size, height: size, opacity: value >= MAX_QTY ? 0.4 : 1 }, hovered && { backgroundColor: colors.surfaceSunken }, webPointer]}>
         <Ionicons name="add" size={20} color={colors.primary} />
       </Pressable>
@@ -32,14 +33,14 @@ export function Stepper({ value, onChange, label, compact, min = 0 }: { value: n
 export function AddButton({ onPress, label, count = 0 }: { onPress: () => void; label: string; count?: number }) {
   const { colors, radius } = useTheme();
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Add ${label}`}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={t('public.store_parts.add_label', { label })}
       style={({ hovered, pressed }: any) => [styles.add, {
         borderRadius: radius.md, borderColor: colors.primary,
         backgroundColor: pressed || hovered ? colors.primary : colors.primarySoft,
       }, webPointer]}>
       {({ hovered, pressed }: any) => (
         <>
-          <Text variant="bodyStrong" color={pressed || hovered ? colors.primaryText : colors.primary}>{count > 0 ? `Add · ${count}` : 'Add'}</Text>
+          <Text variant="bodyStrong" color={pressed || hovered ? colors.primaryText : colors.primary}>{count > 0 ? t('public.store_parts.add_count', { count }) : t('common.add')}</Text>
           <Ionicons name="add" size={20} color={pressed || hovered ? colors.primaryText : colors.primary} />
         </>
       )}
@@ -62,7 +63,7 @@ export function ProductRow({ product, symbol, qty, canOrder, onAdd, onChangeQty 
           <Text variant="h3" style={{ flexShrink: 1 }}>{product.name}</Text>
         </View>
         <Text variant="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>
-          {hasVariants && product.variants.some((v) => v.price !== minPrice) ? <Text variant="small" tone="muted">from </Text> : null}
+          {hasVariants && product.variants.some((v) => v.price !== minPrice) ? <Text variant="small" tone="muted">{t('public.store_parts.from')} </Text> : null}
           {price(minPrice, symbol)}
         </Text>
         {product.description ? <Text variant="small" tone="muted" numberOfLines={3}>{product.description}</Text> : null}
@@ -78,7 +79,7 @@ export function ProductRow({ product, symbol, qty, canOrder, onAdd, onChangeQty 
             <Stepper value={qty} onChange={onChangeQty} label={product.name} />
           )}
           {hasVariants ? (
-            <Text variant="caption" tone="subtle">{qty > 0 ? 'Pick another size' : 'Customisable'}</Text>
+            <Text variant="caption" tone="subtle">{qty > 0 ? t('public.store_parts.pick_another_size') : t('public.store_parts.customisable')}</Text>
           ) : null}
         </View>
       ) : null}

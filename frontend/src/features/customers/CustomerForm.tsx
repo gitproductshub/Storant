@@ -7,6 +7,7 @@ import { Button, Input, Sheet, Text, toast } from '@/components/ui';
 import { useData } from '@/store/data';
 import { Callout, FieldRow, SettingSwitch } from '@/features/settings/components';
 import { fieldErrorsFrom, formatMobile, normaliseMobile, validateEmail } from '@/features/settings/validation';
+import { t } from '@/i18n';
 
 /** Add or edit a customer. Managers can also correct loyalty points. */
 export function CustomerFormSheet({ customer, canEditPoints, onClose, onSaved }: {
@@ -64,10 +65,10 @@ export function CustomerFormSheet({ customer, canEditPoints, onClose, onSaved }:
           return;
         }
         saved = await crmApi.update(customer.id, update);
-        toast.success('Customer updated');
+        toast.success(t('customers.CustomerForm.customer_updated'));
       } else {
         saved = await crmApi.create(body);
-        toast.success(`${saved.name} added`);
+        toast.success(t('customers.CustomerForm.name_added', { name: saved.name }));
       }
       useData.getState().upsertCustomer(saved);
       onSaved(saved);
@@ -84,36 +85,36 @@ export function CustomerFormSheet({ customer, canEditPoints, onClose, onSaved }:
   };
 
   return (
-    <Sheet visible onClose={onClose} title={editing ? 'Edit customer' : 'Add customer'}
-      subtitle={editing ? undefined : 'Customers are also saved automatically when you add a phone number to a bill.'} width={560}
+    <Sheet visible onClose={onClose} title={editing ? t('customers.CustomerForm.edit_customer') : t('common.add_customer')}
+      subtitle={editing ? undefined : t('customers.CustomerForm.customers_are_also_saved_automatically')} width={560}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title={editing ? 'Save' : 'Add customer'} icon="checkmark" onPress={save} loading={saving} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={editing ? t('common.save') : t('common.add_customer')} icon="checkmark" onPress={save} loading={saving} />
         </View>
       }>
       {formError ? <Callout tone="danger">{formError}</Callout> : null}
-      <Input label="Name" required value={name} onChangeText={(v) => { setName(v); setServerErrors((s) => ({ ...s, name: '' })); }}
-        error={show('name')} maxLength={100} placeholder="e.g. Priya Sharma" autoFocus={!editing} autoCapitalize="words" />
+      <Input label={t('common.name')} required value={name} onChangeText={(v) => { setName(v); setServerErrors((s) => ({ ...s, name: '' })); }}
+        error={show('name')} maxLength={100} placeholder={t('customers.CustomerForm.e_g_priya_sharma')} autoFocus={!editing} autoCapitalize="words" />
       <FieldRow>
-        <Input label="Mobile number" required value={phone} onChangeText={(v) => { setPhone(v); setServerErrors((s) => ({ ...s, phone: '' })); }}
+        <Input label={t('common.mobile_number')} required value={phone} onChangeText={(v) => { setPhone(v); setServerErrors((s) => ({ ...s, phone: '' })); }}
           error={show('phone')} keyboardType="phone-pad" maxLength={18} placeholder="98765 43210" icon="call-outline"
-          hint="10-digit Indian mobile. Use +country code for other countries." />
-        <Input label="Email (optional)" value={email} onChangeText={(v) => { setEmail(v); setServerErrors((s) => ({ ...s, email: '' })); }}
+          hint={t('customers.CustomerForm.10_digit_indian_mobile_use_country_code')} />
+        <Input label={t('customers.CustomerForm.email_optional')} value={email} onChangeText={(v) => { setEmail(v); setServerErrors((s) => ({ ...s, email: '' })); }}
           error={show('email')} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} placeholder="priya@example.com" icon="mail-outline" />
       </FieldRow>
       {email.trim() ? (
         <View style={{ gap: 8 }}>
-          <SettingSwitch title="Customer agreed to receive offers by email" value={optIn} onValueChange={setOptIn}
-            subtitle={optIn ? 'They will get your offer announcements by email.' : 'They only get receipts and rewards, not offers.'} />
-          <Text variant="small" tone="subtle">Only switch this on if the customer said yes. Ask again if you're not sure — consent is required before sending offers.</Text>
+          <SettingSwitch title={t('customers.CustomerForm.customer_agreed_to_receive_offers_by_email')} value={optIn} onValueChange={setOptIn}
+            subtitle={optIn ? t('customers.CustomerForm.they_will_get_your_offer_announcements_by') : t('customers.CustomerForm.they_only_get_receipts_and_rewards_not')} />
+          <Text variant="small" tone="subtle">{t('customers.CustomerForm.only_switch_this_on_if_the_customer_said')}</Text>
         </View>
       ) : null}
-      <Input label="Notes (optional)" value={notes} onChangeText={setNotes} error={show('notes')} multiline maxLength={500}
-        placeholder="Allergies, favourite table, birthday…" hint={`${notes.length}/500 · Visible to staff only.`} style={{ minHeight: 72, textAlignVertical: 'top' }} />
+      <Input label={t('customers.CustomerForm.notes_optional')} value={notes} onChangeText={setNotes} error={show('notes')} multiline maxLength={500}
+        placeholder={t('customers.CustomerForm.allergies_favourite_table_birthday')} hint={t('customers.CustomerForm.length_500_visible_to_staff_only', { length: notes.length })} style={{ minHeight: 72, textAlignVertical: 'top' }} />
       {editing && canEditPoints ? (
-        <Input label="Loyalty points" value={points} onChangeText={(v) => setPoints(v.replace(/[^\d]/g, ''))} error={show('points')}
-          keyboardType="number-pad" maxLength={8} hint="Change only to correct a mistake. Points are normally added and redeemed on bills." />
+        <Input label={t('common.loyalty_points')} value={points} onChangeText={(v) => setPoints(v.replace(/[^\d]/g, ''))} error={show('points')}
+          keyboardType="number-pad" maxLength={8} hint={t('customers.CustomerForm.change_only_to_correct_a_mistake_points')} />
       ) : null}
     </Sheet>
   );

@@ -62,7 +62,7 @@ frontend/ Expo SDK 57 · RN 0.86 · React 19 · TS strict · expo-router
                          Screen) + high-volume blocks: ActionMenu, SelectionBar, DataList, FilterBar, StatusPill, Checkbox, Skeleton
   src/components/nav/    AppNav: collapsible sidebar (desktop), rail (tablet), bottom bar + More (phone); g+key shortcuts; gated by
                          role, plan modules, permissions; owner-only items
-  src/theme/             tokens (teal brand, slate neutrals, light/dark), ThemeProvider (useTheme, useLayout)
+  src/theme/             tokens (Storant purple brand, light/dark/system via prefs.theme), ThemeProvider (useTheme, useLayout), ThemeToggle
   src/api/               client (timeouts, refresh-on-401, ApiError.network), typed endpoints, types
   src/store/             auth (SecureStore), access (/access/me), subscription (lock), prefs, data (offline cache incl. tax classes),
                          outbox (offline bills, kept on 401/402), badges
@@ -126,6 +126,11 @@ docker compose -f docker-compose.prod.yml up -d --build         # production (ne
   `FilterBar`, `useHotkeys` on desktop, `StatusPill` colours, Button variants (`success` = pay, `kitchen` = KOT). Check the §6 sizes.
 - Use `src/components/ui` + `useTheme().colors` — no hex colours in screens. `useLayout()` for phone vs tablet/desktop layouts. Touch targets ≥44.
 - Read business data from `useData` (offline cache) for selling; call the API for management screens. Every list: loading / empty / error states; every action: disable while busy, `toast.error(errorMessage(e))`.
+- **Languages (en / hi / gu):** UI text goes through `t('area.File.key')` from `@/i18n` (never hardcode user-facing strings). Keys live in
+  `frontend/src/i18n/locales/{en,hi,gu}.json` (en is the source of truth; a missing hi/gu key falls back to English). Language is `prefs.language`
+  (switcher: `i18n/LanguageSwitcher.tsx`); changing it remounts the tree. Module-level label tables use getters (`get label() { return t(...) }`)
+  so they follow the language. Receipts, KOT and printed reports stay English on purpose (`lib/print/*`, `ORDER_TYPE_LABEL` etc. in `lib/format.ts`;
+  screens use `lib/uiLabels.ts`). Dates/numbers: `currentLocale()` (Indian grouping, Latin digits). Hindi/Gujarati fonts: `theme/scriptFonts.ts`.
 - Check the SDK 57 docs before using an Expo API (APIs change every SDK): https://docs.expo.dev/versions/v57.0.0/
 - Feature screens live in `src/features/<area>/`; shared files (`ui`, `api`, `store`, `lib`, `theme`, layouts) change only deliberately.
 

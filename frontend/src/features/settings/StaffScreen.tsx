@@ -16,6 +16,8 @@ import { PerformanceTab } from './staff/PerformanceTab';
 import { RolesTab } from './staff/RolesTab';
 import { TeamTab } from './staff/TeamTab';
 import { TabBar, type StaffCtx } from './staff/shared';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 type Tab = 'team' | 'roles' | 'performance' | 'activity';
 
@@ -41,9 +43,9 @@ export default function StaffScreen() {
   const canManageStaff = staffModule && can('staff.manage');
   const tabs = useMemo(() => {
     const list: { value: Tab; label: string; icon: 'people-outline' | 'shield-half-outline' | 'podium-outline' | 'time-outline' }[] = [];
-    if (canViewStaff) list.push({ value: 'team', label: 'Team', icon: 'people-outline' }, { value: 'roles', label: 'Roles & permissions', icon: 'shield-half-outline' });
-    if (canViewStaff && can('reports.view')) list.push({ value: 'performance', label: 'Performance', icon: 'podium-outline' });
-    if (can('audit.view')) list.push({ value: 'activity', label: 'Activity log', icon: 'time-outline' });
+    if (canViewStaff) list.push({ value: 'team', label: tr('settings.StaffScreen.team'), icon: 'people-outline' }, { value: 'roles', label: tr('settings.StaffScreen.roles_permissions'), icon: 'shield-half-outline' });
+    if (canViewStaff && can('reports.view')) list.push({ value: 'performance', label: tr('settings.StaffScreen.performance'), icon: 'podium-outline' });
+    if (can('audit.view')) list.push({ value: 'activity', label: tr('common.activity_log'), icon: 'time-outline' });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canViewStaff, access, myRole]);
@@ -71,12 +73,12 @@ export default function StaffScreen() {
 
   if (!current) {
     return (
-      <SettingsFrame active="staff" title="Staff & roles">
+      <SettingsFrame active="staff" title={tr('common.staff_roles')}>
         {!staffModule && access ? (
-          <EmptyState icon="lock-closed-outline" title="Staff accounts aren't turned on"
-            message={isOwner ? 'Turn on Staff accounts in Settings → Modules & plan, or contact Tallyko to add it to your plan.' : 'Ask the owner to turn on staff accounts.'} />
+          <EmptyState icon="lock-closed-outline" title={tr('settings.StaffScreen.staff_accounts_aren_t_turned_on')}
+            message={isOwner ? tr('settings.StaffScreen.turn_on_staff_accounts_in_settings', { brand: brand.name }) : tr('settings.StaffScreen.ask_the_owner_to_turn_on_staff_accounts')} />
         ) : (
-          <EmptyState icon="lock-closed-outline" title="Managers only" message="Ask the owner or a manager to add or change staff logins." />
+          <EmptyState icon="lock-closed-outline" title={tr('common.managers_only')} message={tr('settings.StaffScreen.ask_the_owner_or_a_manager_to_add_or')} />
         )}
       </SettingsFrame>
     );
@@ -85,8 +87,8 @@ export default function StaffScreen() {
   return (
     <SettingsFrame
       active="staff"
-      title="Staff & roles"
-      subtitle="Give each person their own login with only the access their job needs, and see who did what."
+      title={tr('common.staff_roles')}
+      subtitle={tr('settings.StaffScreen.give_each_person_their_own_login_with')}
       onRefresh={() => { setRefreshKey((k) => k + 1); void useAccess.getState().refresh(); }}
       refreshing={false}
       maxWidth={1120}
@@ -95,7 +97,7 @@ export default function StaffScreen() {
       <View style={[{ gap: 16 }, current === 'team' && { flex: 1, minHeight: 0 }]}>
         {tabs.length > 1 ? <TabBar value={current} options={tabs} onChange={setTab} /> : null}
         {!staffModule && current === 'activity' ? (
-          <Callout tone="neutral">Staff accounts are turned off for this business, so only the activity log is shown.</Callout>
+          <Callout tone="neutral">{tr('settings.StaffScreen.staff_accounts_are_turned_off_for_this')}</Callout>
         ) : null}
         {current === 'team' ? <TeamTab ctx={ctx} refreshKey={refreshKey} /> : null}
         {current === 'roles' ? <RolesTab ctx={ctx} refreshKey={refreshKey} /> : null}

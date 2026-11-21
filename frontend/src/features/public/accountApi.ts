@@ -4,6 +4,7 @@
  */
 import { ApiError } from '@/api/client';
 import { getServerUrl } from '@/store/prefs';
+import { t } from '@/i18n';
 
 export async function deleteAccountWithToken(accessToken: string, password: string): Promise<{ success: boolean; business_closed: boolean }> {
   const controller = new AbortController();
@@ -18,7 +19,7 @@ export async function deleteAccountWithToken(accessToken: string, password: stri
     });
   } catch (e: any) {
     const timedOut = e?.name === 'AbortError';
-    throw new ApiError(timedOut ? 'The server is taking too long to respond.' : 'Cannot reach the server. Check your internet connection.',
+    throw new ApiError(timedOut ? t('public.accountApi.the_server_is_taking_too_long_to_respond') : t('public.accountApi.cannot_reach_the_server_check_your'),
       0, timedOut ? 'TIMEOUT' : 'NETWORK', undefined, true);
   } finally {
     clearTimeout(timer);
@@ -31,9 +32,9 @@ export async function deleteAccountWithToken(accessToken: string, password: stri
   }
   if (!response.ok) {
     const message = typeof payload?.error?.message === 'string' ? payload.error.message
-      : response.status === 401 ? 'Your sign-in expired. Please start again.'
-      : response.status === 429 ? 'Too many attempts. Please wait a few minutes and try again.'
-      : 'Could not delete the account. Please try again.';
+      : response.status === 401 ? t('public.accountApi.your_sign_in_expired_please_start_again')
+      : response.status === 429 ? t('public.accountApi.too_many_attempts_please_wait_a_few')
+      : t('public.accountApi.could_not_delete_the_account_please_try');
     throw new ApiError(message, response.status, payload?.error?.code ?? 'HTTP_ERROR');
   }
   return payload as { success: boolean; business_closed: boolean };

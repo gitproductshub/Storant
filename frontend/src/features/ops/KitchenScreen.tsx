@@ -22,7 +22,7 @@ import { errorMessage } from '@/api/client';
 import { useData } from '@/store/data';
 import { useBadges } from '@/store/badges';
 import { kotFromTicket, printErrorMessage, printKitchenTicket } from '@/lib/billing';
-import { ORDER_TYPE_LABEL } from '@/lib/format';
+import { ORDER_TYPE_UI } from '@/lib/uiLabels';
 import { channelLabel } from './common';
 import {
   ageTone, bumpTarget, formatAge, freshIds, kindCounts, minutesBetween, nextItemStep, prevItemStep, pruneMarks, ticketKind,
@@ -32,12 +32,13 @@ import { playAlert, useDevicePref, useLivePoll, useNow } from '@/hooks/live';
 import { AgeChip, LiveStatus, ageColors } from './parts';
 import { useFloorAges } from './useFloorAges';
 import type { AgeThresholds } from './floorLogic';
+import { t as tr } from '@/i18n';
 
 type Column = 'pending' | 'preparing' | 'ready';
 const COLUMNS: { key: Column; label: string; bump: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'pending', label: 'New', bump: 'Start', icon: 'flame' },
-  { key: 'preparing', label: 'Preparing', bump: 'Ready', icon: 'checkmark' },
-  { key: 'ready', label: 'Ready', bump: 'Bump', icon: 'checkmark-done' },
+  { key: 'pending', get label() { return tr('common.new'); }, bump: 'Start', icon: 'flame' },
+  { key: 'preparing', get label() { return tr('common.preparing'); }, bump: 'Ready', icon: 'checkmark' },
+  { key: 'ready', get label() { return tr('common.ready'); }, bump: 'Bump', icon: 'checkmark-done' },
 ];
 const ACTIVE: TicketStatus[] = ['pending', 'preparing', 'ready'];
 const STATUS_WORD: Record<TicketStatus, string> = { pending: 'new', preparing: 'preparing', ready: 'ready', served: 'served', cancelled: 'cancelled' };
@@ -46,7 +47,7 @@ const OVERRIDE_TTL = 15_000;
 const POLL_MS = 5_000;
 const NEW_GLOW_MS = 45_000;
 const RECALL_KEEP_MS = 30 * 60_000;
-const KIND_LABEL: Record<Exclude<KitchenKindFilter, 'all'>, string> = { DINE_IN: 'Dine-in', TAKEAWAY: 'Takeaway', DELIVERY: 'Delivery', SWIGGY: 'Swiggy', ZOMATO: 'Zomato' };
+const KIND_LABEL: Record<Exclude<KitchenKindFilter, 'all'>, string> = { get DINE_IN() { return tr('ops.KitchenScreen.dine_in'); }, get TAKEAWAY() { return tr('common.takeaway'); }, get DELIVERY() { return tr('common.delivery'); }, get SWIGGY() { return tr('ops.KitchenScreen.swiggy'); }, get ZOMATO() { return tr('ops.KitchenScreen.zomato'); } };
 
 interface Override { ticket: FloorTicket; status: TicketStatus; at: number }
 interface ItemOverride { status: ItemStatus; at: number }
@@ -135,10 +136,10 @@ export default function KitchenScreen() {
       }
       if (opts.recall) {
         setBumped((list) => list.filter((x) => x.ticket.id !== ticket.id));
-        toast.success(`KOT ${ticket.kot_no ?? ticket.order_code} is back in Ready`);
+        toast.success(tr('ops.KitchenScreen.kot_v_is_back_in_ready', { v: ticket.kot_no ?? ticket.order_code }));
       } else if (!opts.isUndo) {
         // Bump now, offer Undo (docs/20 §1.4) — 8 s, a busy cook may look up late
-        toast.undo(`KOT ${ticket.kot_no ?? ticket.order_code} marked ${STATUS_WORD[next]}`,
+        toast.undo(tr('ops.KitchenScreen.kot_v_marked_v2', { v: ticket.kot_no ?? ticket.order_code, v2: STATUS_WORD[next] }),
           () => void change({ ...ticket, status: next }, prev, { isUndo: true }), 8_000);
       }
       void useBadges.getState().refresh();
@@ -193,7 +194,7 @@ export default function KitchenScreen() {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     const doc: any = document;
     if (doc.fullscreenElement) void doc.exitFullscreen?.();
-    else void doc.documentElement.requestFullscreen?.().catch(() => toast.info('Full screen is not available here'));
+    else void doc.documentElement.requestFullscreen?.().catch(() => toast.info(tr('ops.KitchenScreen.full_screen_is_not_available_here')));
   };
 
   // Recall: tickets bumped on this screen, plus tickets served in the last 2 h on any screen (newest first)
@@ -210,9 +211,9 @@ export default function KitchenScreen() {
     const local = bumped.filter((x) => t0 - x.at < RECALL_KEEP_MS).map((x) => x.ticket);
     const seenIds = new Set(local.map((t) => t.id));
     const list = [...local, ...recallServer.filter((t) => !seenIds.has(t.id))].slice(0, 10);
-    if (!list.length) return [{ key: 'none', label: 'Nothing bumped recently', icon: 'time-outline', disabled: true, onPress: () => {} }];
+    if (!list.length) return [{ key: 'none', label: tr('ops.KitchenScreen.nothing_bumped_recently'), icon: 'time-outline', disabled: true, onPress: () => {} }];
     return list.map((t) => ({
-      key: t.id, icon: 'arrow-undo-outline', label: `${ticketTitle(t)} · KOT ${t.kot_no ?? '—'}`,
+      key: t.id, icon: 'arrow-undo-outline', label: tr('ops.KitchenScreen.tickettitle_kot_v', { ticketTitle: ticketTitle(t), v: t.kot_no ?? '—' }),
       description: [t.bumped_at ? `Served ${formatAge(minutesBetween(t.bumped_at, t0)).toLowerCase()}${minutesBetween(t.bumped_at, t0) >= 1 ? ' ago' : ''}` : null,
         t.items.filter((i) => !i.is_void).map((i) => `${i.quantity}× ${i.name}`).join(', ')].filter(Boolean).join(' · ').slice(0, 70) || undefined,
       onPress: () => void change(t, 'ready', { recall: true }),
@@ -239,7 +240,7 @@ export default function KitchenScreen() {
   );
 
   const kindFilters = [
-    { key: 'all', label: 'All', count: counts.all },
+    { key: 'all', label: tr('common.all'), count: counts.all },
     ...(Object.keys(KIND_LABEL) as (keyof typeof KIND_LABEL)[])
       .filter((k) => counts[k] > 0 || k === 'DINE_IN' || k === 'TAKEAWAY' || kind === k)
       .map((k) => ({ key: k, label: KIND_LABEL[k], count: counts[k] })),
@@ -247,12 +248,12 @@ export default function KitchenScreen() {
   const brandMenu = brandOptions.length ? (
     <ActionMenu
       align="end"
-      title="Brand"
+      title={tr('ops.KitchenScreen.brand')}
       items={[
-        { key: 'all', label: 'All brands', selected: !brand, onPress: () => setBrand(null) },
+        { key: 'all', label: tr('ops.KitchenScreen.all_brands'), selected: !brand, onPress: () => setBrand(null) },
         ...brandOptions.map((b) => ({ key: b, label: b, icon: 'pricetag-outline' as const, selected: brand === b, onPress: () => setBrand(b) })),
       ]}
-      trigger={(open) => <Button title={brand ?? (isPhone ? 'Brand' : 'All brands')} icon="pricetag-outline" iconRight="chevron-down" variant={brand ? 'tonal' : 'outline'} size="sm" onPress={open} />}
+      trigger={(open) => <Button title={brand ?? (isPhone ? tr('ops.KitchenScreen.brand') : tr('ops.KitchenScreen.all_brands'))} icon="pricetag-outline" iconRight="chevron-down" variant={brand ? 'tonal' : 'outline'} size="sm" onPress={open} />}
     />
   ) : null;
 
@@ -268,11 +269,11 @@ export default function KitchenScreen() {
     body = <ErrorState message={error} onRetry={reload} />;
   } else if (!tickets.length) {
     body = (
-      <EmptyState icon="restaurant-outline" title="Kitchen is clear"
-        message="New kitchen tickets (KOTs) appear here as soon as a bill or online order is sent to the kitchen. This screen refreshes every 5 seconds." />
+      <EmptyState icon="restaurant-outline" title={tr('ops.KitchenScreen.kitchen_is_clear')}
+        message={tr('ops.KitchenScreen.new_kitchen_tickets_kots_appear_here_as')} />
     );
   } else if (!visible.length) {
-    body = <EmptyState icon="funnel-outline" title="No tickets for this filter" action={{ label: 'Show all', onPress: () => { setKind('all'); setBrand(null); } }} />;
+    body = <EmptyState icon="funnel-outline" title={tr('ops.KitchenScreen.no_tickets_for_this_filter')} action={{ label: tr('common.show_all'), onPress: () => { setKind('all'); setBrand(null); } }} />;
   } else if (tabsMode) {
     const list = byColumn(tab);
     body = (
@@ -305,22 +306,22 @@ export default function KitchenScreen() {
 
   return (
     <Screen
-      title="Kitchen"
-      subtitle={tickets.length ? `${nNew} new · ${nPrep} preparing · ${nReady} ready` : undefined}
+      title={tr('common.kitchen')}
+      subtitle={tickets.length ? tr('ops.KitchenScreen.nnew_new_nprep_preparing_nready_ready', { nNew, nPrep, nReady }) : undefined}
       scroll={false}
       maxWidth={isDesktop ? 2600 : 1280}
       contentStyle={{ flex: 1 }}
       actions={
         <>
-          <ActionMenu align="end" title="Recall a bumped ticket" items={recallItems} width={320}
-            trigger={(open) => <Button title={isPhone ? undefined : 'Recall'} icon="arrow-undo-outline" variant="outline" accessibilityLabel="Recall a bumped ticket"
+          <ActionMenu align="end" title={tr('ops.KitchenScreen.recall_a_bumped_ticket')} items={recallItems} width={320}
+            trigger={(open) => <Button title={isPhone ? undefined : tr('ops.KitchenScreen.recall')} icon="arrow-undo-outline" variant="outline" accessibilityLabel={tr('ops.KitchenScreen.recall_a_bumped_ticket')}
               onPress={() => { void loadRecall(); open(); }} />} />
           <IconButton icon={sound ? 'volume-high-outline' : 'volume-mute-outline'} variant={sound ? 'secondary' : 'tonal'}
-            accessibilityLabel={sound ? 'Mute new-ticket sound' : 'Turn on new-ticket sound'} onPress={() => { setSound(!sound); if (!sound) playAlert('kitchen'); }} />
-          <IconButton icon={large ? 'remove-circle-outline' : 'text-outline'} variant="secondary" accessibilityLabel={large ? 'Smaller text' : 'Larger text'}
+            accessibilityLabel={sound ? tr('ops.KitchenScreen.mute_new_ticket_sound') : tr('ops.KitchenScreen.turn_on_new_ticket_sound')} onPress={() => { setSound(!sound); if (!sound) playAlert('kitchen'); }} />
+          <IconButton icon={large ? 'remove-circle-outline' : 'text-outline'} variant="secondary" accessibilityLabel={large ? tr('ops.KitchenScreen.smaller_text') : tr('ops.KitchenScreen.larger_text')}
             onPress={() => setLarge(!large)} />
           {Platform.OS === 'web' && !isPhone ? (
-            <IconButton icon="expand-outline" variant="secondary" accessibilityLabel="Toggle full screen" onPress={toggleFullscreen} />
+            <IconButton icon="expand-outline" variant="secondary" accessibilityLabel={tr('ops.KitchenScreen.toggle_full_screen')} onPress={toggleFullscreen} />
           ) : null}
         </>
       }
@@ -332,8 +333,8 @@ export default function KitchenScreen() {
             {showKeys && ordered.length ? (
               <View style={styles.hint}>
                 <ShortcutHint keys="1" /><Text variant="caption" tone="subtle">–</Text><ShortcutHint keys="9" />
-                <Text variant="caption" tone="subtle">select</Text>
-                <ShortcutHint keys="Space" /><Text variant="caption" tone="subtle">bump</Text>
+                <Text variant="caption" tone="subtle">{tr('ops.KitchenScreen.select')}</Text>
+                <ShortcutHint keys="Space" /><Text variant="caption" tone="subtle">{tr('ops.KitchenScreen.bump')}</Text>
               </View>
             ) : null}
           </View>
@@ -349,7 +350,7 @@ export default function KitchenScreen() {
 }
 
 function ticketTitle(t: FloorTicket): string {
-  return t.table_label ? `Table ${t.table_label}` : t.token_no ? `Token ${t.token_no}` : ORDER_TYPE_LABEL[t.type] ?? t.type;
+  return t.table_label ? `Table ${t.table_label}` : t.token_no ? `Token ${t.token_no}` : ORDER_TYPE_UI[t.type] ?? t.type;
 }
 
 function ColumnHeader({ column, label, count, large }: { column: Column; label: string; count: number; large: boolean }) {
@@ -365,7 +366,7 @@ function ColumnHeader({ column, label, count, large }: { column: Column; label: 
 }
 
 function ColumnEmpty({ column }: { column: Column }) {
-  const msg = column === 'pending' ? 'No new tickets' : column === 'preparing' ? 'Nothing cooking right now' : 'Nothing waiting to be served';
+  const msg = column === 'pending' ? tr('ops.KitchenScreen.no_new_tickets') : column === 'preparing' ? tr('ops.KitchenScreen.nothing_cooking_right_now') : tr('ops.KitchenScreen.nothing_waiting_to_be_served');
   return (
     <View style={{ paddingVertical: 32, alignItems: 'center' }}>
       <Text tone="subtle">{msg}</Text>
@@ -392,7 +393,7 @@ const TicketCard = React.memo(function TicketCard({ ticket, now, ageLimits, larg
 
   return (
     <View style={[styles.ticket, { backgroundColor: isNew ? colors.kitchenSoft : colors.surface, borderColor: border, borderRadius: radius.lg, borderWidth: selected || isNew ? 3 : 1.5 }]}
-      accessibilityLabel={`Kitchen ticket ${ticket.kot_no ?? ticket.order_code}, ${formatAge(mins)} old${isNew ? ', new' : ''}`}>
+      accessibilityLabel={tr('ops.KitchenScreen.kitchen_ticket_v_formatage_old_v2', { v: ticket.kot_no ?? ticket.order_code, formatAge: formatAge(mins), v2: isNew ? tr('ops.KitchenScreen.new_2') : '' })}>
       <View style={[styles.ticketBar, { backgroundColor: tone === 'ok' ? (isNew ? colors.kitchen : colors.borderStrong) : age.solid }]} />
       <View style={styles.ticketHead}>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -404,7 +405,7 @@ const TicketCard = React.memo(function TicketCard({ ticket, now, ageLimits, larg
             </Text>
           </View>
           <Text variant={large ? 'body' : 'small'} tone="muted" numberOfLines={1}>
-            KOT {ticket.kot_no ?? '—'} · #{ticket.order_code}{ticket.token_no && ticket.table_label ? ` · Token ${ticket.token_no}` : ''}
+            KOT {ticket.kot_no ?? '—'} · #{ticket.order_code}{ticket.token_no && ticket.table_label ? tr('ops.KitchenScreen.token_token_no', { token_no: ticket.token_no }) : ''}
           </Text>
         </View>
         <AgeChip minutes={mins} tone={tone} size={large ? 'lg' : 'md'} />
@@ -412,7 +413,7 @@ const TicketCard = React.memo(function TicketCard({ ticket, now, ageLimits, larg
 
       <View style={styles.badges}>
         {isNew ? <StatusPill status="placed" label="NEW" /> : null}
-        <StatusPill status="neutral" label={ORDER_TYPE_LABEL[ticket.type] ?? ticket.type} showIcon={false} />
+        <StatusPill status="neutral" label={ORDER_TYPE_UI[ticket.type] ?? ticket.type} showIcon={false} />
         {ticket.channel !== 'POS' ? <StatusPill status="brand" label={channelLabel(ticket.channel)} showIcon={false} /> : null}
         {ticket.brand ? <StatusPill status="brand" label={ticket.brand} /> : null}
         {ticket.customer_name ? <StatusPill status="neutral" label={ticket.customer_name} showIcon={false} /> : null}
@@ -422,7 +423,7 @@ const TicketCard = React.memo(function TicketCard({ ticket, now, ageLimits, larg
         {ticket.items.map((i) => (
           <TicketItem key={i.id} item={i} large={large} qtySize={qtySize} nameSize={nameSize} busy={!!itemBusy[i.id]} onItem={onItem} />
         ))}
-        {!ticket.items.length ? <Text tone="subtle">No items on this ticket</Text> : null}
+        {!ticket.items.length ? <Text tone="subtle">{tr('ops.KitchenScreen.no_items_on_this_ticket')}</Text> : null}
       </View>
 
       {ticket.notes ? (
@@ -434,12 +435,12 @@ const TicketCard = React.memo(function TicketCard({ ticket, now, ageLimits, larg
 
       <View style={styles.ticketFoot}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text variant={large ? 'bodyStrong' : 'smallStrong'} numberOfLines={1}>{totalQty} item{totalQty === 1 ? '' : 's'}</Text>
-          {cancelled ? <Text variant="caption" tone="danger" numberOfLines={1}>{cancelled} cancelled</Text> : null}
+          <Text variant={large ? 'bodyStrong' : 'smallStrong'} numberOfLines={1}>{totalQty} {tr('common.item_2')}{totalQty === 1 ? '' : 's'}</Text>
+          {cancelled ? <Text variant="caption" tone="danger" numberOfLines={1}>{cancelled} {tr('ops.KitchenScreen.cancelled')}</Text> : null}
         </View>
-        <IconButton icon="print-outline" variant="secondary" accessibilityLabel={`Print KOT ${ticket.kot_no ?? ''}`} onPress={onPrint} />
+        <IconButton icon="print-outline" variant="secondary" accessibilityLabel={tr('ops.KitchenScreen.print_kot_v', { v: ticket.kot_no ?? '' })} onPress={onPrint} />
         <Button title={col.bump} icon={col.icon} variant={bumpVariant} size="lg" loading={busy} disabled={busy}
-          onPress={onBump} accessibilityLabel={`Bump KOT ${ticket.kot_no ?? ''} to ${STATUS_WORD[bumpTarget(ticket.status as TicketStatus) ?? 'served']}`}
+          onPress={onBump} accessibilityLabel={tr('ops.KitchenScreen.bump_kot_v_to_v2', { v: ticket.kot_no ?? '', v2: STATUS_WORD[bumpTarget(ticket.status as TicketStatus) ?? 'served'] })}
           style={{ minWidth: large ? 170 : 140 }} shortcut={selected ? 'Space' : undefined} />
       </View>
     </View>
@@ -471,7 +472,7 @@ function TicketItem({ item, large, qtySize, nameSize, busy, onItem }: {
           <View style={[styles.note, { backgroundColor: colors.danger, borderRadius: radius.sm }]}>
             <Ionicons name="close-circle" size={large ? 20 : 16} color={colors.onDanger} />
             <Text variant={large ? 'h3' : 'smallStrong'} color={colors.onDanger} style={{ flex: 1 }}>
-              DON'T MAKE · cancelled{item.void_reason ? ` · ${item.void_reason}` : ''}
+              {tr('ops.KitchenScreen.don_t_make_cancelled')}{item.void_reason ? ` · ${item.void_reason}` : ''}
             </Text>
           </View>
         ) : item.notes ? (
@@ -488,12 +489,12 @@ function TicketItem({ item, large, qtySize, nameSize, busy, onItem }: {
   );
 
   if (voided) {
-    return <View style={styles.item} accessibilityLabel={`${item.quantity} ${item.name}, cancelled, don't make${item.void_reason ? `: ${item.void_reason}` : ''}`}>{content}</View>;
+    return <View style={styles.item} accessibilityLabel={tr('ops.KitchenScreen.quantity_name_cancelled_don_t_make_v', { quantity: item.quantity, name: item.name, v: item.void_reason ? `: ${item.void_reason}` : '' })}>{content}</View>;
   }
   return (
     <Pressable onPress={() => next && onItem(item, next)} onLongPress={() => prev && onItem(item, prev)} delayLongPress={450} disabled={busy}
       accessibilityRole="button" accessibilityState={{ busy }}
-      accessibilityLabel={`${item.quantity} ${item.name}, ${ITEM_WORD[status]}${next ? `. Tap to mark ${ITEM_WORD[next].toLowerCase()}` : ''}${prev ? '. Long-press to undo' : ''}`}
+      accessibilityLabel={`${item.quantity} ${item.name}, ${ITEM_WORD[status]}${next ? tr('ops.KitchenScreen.tap_to_mark_tolowercase', { toLowerCase: ITEM_WORD[next].toLowerCase() }) : ''}${prev ? tr('ops.KitchenScreen.long_press_to_undo') : ''}`}
       style={({ pressed, hovered }: any) => [styles.item, styles.itemTap, { borderRadius: radius.md, minHeight: large ? 56 : 48 },
         (pressed || hovered) && next ? { backgroundColor: colors.surfaceSunken } : null,
         Platform.OS === 'web' && ({ cursor: next ? 'pointer' : 'default', userSelect: 'none' } as any)]}>

@@ -11,6 +11,7 @@ import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, View } f
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { IconButton, Text, useHotkeys } from '@/components/ui';
+import { t } from '@/i18n';
 
 export type PanelPresentation = 'panel' | 'screen';
 
@@ -53,7 +54,7 @@ export function DetailPanel({
 
   const header = (
     <View style={[styles.header, { borderBottomColor: colors.divider, paddingTop: isPhone ? insets.top + 8 : 12 }]}>
-      <IconButton icon={isPhone ? 'arrow-back' : 'close'} accessibilityLabel="Close" onPress={onClose} disabled={!dismissable} />
+      <IconButton icon={isPhone ? 'arrow-back' : 'close'} accessibilityLabel={t('common.close')} onPress={onClose} disabled={!dismissable} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text variant="h3" numberOfLines={1}>{title}</Text>
         {subtitle ? <Text variant="small" tone="muted" numberOfLines={1}>{subtitle}</Text> : null}

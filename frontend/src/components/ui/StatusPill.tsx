@@ -10,6 +10,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeColors } from '@/theme/tokens';
 import { Text } from './Text';
 import { STATUS_META, statusMeta, type StatusMeta, type StatusTone, type KnownStatus } from './statusMeta';
+import { t } from '@/i18n';
 
 export { STATUS_META, statusMeta, type StatusMeta, type StatusTone, type KnownStatus };
 export type { KitchenStatus, OrderStatus, PaymentStatus, SubscriptionStatus } from './statusMeta';
@@ -46,7 +47,7 @@ export function StatusPill({ status, label, size = 'sm', showIcon = true, style,
   return (
     <View
       accessibilityRole="text"
-      accessibilityLabel={`Status: ${text}${count !== undefined ? ` ${count}` : ''}`}
+      accessibilityLabel={t('ui.StatusPill.status_text_v', { text, v: count !== undefined ? ` ${count}` : '' })}
       style={[styles.pill, { backgroundColor: bg, borderRadius: radius.pill, height: md ? 28 : 22, paddingHorizontal: md ? 10 : 8 }, style]}
     >
       {showIcon ? <Ionicons name={meta.icon} size={md ? 14 : 12} color={fg} /> : null}

@@ -24,23 +24,24 @@ import { CustomerFormSheet } from './CustomerForm';
 import {
   filterCustomers, lastVisitLabel, searchCached, serverSort, serverSortDir, sortCustomers, type CustomerSort, type TierFilter,
 } from './paging';
+import { t as tr, currentLocale } from '@/i18n';
 
 const PAGE = 100;
 
 const SORTS: { value: CustomerSort; label: string }[] = [
-  { value: 'recent', label: 'Recent visit' },
-  { value: 'spend', label: 'Top spend' },
-  { value: 'visits', label: 'Most visits' },
-  { value: 'points', label: 'Most points' },
-  { value: 'name', label: 'Name' },
+  { value: 'recent', get label() { return tr('customers.CustomersScreen.recent_visit'); } },
+  { value: 'spend', get label() { return tr('customers.CustomersScreen.top_spend'); } },
+  { value: 'visits', get label() { return tr('customers.CustomersScreen.most_visits'); } },
+  { value: 'points', get label() { return tr('customers.CustomersScreen.most_points'); } },
+  { value: 'name', get label() { return tr('common.name'); } },
 ];
 
 export default function CustomersScreen() {
   const role = useAuth((s) => s.session?.role ?? null);
   if (!can(role, 'order')) {
     return (
-      <Screen title="Customers">
-        <EmptyState icon="lock-closed-outline" title="Not available for kitchen logins" message="Ask a cashier or manager to look up customers." />
+      <Screen title={tr('common.customers')}>
+        <EmptyState icon="lock-closed-outline" title={tr('customers.CustomersScreen.not_available_for_kitchen_logins')} message={tr('customers.CustomersScreen.ask_a_cashier_or_manager_to_look_up')} />
       </Screen>
     );
   }
@@ -92,11 +93,11 @@ function Customers() {
   const offlineCount = (t: TierFilter) => (offline ? filterCustomers(searchCached(cached, q), t).length : undefined);
   const counts = pages.counts;
   const filters: FilterOption[] = [
-    { key: 'all', label: 'All', count: offline ? offlineCount('all') : counts?.all },
-    { key: 'Gold', label: 'Gold', count: offline ? offlineCount('Gold') : counts?.Gold },
-    { key: 'Silver', label: 'Silver', count: offline ? offlineCount('Silver') : counts?.Silver },
-    { key: 'Bronze', label: 'Bronze', count: offline ? offlineCount('Bronze') : counts?.Bronze },
-    { key: 'optin', label: 'Email offers OK', icon: 'mail-outline', count: offline ? offlineCount('optin') : counts?.opted_in },
+    { key: 'all', label: tr('common.all'), count: offline ? offlineCount('all') : counts?.all },
+    { key: 'Gold', label: tr('customers.CustomersScreen.gold'), count: offline ? offlineCount('Gold') : counts?.Gold },
+    { key: 'Silver', label: tr('customers.CustomersScreen.silver'), count: offline ? offlineCount('Silver') : counts?.Silver },
+    { key: 'Bronze', label: tr('customers.CustomersScreen.bronze'), count: offline ? offlineCount('Bronze') : counts?.Bronze },
+    { key: 'optin', label: tr('customers.CustomersScreen.email_offers_ok'), icon: 'mail-outline', count: offline ? offlineCount('optin') : counts?.opted_in },
   ];
 
   // The server sorts each key one way (name A→Z, the rest highest / latest first)
@@ -119,12 +120,12 @@ function Customers() {
     </View>
   );
   const consent = (c: Customer) => (c.marketing_opt_in
-    ? <Badge label="Email OK" tone="success" icon="mail-outline" />
+    ? <Badge label={tr('customers.CustomersScreen.email_ok')} tone="success" icon="mail-outline" />
     : <Text variant="small" tone="subtle">—</Text>);
 
   const columns = useMemo<DataColumn<Customer>[]>(() => [
     {
-      key: 'name', title: 'Customer', flex: 2, minWidth: 170, sortable: true,
+      key: 'name', title: tr('common.customer'), flex: 2, minWidth: 170, sortable: true,
       render: (c) => (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 }}>
           {avatar(c, 28)}
@@ -132,13 +133,13 @@ function Customers() {
         </View>
       ),
     },
-    { key: 'phone', title: 'Phone', width: 130, value: (c) => formatMobile(c.phone) },
-    { key: 'tier', title: 'Tier', width: 86, hideBelow: 700, render: (c) => <Badge label={c.tier} tone={TIER_TONE[c.tier]} /> },
-    { key: 'points', title: 'Points', width: 76, numeric: true, sortable: true, value: (c) => c.points.toLocaleString('en-IN') },
-    { key: 'visits', title: 'Visits', width: 70, numeric: true, sortable: true, value: (c) => c.visits.toLocaleString('en-IN') },
-    { key: 'spend', title: 'Spent', width: 110, numeric: true, sortable: true, hideBelow: 540, value: (c) => money(c.total_spent, '₹', true) },
-    { key: 'recent', title: 'Last visit', width: 104, sortable: true, hideBelow: 860, value: (c) => lastVisitLabel(c.last_visit_at) },
-    { key: 'consent', title: 'Offers', width: 104, hideBelow: 980, render: consent },
+    { key: 'phone', title: tr('common.phone'), width: 130, value: (c) => formatMobile(c.phone) },
+    { key: 'tier', title: tr('customers.CustomersScreen.tier'), width: 86, hideBelow: 700, render: (c) => <Badge label={c.tier} tone={TIER_TONE[c.tier]} /> },
+    { key: 'points', title: tr('customers.CustomersScreen.points'), width: 76, numeric: true, sortable: true, value: (c) => c.points.toLocaleString(currentLocale()) },
+    { key: 'visits', title: tr('customers.CustomersScreen.visits'), width: 70, numeric: true, sortable: true, value: (c) => c.visits.toLocaleString(currentLocale()) },
+    { key: 'spend', title: tr('customers.CustomersScreen.spent'), width: 110, numeric: true, sortable: true, hideBelow: 540, value: (c) => money(c.total_spent, '₹', true) },
+    { key: 'recent', title: tr('customers.CustomersScreen.last_visit'), width: 104, sortable: true, hideBelow: 860, value: (c) => lastVisitLabel(c.last_visit_at) },
+    { key: 'consent', title: tr('common.offers'), width: 104, hideBelow: 980, render: consent },
   ], [colors]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const renderCard = useCallback((c: Customer) => (
@@ -147,16 +148,16 @@ function Customers() {
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>{c.name}</Text>
-          {c.marketing_opt_in ? <Ionicons name="mail" size={13} color={colors.successText} accessibilityLabel="Agreed to email offers" /> : null}
+          {c.marketing_opt_in ? <Ionicons name="mail" size={13} color={colors.successText} accessibilityLabel={tr('customers.CustomersScreen.agreed_to_email_offers')} /> : null}
         </View>
         <Text variant="small" tone="muted" numberOfLines={1}>
-          {formatMobile(c.phone)} · {c.visits} visit{c.visits === 1 ? '' : 's'} · {lastVisitLabel(c.last_visit_at)}
+          {tr('customers.CustomersScreen.formatmobile_visits_visit', { formatMobile: formatMobile(c.phone), visits: c.visits })}{c.visits === 1 ? '' : 's'} · {lastVisitLabel(c.last_visit_at)}
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end', gap: 4 }}>
         <Text variant="money">{money(c.total_spent, '₹', true)}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text variant="caption" tone="subtle">{c.points} pts</Text>
+          <Text variant="caption" tone="subtle">{c.points} {tr('customers.CustomersScreen.pts')}</Text>
           <Badge label={c.tier} tone={TIER_TONE[c.tier]} />
         </View>
       </View>
@@ -165,43 +166,43 @@ function Customers() {
 
   const shown = offline ? rows.length : pages.total ?? 0;
   const subtitle = pages.loaded || offline
-    ? q ? `${shown.toLocaleString('en-IN')} found for “${q}”` : `${shown.toLocaleString('en-IN')} customer${shown === 1 ? '' : 's'}${tier !== 'all' ? ` · ${tier === 'optin' ? 'email offers OK' : tier}` : ''}`
+    ? q ? tr('customers.CustomersScreen.tolocalestring_found_for_q', { toLocaleString: shown.toLocaleString(currentLocale()), q }) : tr('customers.CustomersScreen.tolocalestring_customer_v_v2', { toLocaleString: shown.toLocaleString(currentLocale()), v: shown === 1 ? '' : 's', v2: tier !== 'all' ? ` · ${tier === 'optin' ? tr('customers.CustomersScreen.email_offers_ok_2') : tier}` : '' })
     : undefined;
 
   const empty = q || tier !== 'all'
     ? {
-      icon: 'search-outline' as const, title: 'No matching customers',
-      message: q ? `Nobody matches “${q}”. Check the spelling or search by phone number.` : 'No customers in this group yet.',
-      action: q ? { label: 'Add as new customer', icon: 'person-add-outline' as const, onPress: () => setForm({ customer: null }) } : undefined,
+      icon: 'search-outline' as const, title: tr('customers.CustomersScreen.no_matching_customers'),
+      message: q ? tr('customers.CustomersScreen.nobody_matches_q_check_the_spelling_or', { q }) : tr('customers.CustomersScreen.no_customers_in_this_group_yet'),
+      action: q ? { label: tr('customers.CustomersScreen.add_as_new_customer'), icon: 'person-add-outline' as const, onPress: () => setForm({ customer: null }) } : undefined,
     }
     : {
-      icon: 'people-outline' as const, title: 'No customers yet',
-      message: 'Customers are saved automatically when you add a phone number to a bill. They then earn loyalty points and you can see their order history here.',
-      action: { label: 'Add customer', icon: 'person-add-outline' as const, onPress: () => setForm({ customer: null }) },
+      icon: 'people-outline' as const, title: tr('customers.CustomersScreen.no_customers_yet'),
+      message: tr('customers.CustomersScreen.customers_are_saved_automatically_when'),
+      action: { label: tr('common.add_customer'), icon: 'person-add-outline' as const, onPress: () => setForm({ customer: null }) },
     };
 
   return (
     <Screen
-      title="Customers"
+      title={tr('common.customers')}
       subtitle={subtitle}
       scroll={false}
       contentStyle={{ flex: 1, paddingBottom: 16 }}
       maxWidth={isDesktop ? 1680 : 1280}
-      actions={<Button title={isPhone ? 'Add' : 'Add customer'} icon="person-add-outline" onPress={() => setForm({ customer: null })} />}
+      actions={<Button title={isPhone ? tr('common.add') : tr('common.add_customer')} icon="person-add-outline" onPress={() => setForm({ customer: null })} />}
       toolbar={(
-        <FilterBar onSearch={setQ} search={q} searchPlaceholder="Search name or phone" searching={pages.loading && !!q}
+        <FilterBar onSearch={setQ} search={q} searchPlaceholder={tr('customers.CustomersScreen.search_name_or_phone_x')} searching={pages.loading && !!q}
           filters={filters} value={tier} onChange={(k) => setTier(k as TierFilter)}
           right={(
-            <ActionMenu items={sortMenu} title="Sort customers" align="end"
-              trigger={(open) => <Button title={isPhone ? undefined : sortLabel} icon="swap-vertical-outline" variant="outline" onPress={open} accessibilityLabel={`Sort: ${sortLabel}`} />} />
+            <ActionMenu items={sortMenu} title={tr('customers.CustomersScreen.sort_customers')} align="end"
+              trigger={(open) => <Button title={isPhone ? undefined : sortLabel} icon="swap-vertical-outline" variant="outline" onPress={open} accessibilityLabel={tr('customers.CustomersScreen.sort_sortlabel', { sortLabel })} />} />
           )} />
       )}
     >
       {offline ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 10, backgroundColor: colors.warningSoft, marginBottom: 8 }}>
           <Ionicons name="cloud-offline-outline" size={16} color={colors.warningText} />
-          <Text variant="small" tone="warning" style={{ flex: 1 }}>Offline — showing customers saved on this device. Totals may be out of date.</Text>
-          <Button title="Retry" size="sm" variant="ghost" onPress={() => void pages.reload()} />
+          <Text variant="small" tone="warning" style={{ flex: 1 }}>{tr('customers.CustomersScreen.offline_showing_customers_saved_on_this')}</Text>
+          <Button title={tr('common.retry')} size="sm" variant="ghost" onPress={() => void pages.reload()} />
         </View>
       ) : null}
       <View style={{ flex: 1, flexDirection: 'row', gap: 16, minHeight: 0 }}>
@@ -233,7 +234,7 @@ function Customers() {
         </View>
         {selected ? (
           <DetailPanel title={selected.name} subtitle={formatMobile(selected.phone)} onClose={() => setSelected(null)}
-            headerRight={<Button title={isPhone ? undefined : 'Edit'} icon="create-outline" variant="ghost" size="sm" onPress={() => setForm({ customer: selected })} accessibilityLabel="Edit customer" />}>
+            headerRight={<Button title={isPhone ? undefined : tr('common.edit')} icon="create-outline" variant="ghost" size="sm" onPress={() => setForm({ customer: selected })} accessibilityLabel={tr('customers.CustomersScreen.edit_customer')} />}>
             <CustomerDetail key={selected.id} customer={selected} compactHeader canEdit={false} onEdit={() => setForm({ customer: selected })} />
           </DetailPanel>
         ) : null}

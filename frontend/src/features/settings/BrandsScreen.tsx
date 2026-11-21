@@ -11,13 +11,14 @@ import { useData } from '@/store/data';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { SettingsFrame } from './SettingsFrame';
 import { Callout } from './components';
+import { t } from '@/i18n';
 
 export default function BrandsScreen() {
   const role = useAuth((s) => s.session?.role ?? null);
   if (!can(role, 'manage')) {
     return (
-      <SettingsFrame active="brands" title="Brands">
-        <EmptyState icon="lock-closed-outline" title="Managers only" message="Ask the owner or a manager to manage brands." />
+      <SettingsFrame active="brands" title={t('common.brands')}>
+        <EmptyState icon="lock-closed-outline" title={t('common.managers_only')} message={t('settings.BrandsScreen.ask_the_owner_or_a_manager_to_manage')} />
       </SettingsFrame>
     );
   }
@@ -58,7 +59,7 @@ function BrandsList() {
       replace(created);
       setName('');
       setNameError(null);
-      toast.success(`${created.name} added`);
+      toast.success(t('settings.BrandsScreen.name_added', { name: created.name }));
     } catch (e) {
       setNameError(errorMessage(e));
     } finally {
@@ -67,30 +68,30 @@ function BrandsList() {
   };
 
   return (
-    <SettingsFrame active="brands" title="Brands" subtitle="Run several delivery brands from one kitchen." refreshing={refreshing} onRefresh={reload}>
-      <Callout tone="neutral" icon="bulb-outline" title="What are virtual brands?">
-        {`Cloud kitchens often sell under more than one name, for example "Biryani Box" and "Wrap Republic", each with its own Swiggy/Zomato listing. Add each brand here, assign menu items to it, and pick the brand on an order. Kitchen tickets and reports then show which brand an order belongs to.${businessType && businessType !== 'cloud_kitchen' ? ' Single-brand shops can skip this.' : ''}`}
+    <SettingsFrame active="brands" title={t('common.brands')} subtitle={t('settings.BrandsScreen.run_several_delivery_brands_from_one')} refreshing={refreshing} onRefresh={reload}>
+      <Callout tone="neutral" icon="bulb-outline" title={t('settings.BrandsScreen.what_are_virtual_brands')}>
+        {t('settings.BrandsScreen.cloud_kitchens_often_sell_under_more_than', { v: businessType && businessType !== 'cloud_kitchen' ? t('settings.BrandsScreen.single_brand_shops_can_skip_this') : '' })}
       </Callout>
 
       <Card style={{ gap: 10 }}>
-        <Text variant="h3">Add a brand</Text>
+        <Text variant="h3">{t('settings.BrandsScreen.add_a_brand')}</Text>
         <View style={{ flexDirection: isPhone ? 'column' : 'row', gap: 10, alignItems: isPhone ? 'stretch' : 'flex-start' }}>
-          <Input containerStyle={{ flex: 1 }} value={name} onChangeText={(v) => { setName(v); setNameError(null); }} placeholder="Brand name, e.g. Biryani Box"
-            accessibilityLabel="New brand name" maxLength={60} error={nameError} onSubmitEditing={add} returnKeyType="done" />
-          <Button title="Add brand" icon="add" onPress={add} loading={adding} disabled={!name.trim()} />
+          <Input containerStyle={{ flex: 1 }} value={name} onChangeText={(v) => { setName(v); setNameError(null); }} placeholder={t('settings.BrandsScreen.brand_name_e_g_biryani_box')}
+            accessibilityLabel={t('settings.BrandsScreen.new_brand_name')} maxLength={60} error={nameError} onSubmitEditing={add} returnKeyType="done" />
+          <Button title={t('settings.BrandsScreen.add_brand')} icon="add" onPress={add} loading={adding} disabled={!name.trim()} />
         </View>
       </Card>
 
-      {loading && !data ? <Loading label="Loading brands" /> : null}
+      {loading && !data ? <Loading label={t('settings.BrandsScreen.loading_brands')} /> : null}
       {error && !data ? <ErrorState message={error} onRetry={reload} /> : null}
 
       {data && brands.length === 0 ? (
-        <Card><EmptyState icon="pricetags-outline" title="No brands yet" message="Your business name is used on every order. Add brands only if you sell under more than one name." /></Card>
+        <Card><EmptyState icon="pricetags-outline" title={t('settings.BrandsScreen.no_brands_yet')} message={t('settings.BrandsScreen.your_business_name_is_used_on_every_order')} /></Card>
       ) : null}
 
       {active.length ? (
         <View style={{ gap: 8 }}>
-          <SectionTitle title={`Active · ${active.length}`} />
+          <SectionTitle title={t('settings.BrandsScreen.active_length', { length: active.length })} />
           <Card padded={false}>
             {active.map((b, i) => <BrandRow key={b.id} brand={b} first={i === 0} brands={brands} onSaved={replace} />)}
           </Card>
@@ -99,7 +100,7 @@ function BrandsList() {
 
       {inactive.length ? (
         <View style={{ gap: 8 }}>
-          <SectionTitle title={`Inactive · ${inactive.length}`} />
+          <SectionTitle title={t('settings.BrandsScreen.inactive_length', { length: inactive.length })} />
           <Card padded={false}>
             {inactive.map((b, i) => <BrandRow key={b.id} brand={b} first={i === 0} brands={brands} onSaved={replace} />)}
           </Card>
@@ -134,8 +135,8 @@ function BrandRow({ brand, first, brands, onSaved }: { brand: Brand; first: bool
 
   const rename = async () => {
     const n = value.trim();
-    if (!n) return setError('Enter a brand name.');
-    if (brands.some((b) => b.id !== brand.id && b.name.toLowerCase() === n.toLowerCase())) return setError('Another brand already has this name.');
+    if (!n) return setError(t('settings.BrandsScreen.enter_a_brand_name'));
+    if (brands.some((b) => b.id !== brand.id && b.name.toLowerCase() === n.toLowerCase())) return setError(t('settings.BrandsScreen.another_brand_already_has_this_name'));
     if (n === brand.name) return setEditing(false);
     if (await update({ name: n, is_active: brand.is_active }, 'Brand renamed')) setEditing(false);
   };
@@ -143,9 +144,9 @@ function BrandRow({ brand, first, brands, onSaved }: { brand: Brand; first: bool
   const toggleActive = async () => {
     if (brand.is_active) {
       const ok = await confirm({
-        title: `Deactivate ${brand.name}?`,
-        message: 'It is hidden when taking new orders. Past orders and reports keep the brand name. You can turn it back on any time.',
-        confirmLabel: 'Deactivate',
+        title: t('settings.BrandsScreen.deactivate_brand', { brand: brand.name }),
+        message: t('settings.BrandsScreen.it_is_hidden_when_taking_new_orders_past'),
+        confirmLabel: t('common.deactivate'),
         danger: true,
       });
       if (!ok) return;
@@ -158,10 +159,10 @@ function BrandRow({ brand, first, brands, onSaved }: { brand: Brand; first: bool
       {editing ? (
         <View style={{ flexDirection: isPhone ? 'column' : 'row', gap: 8, alignItems: isPhone ? 'stretch' : 'flex-start' }}>
           <Input containerStyle={{ flex: 1 }} autoFocus value={value} onChangeText={(v) => { setValue(v); setError(null); }} maxLength={60}
-            error={error} accessibilityLabel="Brand name" onSubmitEditing={rename} />
+            error={error} accessibilityLabel={t('settings.BrandsScreen.brand_name')} onSubmitEditing={rename} />
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Button title="Cancel" variant="secondary" onPress={() => { setEditing(false); setValue(brand.name); setError(null); }} disabled={busy} />
-            <Button title="Save" onPress={rename} loading={busy} />
+            <Button title={t('common.cancel')} variant="secondary" onPress={() => { setEditing(false); setValue(brand.name); setError(null); }} disabled={busy} />
+            <Button title={t('common.save')} onPress={rename} loading={busy} />
           </View>
         </View>
       ) : (
@@ -172,9 +173,9 @@ function BrandRow({ brand, first, brands, onSaved }: { brand: Brand; first: bool
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text variant="bodyStrong" tone={brand.is_active ? 'default' : 'muted'} numberOfLines={1}>{brand.name}</Text>
           </View>
-          {!brand.is_active ? <Badge label="Inactive" /> : null}
-          <Button icon="create-outline" variant="ghost" size="sm" accessibilityLabel={`Rename ${brand.name}`} onPress={() => setEditing(true)} disabled={busy} />
-          <Button title={brand.is_active ? 'Deactivate' : 'Activate'} variant={brand.is_active ? 'ghost' : 'soft'} size="sm" onPress={toggleActive} loading={busy} />
+          {!brand.is_active ? <Badge label={t('settings.BrandsScreen.inactive')} /> : null}
+          <Button icon="create-outline" variant="ghost" size="sm" accessibilityLabel={t('settings.BrandsScreen.rename_brand', { brand: brand.name })} onPress={() => setEditing(true)} disabled={busy} />
+          <Button title={brand.is_active ? t('common.deactivate') : t('settings.BrandsScreen.activate')} variant={brand.is_active ? 'ghost' : 'soft'} size="sm" onPress={toggleActive} loading={busy} />
         </View>
       )}
     </View>

@@ -1,11 +1,11 @@
 /*
- * Tallyko service worker: keeps the app shell available offline so billing opens without internet.
+ * Storant service worker: keeps the app shell available offline so billing opens without internet.
  * - Navigations: network first, fall back to the cached index.html.
  * - Hashed static bundles (/_expo/static/*) and icons: cache first (they never change once built).
  * - API calls (/api/*, /health) are never cached — offline bills go through the app's own outbox.
  */
-const CACHE = 'tallyko-shell-v1';
-const SHELL = ['/', '/index.html', '/manifest.json', '/logo192.png', '/logo512.png'];
+const CACHE = 'storant-v1';
+const SHELL = ['/', '/index.html', '/manifest.json', '/storant-light-192.png', '/storant-light-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

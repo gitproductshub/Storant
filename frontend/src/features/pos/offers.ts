@@ -12,6 +12,7 @@ import type { OrderItemInput, Product } from '@/api/types';
 import { isFreeItem } from '@/lib/billing';
 import type { Draft } from './cart';
 import { PHONE_RE } from './totals';
+import { t as tr } from '@/i18n';
 
 /** The offer the bill preview (and the order sent to the server) uses. `discount` is pre-tax. */
 export interface AppliedOffer {
@@ -151,7 +152,7 @@ export function useCartOffers({ draft, enabled, online }: { draft: Draft; enable
         if (id !== seq.current) return;
         // Offers are optional: forget suggestions and let the bill go through without one
         setResult(null);
-        setError({ key: forKey, message: isOffline(e) ? null : 'Could not check offers' });
+        setError({ key: forKey, message: isOffline(e) ? null : tr('pos.offers.could_not_check_offers') });
       })
       .finally(() => {
         if (id === seq.current) setRunning(false);

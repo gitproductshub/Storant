@@ -11,6 +11,7 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout, FieldRow, SettingSwitch, monoFont } from '@/features/settings/components';
 import { fieldErrorsFrom } from '@/features/settings/validation';
 import { AdminPage, LIMIT_LABEL, ReadOnlyNote, goTo, limitText, useCanEdit, useOnline } from './shared';
+import { t, currentLocale } from '@/i18n';
 
 function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -28,18 +29,18 @@ export default function PlansScreen() {
 
   return (
     <AdminPage
-      title="Plans & features"
-      subtitle="What each plan costs and includes. Changes apply to every business on the plan straight away; per-business overrides still win."
+      title={t('admin.PlansScreen.plans_features')}
+      subtitle={t('admin.PlansScreen.what_each_plan_costs_and_includes_changes')}
       refreshing={refreshing}
       onRefresh={reload}
-      actions={canEdit ? <Button title="New plan" icon="add" onPress={() => setEditing('new')} /> : null}
+      actions={canEdit ? <Button title={t('admin.PlansScreen.new_plan')} icon="add" onPress={() => setEditing('new')} /> : null}
     >
       {!canEdit ? <ReadOnlyNote what="edit plans" /> : null}
-      {loading && !data ? <Loading label="Loading plans" /> : null}
+      {loading && !data ? <Loading label={t('admin.PlansScreen.loading_plans')} /> : null}
       {error && !data ? <ErrorState message={error} onRetry={reload} /> : null}
       {data && plans.length === 0 ? (
-        <EmptyState icon="layers-outline" title="No plans" message="Create the first plan to choose what businesses get."
-          action={canEdit ? { label: 'New plan', icon: 'add', onPress: () => setEditing('new') } : undefined} />
+        <EmptyState icon="layers-outline" title={t('admin.PlansScreen.no_plans')} message={t('admin.PlansScreen.create_the_first_plan_to_choose_what')}
+          action={canEdit ? { label: t('admin.PlansScreen.new_plan'), icon: 'add', onPress: () => setEditing('new') } : undefined} />
       ) : null}
 
       {plans.length ? (
@@ -59,7 +60,7 @@ export default function PlansScreen() {
 
       {data ? (
         <Callout tone="neutral" icon="information-circle-outline">
-          Payments keep a snapshot of the plan they paid for, so editing a plan never changes what was sold. A business can have extra features switched on or off on its own page.
+          {t('admin.PlansScreen.payments_keep_a_snapshot_of_the_plan_they')}
         </Callout>
       ) : null}
 
@@ -80,14 +81,14 @@ function PlanCard({ plan: p, catalog, canEdit, onEdit }: { plan: PlanInfo; catal
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <Text variant="h2">{p.name}</Text>
-            {!p.is_active ? <Badge label="Not offered" tone="warning" /> : null}
+            {!p.is_active ? <Badge label={t('admin.PlansScreen.not_offered')} tone="warning" /> : null}
           </View>
           <Text variant="caption" tone="subtle" style={{ fontFamily: monoFont }}>{p.key}</Text>
         </View>
-        {canEdit ? <Button title="Edit" icon="create-outline" size="sm" variant="secondary" onPress={onEdit} /> : null}
+        {canEdit ? <Button title={t('common.edit')} icon="create-outline" size="sm" variant="secondary" onPress={onEdit} /> : null}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-        <Text variant="moneyLarge">{p.price_monthly ? money(p.price_monthly, '₹', true) : 'Free'}</Text>
+        <Text variant="moneyLarge">{p.price_monthly ? money(p.price_monthly, '₹', true) : t('common.free')}</Text>
         {p.price_monthly ? <Text tone="muted">/ month</Text> : null}
       </View>
       {p.description ? <Text variant="small" tone="muted">{p.description}</Text> : null}
@@ -96,18 +97,18 @@ function PlanCard({ plan: p, catalog, canEdit, onEdit }: { plan: PlanInfo; catal
           {p.price_options.map((o) => (
             <View key={o.months} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text variant="small" style={{ flex: 1 }} numberOfLines={1}>{o.label}</Text>
-              {o.saving > 0 ? <Badge label={`Save ${money(o.saving, '₹', true)}`} tone="success" /> : null}
+              {o.saving > 0 ? <Badge label={t('admin.PlansScreen.save_money', { money: money(o.saving, '₹', true) })} tone="success" /> : null}
               <Text variant="smallStrong">{money(o.price, '₹', true)}</Text>
             </View>
           ))}
         </View>
       ) : null}
       <Pressable onPress={() => goTo(`/admin/businesses?plan=${encodeURIComponent(p.key)}`)} accessibilityRole="link"
-        accessibilityLabel={`${p.businesses} businesses on ${p.name}`}
+        accessibilityLabel={t('admin.PlansScreen.businesses_businesses_on_name', { businesses: p.businesses, name: p.name })}
         style={({ hovered }: any) => [{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }, hovered && { opacity: 0.75 },
           Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
         <Ionicons name="storefront-outline" size={16} color={colors.primary} />
-        <Text variant="smallStrong" tone="primary">{p.businesses.toLocaleString('en-IN')} business{p.businesses === 1 ? '' : 'es'}</Text>
+        <Text variant="smallStrong" tone="primary">{p.businesses.toLocaleString(currentLocale())} {t('admin.PlansScreen.business')}{p.businesses === 1 ? '' : 'es'}</Text>
       </Pressable>
       <Divider />
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -119,7 +120,7 @@ function PlanCard({ plan: p, catalog, canEdit, onEdit }: { plan: PlanInfo; catal
         ))}
       </View>
       <Divider />
-      <Text variant="smallStrong" tone="muted">{p.features.length} of {catalog.length} features</Text>
+      <Text variant="smallStrong" tone="muted">{p.features.length} {t('admin.PlansScreen.of_length_features', { length: catalog.length })}</Text>
       <View style={{ gap: 6 }}>
         {catalog.map((f) => {
           const on = included.has(f.key);
@@ -205,7 +206,7 @@ function PlanSheet({ plan, data, onClose, onSaved }: { plan: PlanInfo | null; da
         billing_options: billing.map((r): BillingOption => ({ months: Number(r.months.trim()), price: r.price.trim() ? Number(r.price.trim()) : null, label: r.label.trim() || null })),
         sort_order: plan?.sort_order ?? Math.max(0, ...data.plans.map((p) => p.sort_order)) + 1,
       });
-      toast.success(isNew ? `${name.trim()} plan created` : `${name.trim()} plan saved`);
+      toast.success(isNew ? t('admin.PlansScreen.trim_plan_created', { trim: name.trim() }) : t('admin.PlansScreen.trim_plan_saved', { trim: name.trim() }));
       onSaved(next);
     } catch (e) {
       setServerErrors(fieldErrorsFrom(e));
@@ -218,32 +219,32 @@ function PlanSheet({ plan, data, onClose, onSaved }: { plan: PlanInfo | null; da
   const removed = plan ? plan.features.filter((f) => !features.has(f)) : [];
 
   return (
-    <Sheet visible onClose={onClose} title={isNew ? 'New plan' : `Edit ${plan!.name}`}
-      subtitle={plan ? `${plan.businesses} business${plan.businesses === 1 ? '' : 'es'} on this plan` : 'Choose what businesses on this plan get.'} width={720}
+    <Sheet visible onClose={onClose} title={isNew ? t('admin.PlansScreen.new_plan') : t('admin.PlansScreen.edit_name', { name: plan!.name })}
+      subtitle={plan ? t('admin.PlansScreen.businesses_business_v_on_this_plan', { businesses: plan.businesses, v: plan.businesses === 1 ? '' : 'es' }) : t('admin.PlansScreen.choose_what_businesses_on_this_plan_get')} width={720}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title={isNew ? 'Create plan' : 'Save plan'} icon="checkmark" onPress={submit} loading={saving} disabled={!online} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={isNew ? t('admin.PlansScreen.create_plan') : t('admin.PlansScreen.save_plan')} icon="checkmark" onPress={submit} loading={saving} disabled={!online} />
         </View>
       }>
       {formError ? <Callout tone="danger">{formError}</Callout> : null}
-      {!online ? <Callout tone="warning">You're offline. Connect to save the plan.</Callout> : null}
+      {!online ? <Callout tone="warning">{t('admin.PlansScreen.you_re_offline_connect_to_save_the_plan')}</Callout> : null}
       <FieldRow>
-        <Input label="Plan name" required value={name} onChangeText={setName} maxLength={60} error={show('name')} placeholder="e.g. Growth" autoFocus={isNew} />
-        <Input label="Price per month" required prefix="₹" value={price} onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad"
-          maxLength={10} error={show('price_monthly')} placeholder="0" hint="Before GST. 0 = free." />
+        <Input label={t('admin.PlansScreen.plan_name')} required value={name} onChangeText={setName} maxLength={60} error={show('name')} placeholder={t('admin.PlansScreen.e_g_growth')} autoFocus={isNew} />
+        <Input label={t('admin.PlansScreen.price_per_month')} required prefix="₹" value={price} onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad"
+          maxLength={10} error={show('price_monthly')} placeholder="0" hint={t('admin.PlansScreen.before_gst_0_free')} />
       </FieldRow>
       {isNew ? (
-        <Input label="Key" required value={key} onChangeText={(v) => setKey(v.toLowerCase().replace(/[^a-z0-9_]/g, ''))} maxLength={40} error={show('key')}
-          autoCapitalize="none" autoCorrect={false} placeholder="growth" hint="Permanent id used by the system; can't be changed later." />
+        <Input label={t('admin.PlansScreen.key')} required value={key} onChangeText={(v) => setKey(v.toLowerCase().replace(/[^a-z0-9_]/g, ''))} maxLength={40} error={show('key')}
+          autoCapitalize="none" autoCorrect={false} placeholder={t('admin.PlansScreen.growth')} hint={t('admin.PlansScreen.permanent_id_used_by_the_system_can_t_be')} />
       ) : null}
-      <Input label="Description" value={description} onChangeText={setDescription} maxLength={300} placeholder="Who is this plan for?" />
+      <Input label={t('common.description')} value={description} onChangeText={setDescription} maxLength={300} placeholder={t('admin.PlansScreen.who_is_this_plan_for')} />
 
       <View style={{ gap: 6 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text variant="smallStrong" tone="muted" style={{ flex: 1 }}>Features ({features.size} of {data.features.length})</Text>
-          <Button title="All" size="sm" variant="ghost" onPress={() => setFeatures(new Set(data.features.map((f) => f.key)))} />
-          <Button title="None" size="sm" variant="ghost" onPress={() => setFeatures(new Set())} />
+          <Text variant="smallStrong" tone="muted" style={{ flex: 1 }}>{t('admin.PlansScreen.features_size_of_length', { size: features.size, length: data.features.length })}</Text>
+          <Button title={t('common.all')} size="sm" variant="ghost" onPress={() => setFeatures(new Set(data.features.map((f) => f.key)))} />
+          <Button title={t('common.none')} size="sm" variant="ghost" onPress={() => setFeatures(new Set())} />
         </View>
         <Card padded={false} style={{ paddingVertical: 4 }}>
           <View style={{ flexDirection: isPhone ? 'column' : 'row', flexWrap: 'wrap' }}>
@@ -256,25 +257,25 @@ function PlanSheet({ plan, data, onClose, onSaved }: { plan: PlanInfo | null; da
         </Card>
         {removed.length && plan?.businesses ? (
           <Callout tone="warning">
-            {`Removing ${removed.length} feature${removed.length === 1 ? '' : 's'} switches ${removed.length === 1 ? 'it' : 'them'} off for ${plan.businesses} business${plan.businesses === 1 ? '' : 'es'} right away (unless overridden on the business).`}
+            {t('admin.PlansScreen.removing_length_feature_v_switches_v2_off', { length: removed.length, v: removed.length === 1 ? '' : 's', v2: removed.length === 1 ? 'it' : 'them', businesses: plan.businesses, v3: plan.businesses === 1 ? '' : 'es' })}
           </Callout>
         ) : null}
       </View>
 
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Limits (leave empty for unlimited)</Text>
+        <Text variant="smallStrong" tone="muted">{t('admin.PlansScreen.limits_leave_empty_for_unlimited')}</Text>
         <FieldRow>
           {LIMIT_KEYS.map((k) => (
             <Input key={k} label={LIMIT_LABEL[k]} value={limits[k]} onChangeText={(v) => setLimits((s) => ({ ...s, [k]: v.replace(/[^0-9]/g, '') }))}
-              keyboardType="number-pad" maxLength={7} placeholder="Unlimited" error={show(k)} />
+              keyboardType="number-pad" maxLength={7} placeholder={t('admin.PlansScreen.unlimited')} error={show(k)} />
           ))}
         </FieldRow>
       </View>
 
       <BillingOptionsEditor rows={billing} onChange={setBilling} monthly={Number.isFinite(priceNum) ? priceNum : 0} error={submitted ? errors.billing : undefined} />
 
-      <SettingSwitch title="Offered to new businesses" value={active} onValueChange={setActive}
-        subtitle={active ? 'Shown when onboarding businesses and recording payments.' : 'Hidden from new sign-ups; existing businesses keep it.'} />
+      <SettingSwitch title={t('admin.PlansScreen.offered_to_new_businesses')} value={active} onValueChange={setActive}
+        subtitle={active ? t('admin.PlansScreen.shown_when_onboarding_businesses_and') : t('admin.PlansScreen.hidden_from_new_sign_ups_existing')} />
     </Sheet>
   );
 }
@@ -314,16 +315,16 @@ function BillingOptionsEditor({ rows, onChange, monthly, error }: { rows: Billin
     <View style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <View style={{ flex: 1, minWidth: 200 }}>
-          <Text variant="smallStrong" tone="muted">Billing options</Text>
+          <Text variant="smallStrong" tone="muted">{t('admin.PlansScreen.billing_options')}</Text>
           <Text variant="small" tone="subtle">
-            {rows.length ? 'Owners and the payment sheet offer exactly these durations.' : 'None set: monthly price × 1, 3, 6 or 12 months, no saving.'}
+            {rows.length ? t('admin.PlansScreen.owners_and_the_payment_sheet_offer') : t('admin.PlansScreen.none_set_monthly_price_1_3_6_or_12_months')}
           </Text>
         </View>
         {!rows.length && monthly > 0 ? (
-          <Button title="Use 1 / 3 / 12" size="sm" variant="ghost"
-            onPress={() => onChange([{ months: '1', price: '', label: '' }, { months: '3', price: '', label: '' }, { months: '12', price: String(Math.round(monthly * 10)), label: 'Yearly · 2 months free' }])} />
+          <Button title={t('admin.PlansScreen.use_1_3_12')} size="sm" variant="ghost"
+            onPress={() => onChange([{ months: '1', price: '', label: '' }, { months: '3', price: '', label: '' }, { months: '12', price: String(Math.round(monthly * 10)), label: t('admin.PlansScreen.yearly_2_months_free') }])} />
         ) : null}
-        <Button title="Add option" icon="add" size="sm" variant="secondary" onPress={add} disabled={rows.length >= 8} />
+        <Button title={t('admin.PlansScreen.add_option')} icon="add" size="sm" variant="secondary" onPress={add} disabled={rows.length >= 8} />
       </View>
       {rows.length ? (
         <Card padded={false} style={{ paddingVertical: 4 }}>
@@ -339,21 +340,21 @@ function BillingOptionsEditor({ rows, onChange, monthly, error }: { rows: Billin
                 {i > 0 ? <Divider /> : null}
                 <View style={{ flexDirection: isPhone ? 'column' : 'row', gap: 8, padding: 10, alignItems: isPhone ? 'stretch' : 'flex-start' }}>
                   <View style={{ flexDirection: 'row', gap: 8, flex: isPhone ? undefined : 1.4 }}>
-                    <Input label="Months" value={r.months} onChangeText={(v) => set(i, { months: v.replace(/[^0-9]/g, '') })} keyboardType="number-pad" maxLength={2}
+                    <Input label={t('admin.PlansScreen.months')} value={r.months} onChangeText={(v) => set(i, { months: v.replace(/[^0-9]/g, '') })} keyboardType="number-pad" maxLength={2}
                       containerStyle={{ width: 80 }} />
-                    <Input label="Price" prefix="₹" value={r.price} onChangeText={(v) => set(i, { price: v.replace(/[^0-9.]/g, '') })} keyboardType="decimal-pad" maxLength={10}
-                      placeholder={full ? String(Math.round(full * 100) / 100) : 'Auto'} containerStyle={{ flex: 1 }} />
+                    <Input label={t('common.price')} prefix="₹" value={r.price} onChangeText={(v) => set(i, { price: v.replace(/[^0-9.]/g, '') })} keyboardType="decimal-pad" maxLength={10}
+                      placeholder={full ? String(Math.round(full * 100) / 100) : t('admin.PlansScreen.auto')} containerStyle={{ flex: 1 }} />
                   </View>
-                  <Input label="Label" value={r.label} onChangeText={(label) => set(i, { label })} maxLength={40} placeholder={m ? defaultLabel(m) : 'Label'}
+                  <Input label={t('admin.PlansScreen.label')} value={r.label} onChangeText={(label) => set(i, { label })} maxLength={40} placeholder={m ? defaultLabel(m) : t('admin.PlansScreen.label')}
                     containerStyle={{ flex: isPhone ? undefined : 1.3 }} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: isPhone ? undefined : 1, paddingTop: isPhone ? 0 : 26 }}>
                     <View style={{ flex: 1, gap: 2 }}>
                       <Text variant="smallStrong" numberOfLines={1}>{m ? `${money(per, '₹', true)}/mo` : '—'}</Text>
-                      {saving > 0 ? <Text variant="caption" tone="success" numberOfLines={1}>{`Save ${money(saving, '₹', true)} (${pct}%)`}</Text>
-                        : price > full && m ? <Text variant="caption" tone="warning" numberOfLines={1}>Above the monthly rate</Text>
-                          : <Text variant="caption" tone="subtle" numberOfLines={1}>No saving</Text>}
+                      {saving > 0 ? <Text variant="caption" tone="success" numberOfLines={1}>{t('admin.PlansScreen.save_money_pct', { money: money(saving, '₹', true), pct })}</Text>
+                        : price > full && m ? <Text variant="caption" tone="warning" numberOfLines={1}>{t('admin.PlansScreen.above_the_monthly_rate')}</Text>
+                          : <Text variant="caption" tone="subtle" numberOfLines={1}>{t('admin.PlansScreen.no_saving')}</Text>}
                     </View>
-                    <Button icon="trash-outline" size="sm" variant="ghost" accessibilityLabel={`Remove the ${m || ''} month option`} onPress={() => onChange(rows.filter((_, j) => j !== i))} />
+                    <Button icon="trash-outline" size="sm" variant="ghost" accessibilityLabel={t('admin.PlansScreen.remove_the_v_month_option', { v: m || '' })} onPress={() => onChange(rows.filter((_, j) => j !== i))} />
                   </View>
                 </View>
               </View>

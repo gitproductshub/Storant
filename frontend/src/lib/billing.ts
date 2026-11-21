@@ -10,6 +10,7 @@ import { useAuth } from '@/store/auth';
 import { useData } from '@/store/data';
 import { resolveTaxRate } from '@/lib/tax';
 import { ORDER_TYPE_LABEL, CHANNEL_LABEL, round2 } from './format';
+import { brand } from '@/config/brand';
 
 export interface CartLine {
   key: string; // product + variant + notes
@@ -175,7 +176,7 @@ export function receiptFromOrder(order: Order, settings: BusinessSettings | null
   const session = useAuth.getState().session;
   return {
     business: {
-      name: settings?.business_name ?? session?.businessName ?? 'Tallyko',
+      name: settings?.business_name ?? session?.businessName ?? brand.name,
       address: settings?.address, phone: settings?.phone, gstin: settings?.gstin, fssai: settings?.fssai,
       footer: settings?.receipt_footer, currencySymbol: settings?.currency_symbol ?? '₹', upiId: settings?.upi_id,
     },

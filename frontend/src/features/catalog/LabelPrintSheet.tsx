@@ -9,6 +9,7 @@ import { printHtml } from '@/lib/print/printers';
 import { Checkbox, ChoiceChips, Field, Stepper } from './components';
 import { LABEL_LAYOUTS, barcodeFormatFor, buildLabelsHtml, countLabels, type LabelLayout } from './labels';
 import { plural, priceLabel } from './utils';
+import { t } from '@/i18n';
 
 interface Props {
   visible: boolean;
@@ -66,8 +67,8 @@ export function LabelPrintSheet({ visible, onClose, products, preselect, setting
     }
     onProducts(done);
     setBusy(null);
-    if (done.length) toast.success(`Generated ${plural(done.length, 'barcode')}`);
-    if (failed) toast.error(`${plural(failed, 'item')} could not get a barcode. Try again.`);
+    if (done.length) toast.success(t('catalog.LabelPrintSheet.generated_plural', { plural: plural(done.length, 'barcode') }));
+    if (failed) toast.error(t('catalog.LabelPrintSheet.plural_could_not_get_a_barcode_try_again', { plural: plural(failed, 'item') }));
   };
 
   const print = async () => {
@@ -85,29 +86,29 @@ export function LabelPrintSheet({ visible, onClose, products, preselect, setting
 
   const footer = (
     <View style={styles.footer}>
-      <Text tone="muted" style={{ flex: 1 }}>{total ? `${plural(total, 'label')} from ${plural(printable.length, 'item')}` : 'Pick items with a barcode'}</Text>
-      <Button title="Print labels" icon="print-outline" onPress={print} loading={busy === 'print'} disabled={!total || busy !== null} />
+      <Text tone="muted" style={{ flex: 1 }}>{total ? t('catalog.LabelPrintSheet.plural_from_plural2', { plural: plural(total, 'label'), plural2: plural(printable.length, 'item') }) : t('catalog.LabelPrintSheet.pick_items_with_a_barcode')}</Text>
+      <Button title={t('catalog.LabelPrintSheet.print_labels')} icon="print-outline" onPress={print} loading={busy === 'print'} disabled={!total || busy !== null} />
     </View>
   );
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Print barcode labels" subtitle="Stick them on shelves or packed items, then scan at billing" width={720} footer={footer} scroll={false}>
-      <Field label="Label size">
+    <Sheet visible={visible} onClose={onClose} title={t('catalog.LabelPrintSheet.print_barcode_labels')} subtitle={t('catalog.LabelPrintSheet.stick_them_on_shelves_or_packed_items')} width={720} footer={footer} scroll={false}>
+      <Field label={t('catalog.LabelPrintSheet.label_size')}>
         <ChoiceChips<LabelLayout> value={layout} onChange={setLayout} options={LABEL_LAYOUTS.map((l) => ({ value: l.value, label: l.label }))} />
         <Text variant="small" tone="subtle">{LABEL_LAYOUTS.find((l) => l.value === layout)?.hint}</Text>
       </Field>
-      <SwitchRow title="Show price on label" subtitle="Items with options print without a price" value={showPrice} onValueChange={setShowPrice} />
+      <SwitchRow title={t('catalog.LabelPrintSheet.show_price_on_label')} subtitle={t('catalog.LabelPrintSheet.items_with_options_print_without_a_price')} value={showPrice} onValueChange={setShowPrice} />
       {missing.length ? (
         <View style={[styles.warn, { backgroundColor: colors.warningSoft, borderColor: colors.warning }]}>
-          <Text tone="warning" style={{ flex: 1 }}>{plural(missing.length, 'selected item')} {missing.length === 1 ? 'has' : 'have'} no printable barcode and will be skipped.</Text>
+          <Text tone="warning" style={{ flex: 1 }}>{plural(missing.length, 'selected item')} {missing.length === 1 ? 'has' : 'have'} {t('catalog.LabelPrintSheet.no_printable_barcode_and_will_be_skipped')}</Text>
           {missing.some((p) => !p.barcode) ? (
-            <Button title="Generate barcodes" size="sm" icon="sparkles-outline" onPress={generateMissing} loading={busy === 'generate'} disabled={busy !== null} />
+            <Button title={t('catalog.LabelPrintSheet.generate_barcodes')} size="sm" icon="sparkles-outline" onPress={generateMissing} loading={busy === 'generate'} disabled={busy !== null} />
           ) : null}
         </View>
       ) : null}
-      <Input icon="search" placeholder="Search items" value={query} onChangeText={setQuery} accessibilityLabel="Search items" />
+      <Input icon="search" placeholder={t('catalog.LabelPrintSheet.search_items')} value={query} onChangeText={setQuery} accessibilityLabel={t('catalog.LabelPrintSheet.search_items')} />
       {list.length === 0 ? (
-        <EmptyState icon="pricetags-outline" title="No items" message={query ? 'Nothing matches your search.' : 'Add items to your menu first.'} />
+        <EmptyState icon="pricetags-outline" title={t('catalog.LabelPrintSheet.no_items')} message={query ? t('catalog.LabelPrintSheet.nothing_matches_your_search') : t('catalog.LabelPrintSheet.add_items_to_your_menu_first')} />
       ) : (
         <FlatList
           data={list}
@@ -118,15 +119,15 @@ export function LabelPrintSheet({ visible, onClose, products, preselect, setting
             const on = !!copies[p.id];
             return (
               <View style={[styles.row, index > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}>
-                <Checkbox checked={on} onChange={(v) => toggle(p.id, v)} label={`Print labels for ${p.name}`} />
+                <Checkbox checked={on} onChange={(v) => toggle(p.id, v)} label={t('catalog.LabelPrintSheet.print_labels_for_name', { name: p.name })} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text variant="bodyStrong" numberOfLines={1}>{p.name}</Text>
                   <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                     <Text variant="small" tone="muted">{priceLabel(p, symbol)}</Text>
-                    {p.barcode ? <Text variant="small" tone="subtle">· {p.barcode}</Text> : <Badge label="No barcode" tone="warning" />}
+                    {p.barcode ? <Text variant="small" tone="subtle">· {p.barcode}</Text> : <Badge label={t('catalog.LabelPrintSheet.no_barcode')} tone="warning" />}
                   </View>
                 </View>
-                {on ? <Stepper value={copies[p.id] ?? 1} min={1} max={500} label={`copies of ${p.name}`} onChange={(v) => setCopies((c) => ({ ...c, [p.id]: v }))} /> : null}
+                {on ? <Stepper value={copies[p.id] ?? 1} min={1} max={500} label={t('catalog.LabelPrintSheet.copies_of_name', { name: p.name })} onChange={(v) => setCopies((c) => ({ ...c, [p.id]: v }))} /> : null}
               </View>
             );
           }}

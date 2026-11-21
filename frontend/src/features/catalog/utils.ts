@@ -4,6 +4,7 @@
 import type { BusinessSettings, BusinessType, Category, Product, TaxSnapshot } from '@/api/types';
 import { money } from '@/lib/format';
 import { resolveTaxRate } from '@/lib/tax';
+import { t as tr } from '@/i18n';
 
 /** GST slabs offered as quick picks (backend accepts 0–28). */
 export const GST_RATES = [0, 5, 12, 18, 28] as const;
@@ -13,9 +14,9 @@ export const MAX_PRICE = 1_000_000;
 export const UNITS = ['pcs', 'plate', 'kg', 'g', 'L', 'ml', 'pack', 'box', 'dozen'] as const;
 
 export const VARIANT_PRESETS: { label: string; names: string[] }[] = [
-  { label: 'Half / Full', names: ['Half', 'Full'] },
-  { label: 'Small / Medium / Large', names: ['Small', 'Medium', 'Large'] },
-  { label: 'Regular / Large', names: ['Regular', 'Large'] },
+  { get label() { return tr('catalog.utils.half_full'); }, names: ['Half', 'Full'] },
+  { get label() { return tr('catalog.utils.small_medium_large'); }, names: ['Small', 'Medium', 'Large'] },
+  { get label() { return tr('catalog.utils.regular_large'); }, names: ['Regular', 'Large'] },
 ];
 
 /** Keeps only digits and one decimal point, at most 2 decimals and 7 integer digits. Never negative. */
@@ -88,7 +89,7 @@ export function itemGst(
   tax: TaxSnapshot | null | undefined,
   settings: Pick<BusinessSettings, 'default_tax_rate'> | null | undefined,
 ): { label: string; inherited: boolean } {
-  if (tax && tax.registration !== 'regular') return { label: 'No GST', inherited: true };
+  if (tax && tax.registration !== 'regular') return { label: tr('catalog.utils.no_gst'), inherited: true };
   const ownClass = !!p.tax_class_id && !!tax?.classes.some((c) => c.id === p.tax_class_id);
   const inherited = !ownClass && (p.tax_rate === null || p.tax_rate === undefined);
   return { label: `${trimRate(resolveTaxRate(p, tax, settings))}%`, inherited };

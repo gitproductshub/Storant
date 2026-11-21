@@ -26,6 +26,7 @@ import {
   MAX_PRICE, UNITS, barcodeError, isFoodBusiness, kitchenDefault, moneyInput, normName, parseIntOrNull,
   parseMoney, sanitizeInt, sanitizeMoney,
 } from './utils';
+import { t as tr, currentLocale } from '@/i18n';
 
 const TAX_DEFAULT = '';
 const TAX_LEGACY = '__legacy__';
@@ -161,40 +162,40 @@ export function ProductEditor(props: ProductEditorProps) {
     const e: Errors = {};
     const ve: VariantErrors = {};
     const name = draft.name.trim();
-    if (!name) e.name = 'Enter the item name.';
-    else if (name.length > 120) e.name = 'Keep the name under 120 characters.';
+    if (!name) e.name = tr('catalog.ProductEditor.enter_the_item_name');
+    else if (name.length > 120) e.name = tr('catalog.ProductEditor.keep_the_name_under_120_characters');
     else {
       const dup = products.find((p) => p.is_active && p.id !== product?.id && normName(p.name) === normName(name));
-      if (dup) e.name = `“${dup.name}” is already on your menu. Use a different name.`;
+      if (dup) e.name = tr('catalog.ProductEditor.name_is_already_on_your_menu_use_a', { name: dup.name });
     }
     if (!hasVariants) {
-      if (priceNum === null) e.price = 'Enter the selling price.';
-      else if (priceNum > MAX_PRICE) e.price = 'Price is too high.';
+      if (priceNum === null) e.price = tr('catalog.ProductEditor.enter_the_selling_price');
+      else if (priceNum > MAX_PRICE) e.price = tr('common.price_is_too_high');
     } else {
       const seen = new Set<string>();
       for (const v of draft.variants) {
         const err: { name?: string; price?: string } = {};
         const n = v.name.trim();
-        if (!n) err.name = 'Name required';
-        else if (seen.has(n.toLowerCase())) err.name = 'Duplicate option';
+        if (!n) err.name = tr('catalog.ProductEditor.name_required');
+        else if (seen.has(n.toLowerCase())) err.name = tr('catalog.ProductEditor.duplicate_option');
         seen.add(n.toLowerCase());
         const p = parseMoney(v.price);
-        if (p === null) err.price = 'Price required';
-        else if (p > MAX_PRICE) err.price = 'Too high';
+        if (p === null) err.price = tr('catalog.ProductEditor.price_required');
+        else if (p > MAX_PRICE) err.price = tr('catalog.ProductEditor.too_high');
         if (err.name || err.price) ve[v.key] = err;
       }
     }
-    if (costNum !== null && costNum > MAX_PRICE) e.costPrice = 'Cost is too high.';
+    if (costNum !== null && costNum > MAX_PRICE) e.costPrice = tr('catalog.ProductEditor.cost_is_too_high');
     const bErr = barcodeError(draft.barcode);
     if (bErr) e.barcode = bErr;
     else if (draft.barcode.trim()) {
       const clash = products.find((p) => p.is_active && p.id !== product?.id && p.barcode === draft.barcode.trim());
-      if (clash) e.barcode = `Already used by “${clash.name}”.`;
+      if (clash) e.barcode = tr('catalog.ProductEditor.already_used_by_name', { name: clash.name });
     }
-    if (draft.sku.trim().length > 48) e.sku = 'SKU can be at most 48 characters.';
-    if (draft.description.length > 500) e.description = 'Keep the description under 500 characters.';
+    if (draft.sku.trim().length > 48) e.sku = tr('catalog.ProductEditor.sku_can_be_at_most_48_characters');
+    if (draft.description.length > 500) e.description = tr('catalog.ProductEditor.keep_the_description_under_500_characters');
     if (Object.keys(channelDraftErrors(draft.channelPrices)).length) {
-      e.channelPrices = 'Check the prices on delivery apps.';
+      e.channelPrices = tr('catalog.ProductEditor.check_the_prices_on_delivery_apps');
       setAppsOpen(true);
     }
     setErrors(e);
@@ -264,7 +265,7 @@ export function ProductEditor(props: ProductEditorProps) {
       const saved = product ? await catalogApi.updateProduct(product.id, payload()) : await catalogApi.createProduct(payload());
       onSaved(saved);
       if (mode === 'saveNew') {
-        toast.success(`Added “${saved.name}”`);
+        toast.success(tr('common.added_name', { name: saved.name }));
         const fresh = { ...draftFrom(null, { categoryId: draft.categoryId, businessType: settings?.business_type }), taxClassId: draft.taxClassId, taxRate: draft.taxClassId ? null : draft.taxRate, isVeg: draft.isVeg, printToKitchen: draft.printToKitchen };
         setProduct(null);
         setBaseline(fresh);
@@ -277,7 +278,7 @@ export function ProductEditor(props: ProductEditorProps) {
         setBaseline(next);
         setDraft(next);
         if (mode === 'save') {
-          toast.success(product ? 'Changes saved' : `Added “${saved.name}”`);
+          toast.success(product ? tr('catalog.ProductEditor.changes_saved') : tr('common.added_name', { name: saved.name }));
           onClose();
         }
       }
@@ -298,7 +299,7 @@ export function ProductEditor(props: ProductEditorProps) {
       if (!target || dirty) {
         target = await save('silent');
         if (!target) {
-          toast.warning('Fix the highlighted fields first — the item is saved before a barcode is assigned.');
+          toast.warning(tr('catalog.ProductEditor.fix_the_highlighted_fields_first_the_item'));
           return;
         }
       }
@@ -308,7 +309,7 @@ export function ProductEditor(props: ProductEditorProps) {
       const next = draftFrom(updated, { categoryId: null, businessType: settings?.business_type });
       setBaseline(next);
       setDraft(next);
-      toast.success(`Barcode ${updated.barcode} assigned`);
+      toast.success(tr('catalog.ProductEditor.barcode_barcode_assigned', { barcode: updated.barcode }));
     } catch (e) {
       handleServerError(e);
     } finally {
@@ -319,9 +320,9 @@ export function ProductEditor(props: ProductEditorProps) {
   const remove = async () => {
     if (!product) return;
     const ok = await confirmTop({
-      title: `Remove “${product.name}” from the menu?`,
-      message: 'It disappears from billing and every online menu. Past bills keep it, and nothing is deleted: bring it back any time from “Removed items” or its history.',
-      confirmLabel: 'Remove item',
+      title: tr('catalog.ProductEditor.remove_name_from_the_menu', { name: product.name }),
+      message: tr('catalog.ProductEditor.it_disappears_from_billing_and_every'),
+      confirmLabel: tr('catalog.ProductEditor.remove_item'),
       danger: true,
     });
     if (!ok) return;
@@ -329,7 +330,7 @@ export function ProductEditor(props: ProductEditorProps) {
     try {
       await catalogApi.deleteProduct(product.id);
       onDeleted(product.id);
-      toast.success(`Removed “${product.name}” from the menu`);
+      toast.success(tr('catalog.ProductEditor.removed_name_from_the_menu', { name: product.name }));
       onClose();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -357,7 +358,7 @@ export function ProductEditor(props: ProductEditorProps) {
       const saved = await catalogApi.updateProduct(product.id, { is_active: true });
       onSaved(saved);
       setProduct(saved);
-      toast.success(`“${saved.name}” is back on the menu`);
+      toast.success(tr('catalog.ProductEditor.name_is_back_on_the_menu', { name: saved.name }));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -394,7 +395,7 @@ export function ProductEditor(props: ProductEditorProps) {
   const close = async () => {
     if (busy) return;
     if (dirty) {
-      const ok = await confirmTop({ title: 'Discard changes?', message: 'Your changes to this item have not been saved.', confirmLabel: 'Discard', danger: true });
+      const ok = await confirmTop({ title: tr('catalog.ProductEditor.discard_changes'), message: tr('catalog.ProductEditor.your_changes_to_this_item_have_not_been'), confirmLabel: tr('common.discard'), danger: true });
       if (!ok) return;
     }
     onClose();
@@ -405,7 +406,7 @@ export function ProductEditor(props: ProductEditorProps) {
     set('barcode', code);
     const clash = products.find((p) => p.is_active && p.id !== product?.id && p.barcode === code);
     if (clash) setErrors((x) => ({ ...x, barcode: `Already used by “${clash.name}”.` }));
-    else toast.success(`Scanned ${code}`);
+    else toast.success(tr('catalog.ProductEditor.scanned_code', { code }));
   };
 
   const barcodeValue = draft.barcode.trim();
@@ -425,13 +426,13 @@ export function ProductEditor(props: ProductEditorProps) {
   const taxValue = draft.taxClassId ?? (draft.taxRate !== null ? TAX_LEGACY : TAX_DEFAULT);
   const selectedClass = draft.taxClassId ? taxClasses.find((c) => c.id === draft.taxClassId) ?? null : null;
   const taxOptions: { value: string; label: string }[] = [
-    { value: TAX_DEFAULT, label: `Business default (${formatRate(defaultRate)}%)` },
+    { value: TAX_DEFAULT, label: tr('catalog.ProductEditor.business_default_formatrate', { formatRate: formatRate(defaultRate) }) },
     ...taxClasses
       .filter((c) => c.is_active || c.id === draft.taxClassId)
-      .map((c) => ({ value: c.id, label: `${c.name} · ${formatRate(c.current_rate)}%${c.is_active ? '' : ' (turned off)'}` })),
+      .map((c) => ({ value: c.id, label: `${c.name} · ${formatRate(c.current_rate)}%${c.is_active ? '' : tr('catalog.ProductEditor.turned_off')}` })),
   ];
-  if (draft.taxClassId && !selectedClass) taxOptions.push({ value: draft.taxClassId, label: tax ? 'Removed class' : 'Current class' });
-  if (legacyRate !== null) taxOptions.push({ value: TAX_LEGACY, label: `Legacy ${formatRate(legacyRate)}%` });
+  if (draft.taxClassId && !selectedClass) taxOptions.push({ value: draft.taxClassId, label: tax ? tr('catalog.ProductEditor.removed_class') : tr('catalog.ProductEditor.current_class') });
+  if (legacyRate !== null) taxOptions.push({ value: TAX_LEGACY, label: tr('catalog.ProductEditor.legacy_formatrate', { formatRate: formatRate(legacyRate) }) });
   const pickTax = (v: string) => {
     if (v === TAX_LEGACY) setDraft((d) => ({ ...d, taxClassId: null, taxRate: legacyRate }));
     else setDraft((d) => ({ ...d, taxClassId: v || null, taxRate: null }));
@@ -441,7 +442,7 @@ export function ProductEditor(props: ProductEditorProps) {
     ? 'An old per-item rate. Pick a tax class so government rate changes apply to this item automatically.'
     : selectedClass
       ? [describeComponents(selectedClass.current_components, selectedClass.current_rate), selectedClass.hsn_sac ? `HSN/SAC ${selectedClass.hsn_sac}` : null,
-        nextChange ? `changes to ${formatRate(nextChange.total_rate)}% on ${new Date(nextChange.effective_from).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : null]
+        nextChange ? `changes to ${formatRate(nextChange.total_rate)}% on ${new Date(nextChange.effective_from).toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short', year: 'numeric' })}` : null]
         .filter(Boolean).join(' · ')
       : `Uses your business default${defaultClass ? ` (${defaultClass.name})` : ''}. Changing the default later updates this item too.`;
   const units = UNITS.includes(draft.unit as (typeof UNITS)[number]) ? [...UNITS] : [draft.unit, ...UNITS];
@@ -453,30 +454,30 @@ export function ProductEditor(props: ProductEditorProps) {
     <View style={styles.footer}>
       {product && !deleted ? (
         <Button icon="trash-outline" variant="dangerOutline" onPress={remove} loading={busy === 'delete'} disabled={anyBusy}
-          accessibilityLabel="Remove item from the menu" />
+          accessibilityLabel={tr('catalog.ProductEditor.remove_item_from_the_menu')} />
       ) : null}
       {product ? (
-        <Button title={phone ? undefined : 'History'} icon="time-outline" variant="ghost" onPress={() => setHistoryOpen(true)} disabled={anyBusy}
-          accessibilityLabel="Item history and earlier versions" />
+        <Button title={phone ? undefined : tr('catalog.ProductEditor.history')} icon="time-outline" variant="ghost" onPress={() => setHistoryOpen(true)} disabled={anyBusy}
+          accessibilityLabel={tr('catalog.ProductEditor.item_history_and_earlier_versions')} />
       ) : null}
       <View style={{ flex: 1 }} />
       {!product ? (
-        <Button title={phone ? 'Save + new' : 'Save & add another'} variant="outline" onPress={() => void save('saveNew')} loading={busy === 'saveNew'} disabled={anyBusy} />
+        <Button title={phone ? tr('catalog.ProductEditor.save_new') : tr('catalog.ProductEditor.save_add_another')} variant="outline" onPress={() => void save('saveNew')} loading={busy === 'saveNew'} disabled={anyBusy} />
       ) : null}
-      <Button title={product ? 'Save' : 'Add item'} icon="checkmark" onPress={() => void save('save')} loading={busy === 'save'}
-        disabled={anyBusy || (!!product && !dirty)} disabledReason={product && !dirty ? 'No changes yet' : undefined} shortcut="Ctrl+S" />
+      <Button title={product ? tr('common.save') : tr('common.add_item')} icon="checkmark" onPress={() => void save('save')} loading={busy === 'save'}
+        disabled={anyBusy || (!!product && !dirty)} disabledReason={product && !dirty ? tr('catalog.ProductEditor.no_changes_yet_x') : undefined} shortcut="Ctrl+S" />
     </View>
   );
 
   return (
     <>
-      <DetailPanel onClose={() => void close()} title={product ? product.name : 'New item'}
-        subtitle={product ? (deleted ? 'Removed from the menu' : 'Edit item') : 'Fill in the basics — everything else is optional'}
+      <DetailPanel onClose={() => void close()} title={product ? product.name : tr('catalog.ProductEditor.new_item')}
+        subtitle={product ? (deleted ? tr('catalog.ProductEditor.removed_from_the_menu') : tr('catalog.ProductEditor.edit_item')) : tr('catalog.ProductEditor.fill_in_the_basics_everything_else_is')}
         footer={footer} dismissable={!anyBusy} testID="product-editor">
         {deleted ? (
           <View style={[styles.banner, { backgroundColor: colors.warningSoft, borderColor: colors.warning }]}>
-            <Text tone="warning" style={{ flex: 1 }}>This item was removed from the menu, so it is hidden from billing and every online menu.</Text>
-            <Button title="Bring back" icon="refresh" size="sm" onPress={restore} loading={busy === 'restore'} disabled={anyBusy} />
+            <Text tone="warning" style={{ flex: 1 }}>{tr('catalog.ProductEditor.this_item_was_removed_from_the_menu_so_it')}</Text>
+            <Button title={tr('catalog.ProductEditor.bring_back')} icon="refresh" size="sm" onPress={restore} loading={busy === 'restore'} disabled={anyBusy} />
           </View>
         ) : null}
 
@@ -486,71 +487,71 @@ export function ProductEditor(props: ProductEditorProps) {
           </View>
         ) : null}
 
-        <FormSection title="Basics" icon="fast-food-outline">
-          <Input label="Item name" required autoFocus={!product} placeholder={food ? 'e.g. Paneer Butter Masala' : 'e.g. Amul Butter 100 g'} value={draft.name}
+        <FormSection title={tr('catalog.ProductEditor.basics')} icon="fast-food-outline">
+          <Input label={tr('catalog.ProductEditor.item_name')} required autoFocus={!product} placeholder={food ? tr('catalog.ProductEditor.e_g_paneer_butter_masala') : tr('catalog.ProductEditor.e_g_amul_butter_100_g')} value={draft.name}
             onChangeText={(t) => set('name', t)} error={errors.name} maxLength={120} returnKeyType="next" />
-          <Field label="Category" error={errors.categoryId}>
+          <Field label={tr('common.category')} error={errors.categoryId}>
             {categories.length > 12 ? (
               // Big menus: a scrollable menu instead of dozens of chips
               <View style={styles.wrap}>
-                <ActionMenu title="Category" width={300}
+                <ActionMenu title={tr('common.category')} width={300}
                   items={[
-                    { key: 'none', label: 'No category', selected: draft.categoryId === null, onPress: () => set('categoryId', null) },
+                    { key: 'none', label: tr('common.no_category'), selected: draft.categoryId === null, onPress: () => set('categoryId', null) },
                     ...categories.map((c) => ({ key: c.id, label: c.name, selected: draft.categoryId === c.id, onPress: () => set('categoryId', c.id) })),
                   ]}
                   trigger={(open) => (
-                    <Button title={categories.find((c) => c.id === draft.categoryId)?.name ?? 'No category'} icon="folder-open-outline" iconRight="chevron-down"
-                      variant="outline" onPress={open} accessibilityLabel="Choose category" />
+                    <Button title={categories.find((c) => c.id === draft.categoryId)?.name ?? tr('common.no_category')} icon="folder-open-outline" iconRight="chevron-down"
+                      variant="outline" onPress={open} accessibilityLabel={tr('catalog.ProductEditor.choose_category')} />
                   )} />
-                {newCategory === null ? <Chip label="New category" icon="add" onPress={() => { setNewCategory(''); setCategoryError(null); }} /> : null}
+                {newCategory === null ? <Chip label={tr('catalog.ProductEditor.new_category')} icon="add" onPress={() => { setNewCategory(''); setCategoryError(null); }} /> : null}
               </View>
             ) : (
               <View style={styles.wrap}>
-                <Chip label="None" selected={draft.categoryId === null} onPress={() => set('categoryId', null)} />
+                <Chip label={tr('common.none')} selected={draft.categoryId === null} onPress={() => set('categoryId', null)} />
                 {categories.map((c) => (
                   <Chip key={c.id} label={c.name} selected={draft.categoryId === c.id} onPress={() => set('categoryId', c.id)} />
                 ))}
-                {newCategory === null ? <Chip label="New category" icon="add" onPress={() => { setNewCategory(''); setCategoryError(null); }} /> : null}
+                {newCategory === null ? <Chip label={tr('catalog.ProductEditor.new_category')} icon="add" onPress={() => { setNewCategory(''); setCategoryError(null); }} /> : null}
               </View>
             )}
             {newCategory !== null ? (
               <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
-                <Input containerStyle={{ flex: 1 }} autoFocus placeholder="e.g. Starters" value={newCategory} maxLength={60}
+                <Input containerStyle={{ flex: 1 }} autoFocus placeholder={tr('catalog.ProductEditor.e_g_starters')} value={newCategory} maxLength={60}
                   onChangeText={(t) => { setNewCategory(t); setCategoryError(null); }} onSubmitEditing={createCategory} error={categoryError}
-                  accessibilityLabel="New category name" />
-                <Button title="Create" onPress={createCategory} loading={busy === 'category'} disabled={anyBusy} />
-                <IconButton icon="close" accessibilityLabel="Cancel new category" onPress={() => setNewCategory(null)} />
+                  accessibilityLabel={tr('catalog.ProductEditor.new_category_name')} />
+                <Button title={tr('catalog.ProductEditor.create')} onPress={createCategory} loading={busy === 'category'} disabled={anyBusy} />
+                <IconButton icon="close" accessibilityLabel={tr('catalog.ProductEditor.cancel_new_category')} onPress={() => setNewCategory(null)} />
               </View>
             ) : null}
           </Field>
-          <Field label="Food type" hint={food ? 'Shown as the green / red mark on bills and the online menu.' : 'Only needed for food products.'}>
+          <Field label={tr('catalog.ProductEditor.food_type')} hint={food ? tr('catalog.ProductEditor.shown_as_the_green_red_mark_on_bills_and') : tr('catalog.ProductEditor.only_needed_for_food_products')}>
             <Segmented<'veg' | 'nonveg' | 'none'>
               value={draft.isVeg === null ? 'none' : draft.isVeg ? 'veg' : 'nonveg'}
               onChange={(v) => set('isVeg', v === 'none' ? null : v === 'veg')}
-              options={[{ value: 'veg', label: 'Veg' }, { value: 'nonveg', label: 'Non-veg' }, { value: 'none', label: 'Not set' }]}
+              options={[{ value: 'veg', label: tr('common.veg') }, { value: 'nonveg', label: tr('catalog.ProductEditor.non_veg') }, { value: 'none', label: tr('common.not_set') }]}
             />
           </Field>
         </FormSection>
 
-        <FormSection title="Price & tax" icon="pricetag-outline">
+        <FormSection title={tr('catalog.ProductEditor.price_tax')} icon="pricetag-outline">
           <View style={pair}>
             {hasVariants ? (
-              <Field label="Selling price" style={{ flex: 1 }} hint="Set per option below. Billing asks which option was ordered.">
+              <Field label={tr('catalog.ProductEditor.selling_price')} style={{ flex: 1 }} hint={tr('catalog.ProductEditor.set_per_option_below_billing_asks_which')}>
                 <View style={[styles.readonly, { backgroundColor: colors.surfaceSunken, borderColor: colors.border }]}>
-                  <Text tone="muted">{sellFrom !== null && Number.isFinite(sellFrom) ? `From ${money(sellFrom, symbol)}` : 'From options'}</Text>
+                  <Text tone="muted">{sellFrom !== null && Number.isFinite(sellFrom) ? tr('catalog.ProductEditor.from_money', { money: money(sellFrom, symbol) }) : tr('catalog.ProductEditor.from_options')}</Text>
                 </View>
               </Field>
             ) : (
-              <Input label="Selling price" required containerStyle={{ flex: 1 }} prefix={symbol} placeholder="0" keyboardType="decimal-pad"
+              <Input label={tr('catalog.ProductEditor.selling_price')} required containerStyle={{ flex: 1 }} prefix={symbol} placeholder="0" keyboardType="decimal-pad"
                 value={draft.price} onChangeText={(t) => set('price', sanitizeMoney(t))} error={errors.price}
-                hint={settings ? (settings.prices_include_tax ? 'Price includes GST' : 'GST is added on top at billing') : undefined} />
+                hint={settings ? (settings.prices_include_tax ? tr('catalog.ProductEditor.price_includes_gst') : tr('catalog.ProductEditor.gst_is_added_on_top_at_billing')) : undefined} />
             )}
-            <Input label="Cost price" containerStyle={{ flex: 1 }} prefix={symbol} placeholder="Optional" keyboardType="decimal-pad"
+            <Input label={tr('catalog.ProductEditor.cost_price')} containerStyle={{ flex: 1 }} prefix={symbol} placeholder={tr('common.optional')} keyboardType="decimal-pad"
               value={draft.costPrice} onChangeText={(t) => set('costPrice', sanitizeMoney(t))} error={errors.costPrice}
-              hint={margin !== null ? `Margin ${margin.toFixed(1)}%` : 'Used for profit and stock value'} />
+              hint={margin !== null ? tr('catalog.ProductEditor.margin_tofixed', { toFixed: margin.toFixed(1) }) : tr('catalog.ProductEditor.used_for_profit_and_stock_value')} />
           </View>
-          <Field label="GST / tax class" hint={taxError && !tax ? `Couldn't load tax classes (${taxError}). Your current choice is kept.` : taxHint}
-            right={tax && tax.registration !== 'regular' ? <Badge label="GST not charged" tone="neutral" /> : undefined}>
+          <Field label={tr('catalog.ProductEditor.gst_tax_class')} hint={taxError && !tax ? tr('catalog.ProductEditor.couldn_t_load_tax_classes_taxerror_your', { taxError }) : taxHint}
+            right={tax && tax.registration !== 'regular' ? <Badge label={tr('catalog.ProductEditor.gst_not_charged')} tone="neutral" /> : undefined}>
             <ChoiceChips<string> value={taxValue} options={taxOptions} onChange={pickTax} />
           </Field>
         </FormSection>
@@ -571,83 +572,83 @@ export function ProductEditor(props: ProductEditorProps) {
           compact={isPhone}
         />
 
-        <FormSection title="Options / sizes" icon="layers-outline" subtitle={hasVariants ? `${draft.variants.length} option${draft.variants.length === 1 ? '' : 's'}` : 'Optional'}>
+        <FormSection title={tr('catalog.ProductEditor.options_sizes')} icon="layers-outline" subtitle={hasVariants ? tr('catalog.ProductEditor.length_option_v', { length: draft.variants.length, v: draft.variants.length === 1 ? '' : 's' }) : tr('common.optional')}>
           <VariantsEditor variants={draft.variants} onChange={(v) => { set('variants', v); setVariantErrors({}); }} errors={variantErrors} symbol={symbol} compact={isPhone} />
         </FormSection>
 
-        <FormSection title="Kitchen & stock" icon="flame-outline">
-          <SwitchRow title="Send to kitchen (KOT)" subtitle="Prints a kitchen ticket / shows on the kitchen screen when ordered"
+        <FormSection title={tr('catalog.ProductEditor.kitchen_stock')} icon="flame-outline">
+          <SwitchRow title={tr('catalog.ProductEditor.send_to_kitchen_kot')} subtitle={tr('catalog.ProductEditor.prints_a_kitchen_ticket_shows_on_the')}
             value={draft.printToKitchen} onValueChange={(v) => set('printToKitchen', v)} />
-          <SwitchRow title="Track stock" subtitle="Count quantity on hand and warn when it runs low"
+          <SwitchRow title={tr('catalog.ProductEditor.track_stock')} subtitle={tr('catalog.ProductEditor.count_quantity_on_hand_and_warn_when_it')}
             value={draft.trackStock} onValueChange={(v) => set('trackStock', v)} />
           {draft.trackStock ? (
             <View style={{ gap: 14 }}>
               <View style={pair}>
                 {!product ? (
-                  <Input label="Opening stock" containerStyle={{ flex: 1 }} placeholder="0" keyboardType="number-pad" value={draft.openingStock}
-                    onChangeText={(t) => set('openingStock', sanitizeInt(t))} hint="Quantity you have right now" />
+                  <Input label={tr('catalog.ProductEditor.opening_stock')} containerStyle={{ flex: 1 }} placeholder="0" keyboardType="number-pad" value={draft.openingStock}
+                    onChangeText={(t) => set('openingStock', sanitizeInt(t))} hint={tr('catalog.ProductEditor.quantity_you_have_right_now')} />
                 ) : (
-                  <Field label="Stock on hand" style={{ flex: 1 }}>
-                    <Button title="Add or adjust in Inventory" icon="cube-outline" variant="secondary" size="sm"
+                  <Field label={tr('catalog.ProductEditor.stock_on_hand')} style={{ flex: 1 }}>
+                    <Button title={tr('catalog.ProductEditor.add_or_adjust_in_inventory')} icon="cube-outline" variant="secondary" size="sm"
                       onPress={() => router.navigate('/inventory' as Href)} />
                   </Field>
                 )}
-                <Input label="Low-stock alert at" containerStyle={{ flex: 1 }} keyboardType="number-pad" value={draft.lowStock}
+                <Input label={tr('catalog.ProductEditor.low_stock_alert_at')} containerStyle={{ flex: 1 }} keyboardType="number-pad" value={draft.lowStock}
                   placeholder={settings ? String(settings.low_stock_default) : '10'} onChangeText={(t) => set('lowStock', sanitizeInt(t))}
-                  hint={draft.lowStock ? undefined : `Blank uses your default (${settings?.low_stock_default ?? 10})`} />
+                  hint={draft.lowStock ? undefined : tr('catalog.ProductEditor.blank_uses_your_default_v', { v: settings?.low_stock_default ?? 10 })} />
               </View>
-              <Field label="Unit">
+              <Field label={tr('catalog.ProductEditor.unit')}>
                 <ChoiceChips<string> value={draft.unit} options={units.map((u) => ({ value: u, label: u }))} onChange={(v) => set('unit', v)} />
               </Field>
             </View>
           ) : null}
         </FormSection>
 
-        <FormSection title="Codes & details" icon="barcode-outline" subtitle="Barcode, SKU, brand, description"
-          right={<Button title={more ? 'Hide' : 'Show'} size="sm" variant="ghost" iconRight={more ? 'chevron-up' : 'chevron-down'} onPress={() => setMore((v) => !v)} />}>
+        <FormSection title={tr('catalog.ProductEditor.codes_details')} icon="barcode-outline" subtitle={tr('catalog.ProductEditor.barcode_sku_brand_description')}
+          right={<Button title={more ? tr('common.hide') : tr('common.show')} size="sm" variant="ghost" iconRight={more ? 'chevron-up' : 'chevron-down'} onPress={() => setMore((v) => !v)} />}>
           {more ? (
             <View style={{ gap: 14 }}>
               <Input
-                label="Barcode"
-                placeholder="Scan, type, or generate"
+                label={tr('catalog.ProductEditor.barcode')}
+                placeholder={tr('catalog.ProductEditor.scan_type_or_generate')}
                 value={draft.barcode}
                 onChangeText={(t) => set('barcode', t.replace(/[^0-9A-Za-z\-. ]/g, ''))}
                 error={errors.barcode}
                 maxLength={48}
                 autoCapitalize="characters"
                 autoCorrect={false}
-                hint="A USB / Bluetooth scanner can scan straight into this field."
-                right={<IconButton icon="scan-outline" accessibilityLabel="Scan barcode with camera" onPress={() => setScanOpen(true)} />}
+                hint={tr('catalog.ProductEditor.a_usb_bluetooth_scanner_can_scan_straight')}
+                right={<IconButton icon="scan-outline" accessibilityLabel={tr('catalog.ProductEditor.scan_barcode_with_camera')} onPress={() => setScanOpen(true)} />}
               />
               <View style={styles.barcodeActions}>
-                <Button title={product && !dirty ? 'Generate barcode' : 'Save & generate barcode'} icon="sparkles-outline" size="sm" variant="soft"
+                <Button title={product && !dirty ? tr('catalog.ProductEditor.generate_barcode') : tr('catalog.ProductEditor.save_generate_barcode')} icon="sparkles-outline" size="sm" variant="soft"
                   onPress={generateBarcode} loading={busy === 'barcode'} disabled={anyBusy || !!barcodeValue}
-                  accessibilityLabel="Generate an in-store barcode" />
+                  accessibilityLabel={tr('catalog.ProductEditor.generate_an_in_store_barcode')} />
                 {product && !dirty && product.is_active && product.barcode && product.barcode === barcodeValue ? (
-                  <Button title="Print label" icon="print-outline" size="sm" variant="secondary" onPress={() => onPrintLabel(product)} disabled={anyBusy} />
+                  <Button title={tr('catalog.ProductEditor.print_label')} icon="print-outline" size="sm" variant="secondary" onPress={() => onPrintLabel(product)} disabled={anyBusy} />
                 ) : null}
-                {barcodeValue ? <Text variant="small" tone="subtle">Clear the field to generate a new one.</Text> : (
-                  <Text variant="small" tone="subtle">For loose / own-brand items without a printed code.</Text>
+                {barcodeValue ? <Text variant="small" tone="subtle">{tr('catalog.ProductEditor.clear_the_field_to_generate_a_new_one')}</Text> : (
+                  <Text variant="small" tone="subtle">{tr('catalog.ProductEditor.for_loose_own_brand_items_without_a')}</Text>
                 )}
               </View>
               {canPreview ? (
                 <View style={[styles.preview, { borderColor: colors.border }]}>
                   <Barcode value={barcodeValue} format={previewFormat} height={54} width={240} />
-                  <Badge label={previewFormat === 'ean13' ? 'EAN-13' : 'Code 128'} tone="neutral" />
+                  <Badge label={previewFormat === 'ean13' ? tr('catalog.ProductEditor.ean_13') : tr('catalog.ProductEditor.code_128')} tone="neutral" />
                 </View>
               ) : null}
               <View style={pair}>
-                <Input label="SKU / item code" containerStyle={{ flex: 1 }} placeholder="Optional" value={draft.sku} maxLength={48}
+                <Input label={tr('catalog.ProductEditor.sku_item_code')} containerStyle={{ flex: 1 }} placeholder={tr('common.optional')} value={draft.sku} maxLength={48}
                   onChangeText={(t) => set('sku', t)} error={errors.sku} autoCapitalize="characters" autoCorrect={false} />
                 <View style={{ flex: 1 }} />
               </View>
               {activeBrands.length ? (
-                <Field label="Brand" hint="For multi-brand kitchens: which brand sells this item." error={errors.brandId}>
+                <Field label={tr('catalog.ProductEditor.brand')} hint={tr('catalog.ProductEditor.for_multi_brand_kitchens_which_brand')} error={errors.brandId}>
                   <ChoiceChips<string | null> value={draft.brandId} onChange={(v) => set('brandId', v)}
-                    options={[{ value: null, label: 'All brands' }, ...activeBrands.map((b) => ({ value: b.id as string | null, label: b.name }))]} />
+                    options={[{ value: null, label: tr('catalog.ProductEditor.all_brands') }, ...activeBrands.map((b) => ({ value: b.id as string | null, label: b.name }))]} />
                 </Field>
               ) : null}
-              <Input label="Description" placeholder="Shown on the online menu, e.g. “Cottage cheese in rich tomato gravy”" value={draft.description}
+              <Input label={tr('common.description')} placeholder={tr('catalog.ProductEditor.shown_on_the_online_menu_e_g_cottage')} value={draft.description}
                 onChangeText={(t) => set('description', t)} error={errors.description} multiline maxLength={500}
                 style={{ minHeight: 72, textAlignVertical: 'top' }} hint={`${draft.description.length}/500`} />
             </View>

@@ -4,6 +4,7 @@
  */
 import type { OwnerWatch, WatchEvent, WatchTotals } from '@/api/owner';
 import type { WatchTab } from './watchUtils';
+import { t } from '@/i18n';
 
 export type WatchView = 'staff' | WatchTab | 'requests';
 
@@ -39,7 +40,7 @@ export function watchRows(tab: WatchView, w: OwnerWatch, filtered: boolean): Wat
   switch (tab) {
     case 'bills':
       return w.cancelled_bills.map((b) => ({
-        key: b.id, kind: 'order.cancel', title: `Bill ${b.bill}`, badges: [], detail: quote(b.reason), by: b.by, at: b.cancelled_at, amount: b.total, orderId: b.id,
+        key: b.id, kind: 'order.cancel', title: t('owner.watchRows.bill_bill', { bill: b.bill }), badges: [], detail: quote(b.reason), by: b.by, at: b.cancelled_at, amount: b.total, orderId: b.id,
       }));
     case 'items':
       return w.items.map((it, i) => ({
@@ -47,16 +48,16 @@ export function watchRows(tab: WatchView, w: OwnerWatch, filtered: boolean): Wat
         kind: it.after_kitchen ? 'order.void_item' : 'order.remove_item',
         title: `${it.quantity} × ${it.name}${it.variant ? ` (${it.variant})` : ''}`,
         badges: [
-          { label: it.after_kitchen ? 'After kitchen' : 'Before kitchen', tone: it.after_kitchen ? 'danger' : 'warning' },
-          ...(it.bill_status === 'cancelled' ? [{ label: 'Bill cancelled', tone: 'neutral' as RowTone }] : []),
+          { label: it.after_kitchen ? t('owner.watchRows.after_kitchen') : t('owner.watchRows.before_kitchen'), tone: it.after_kitchen ? 'danger' : 'warning' },
+          ...(it.bill_status === 'cancelled' ? [{ label: t('owner.watchRows.bill_cancelled'), tone: 'neutral' as RowTone }] : []),
         ],
-        detail: `${quote(it.reason)} · Bill ${it.bill}`,
+        detail: t('owner.watchRows.quote_bill_bill', { quote: quote(it.reason), bill: it.bill }),
         by: it.by, at: it.at, amount: it.value, orderId: it.order_id,
       }));
     case 'comps':
       if (filtered) return w.events.filter((e) => e.action === 'order.comp').map(eventRow);
       return w.on_the_house.map((c, i) => ({
-        key: `${c.order_id}-${i}`, kind: 'order.comp', title: `${c.quantity} × ${c.name}`, badges: [], detail: `${quote(c.reason)} · Bill ${c.bill}`,
+        key: `${c.order_id}-${i}`, kind: 'order.comp', title: `${c.quantity} × ${c.name}`, badges: [], detail: t('owner.watchRows.quote_bill_bill', { quote: quote(c.reason), bill: c.bill }),
         by: null, at: null, amount: c.value, orderId: c.order_id,
       }));
     case 'discounts':
@@ -64,7 +65,7 @@ export function watchRows(tab: WatchView, w: OwnerWatch, filtered: boolean): Wat
     case 'menu':
       return w.menu_changes.map((m) => ({
         key: `${m.product_id}-${m.version}`, kind: /removed from the menu/i.test(m.change) ? 'menu.remove' : 'menu.change', title: m.name,
-        badges: [{ label: `Version ${m.version}`, tone: 'neutral' }], detail: m.change, by: m.changed_by, at: m.created_at, amount: null, orderId: null,
+        badges: [{ label: t('owner.watchRows.version_version', { version: m.version }), tone: 'neutral' }], detail: m.change, by: m.changed_by, at: m.created_at, amount: null, orderId: null,
       }));
     case 'timeline':
       return [...w.events].sort((a, b) => b.at.localeCompare(a.at)).map(eventRow);

@@ -4,6 +4,7 @@ import { sessionsApi } from '@/api/subscription';
 import { useAuth } from '@/store/auth';
 import { useOutbox } from '@/store/outbox';
 import { useAccess } from '@/store/access';
+import { t } from '@/i18n';
 
 /**
  * Sign this device out: revoke the session on the server (best effort — offline or an already-ended session must
@@ -28,11 +29,11 @@ export async function signOut(): Promise<void> {
   const tenantId = useAuth.getState().session?.tenantId;
   const pending = useOutbox.getState().queue.filter((q) => !tenantId || q.tenantId === tenantId).length;
   const ok = await confirm({
-    title: 'Sign out?',
+    title: t('app.signOut.sign_out_title'),
     message: pending
-      ? `${pending} offline bill${pending > 1 ? 's are' : ' is'} still waiting to sync. They stay saved on this device and will sync after someone signs in here again.`
-      : 'You can sign back in any time.',
-    confirmLabel: 'Sign out',
+      ? t('app.signOut.pending', { pending })
+      : t('app.signOut.sign_back_in'),
+    confirmLabel: t('app.signOut.sign_out'),
     danger: pending > 0,
   });
   if (!ok) return;

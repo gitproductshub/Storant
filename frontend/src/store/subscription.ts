@@ -1,9 +1,9 @@
 /**
- * The business's Tallyko subscription as this device knows it.
+ * The business's Storant subscription as this device knows it.
  *
  * - Login / refresh responses carry a snapshot (`apply`), kept in the saved session by the auth store.
  * - Any business API answering 402 locks the app at once (`markLocked`); the (app) layout then shows the renewal page.
- * - `refresh()` asks GET /subscription (allowed while locked), so the app unlocks by itself once Tallyko approves a payment.
+ * - `refresh()` asks GET /subscription (allowed while locked), so the app unlocks by itself once Storant approves a payment.
  *
  * Locking never touches the offline outbox: bills made offline stay on the device and sync after renewal.
  */

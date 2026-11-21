@@ -9,6 +9,7 @@ import { View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/components/ui';
+import { t } from '@/i18n';
 
 const TOKEN = /(\[\[[^\]]+\]\]|\{\{[^}]+\}\}|\*\*[^*]+\*\*)/g;
 
@@ -21,7 +22,7 @@ export function Rich({ children, variant = 'body', tone = 'muted' }: { children:
         if (part.startsWith('[[')) {
           return (
             <Text key={i} variant={variant === 'body' ? 'bodyStrong' : 'smallStrong'} color={colors.accentText}
-              style={{ backgroundColor: colors.accentSoft, borderRadius: 4 }} accessibilityLabel={`Placeholder: ${part.slice(2, -2)}`}>
+              style={{ backgroundColor: colors.accentSoft, borderRadius: 4 }} accessibilityLabel={t('public.RichText.placeholder_slice', { slice: part.slice(2, -2) })}>
               {` ${part.slice(2, -2)} `}
             </Text>
           );

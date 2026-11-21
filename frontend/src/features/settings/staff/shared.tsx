@@ -64,6 +64,7 @@ export function canManageRole(isOwner: boolean, canManageStaff: boolean, target:
 }
 
 import { initials } from '@/lib/initials';
+import { t } from '@/i18n';
 export { initials };
 
 export function Avatar({ name, active = true, size = 40 }: { name: string; active?: boolean; size?: number }) {
@@ -79,9 +80,9 @@ export function Avatar({ name, active = true, size = 40 }: { name: string; activ
 
 export type RangeKey = 'today' | '7d' | '30d';
 export const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: '7d', label: '7 days' },
-  { value: '30d', label: '30 days' },
+  { value: 'today', get label() { return t('common.today'); } },
+  { value: '7d', get label() { return t('common.7_days'); } },
+  { value: '30d', get label() { return t('common.30_days'); } },
 ];
 const RANGE_DAYS: Record<RangeKey, number> = { today: 1, '7d': 7, '30d': 30 };
 

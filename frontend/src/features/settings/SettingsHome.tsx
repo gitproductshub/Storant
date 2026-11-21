@@ -15,8 +15,10 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { SettingsFrame, SettingsSearch, useSettingsSections } from './SettingsFrame';
 import { StatusDot, serverOrigin } from './components';
 import { ROLE_LABEL } from './sections';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
-const TYPE_LABEL: Record<BusinessType, string> = { restaurant: 'Restaurant', cafe: 'Café', cloud_kitchen: 'Cloud kitchen', retail: 'Retail shop' };
+const TYPE_LABEL: Record<BusinessType, string> = { get restaurant() { return tr('common.restaurant'); }, get cafe() { return tr('common.caf'); }, get cloud_kitchen() { return tr('common.cloud_kitchen'); }, get retail() { return tr('common.retail_shop'); } };
 
 const go = (href: string) => router.push(href as Href);
 
@@ -39,7 +41,7 @@ export default function SettingsHome() {
   const extra = sections.filter((x) => ['taxes', 'qr', 'floor', 'emails', 'modules', 'billing'].includes(x.key));
 
   return (
-    <SettingsFrame active="overview" title="Settings" subtitle={isDesktop ? `${businessName} · signed in as ${role ? ROLE_LABEL[role] : ''}` : businessName}>
+    <SettingsFrame active="overview" title={tr('common.settings')} subtitle={isDesktop ? tr('settings.SettingsHome.businessname_signed_in_as_v', { businessName, v: role ? ROLE_LABEL[role] : '' }) : businessName}>
       {!isWide ? <SettingsSearch query={query} onQuery={setQuery} sections={sections} onOpen={go} compact /> : null}
 
       {query.trim() && !isWide ? null : (
@@ -49,44 +51,44 @@ export default function SettingsHome() {
       {!isWide ? (
         <>
           {manager && has('business') ? (
-            <Group title="Business">
-              <ListRow icon="storefront-outline" title="Business profile" subtitle={settings ? `${TYPE_LABEL[settings.business_type]} · ${settings.address || 'No address yet'}` : 'Name, address, contact'}
+            <Group title={tr('common.business')}>
+              <ListRow icon="storefront-outline" title={tr('settings.SettingsHome.business_profile')} subtitle={settings ? `${TYPE_LABEL[settings.business_type]} · ${settings.address || tr('settings.SettingsHome.no_address_yet')}` : tr('settings.SettingsHome.name_address_contact')}
                 onPress={() => go('/settings/business?section=profile')} />
-              <ListRow icon="document-text-outline" title="GST & invoices" subtitle={settings?.gstin ? `GSTIN ${settings.gstin}` : 'GSTIN, FSSAI, tax rate, bill footer'}
+              <ListRow icon="document-text-outline" title={tr('settings.SettingsHome.gst_invoices')} subtitle={settings?.gstin ? tr('settings.SettingsHome.gstin_gstin', { gstin: settings.gstin }) : tr('settings.SettingsHome.gstin_fssai_tax_rate_bill_footer')}
                 onPress={() => go('/settings/business?section=tax')} />
-              <ListRow icon="qr-code-outline" title="Payments & UPI" subtitle={settings?.upi_id || 'Add a UPI ID for payment QR on bills'}
+              <ListRow icon="qr-code-outline" title={tr('settings.SettingsHome.payments_upi')} subtitle={settings?.upi_id || tr('settings.SettingsHome.add_a_upi_id_for_payment_qr_on_bills')}
                 onPress={() => go('/settings/business?section=payments')} />
-              <ListRow icon="gift-outline" title="Loyalty" subtitle={settings?.loyalty_enabled ? `On · ${settings.loyalty_points_per_100} point${settings.loyalty_points_per_100 === 1 ? "" : "s"} per ₹100` : 'Off'}
+              <ListRow icon="gift-outline" title={tr('common.loyalty')} subtitle={settings?.loyalty_enabled ? tr('settings.SettingsHome.on_loyalty_points_per_100_point_v_per_100', { loyalty_points_per_100: settings.loyalty_points_per_100, v: settings.loyalty_points_per_100 === 1 ? "" : "s" }) : tr('common.off')}
                 onPress={() => go('/settings/business?section=loyalty')} />
-              <ListRow icon="globe-outline" title="Online ordering" subtitle={onlineSummary(settings?.store_enabled, settings?.qr_ordering_enabled)}
+              <ListRow icon="globe-outline" title={tr('settings.SettingsHome.online_ordering')} subtitle={onlineSummary(settings?.store_enabled, settings?.qr_ordering_enabled)}
                 onPress={() => go('/settings/business?section=online')} />
             </Group>
           ) : null}
 
-          <Group title="This device">
-            <ListRow icon="print-outline" title="Printers & receipts" subtitle={printer ? `Bills print on ${printer.name}` : 'Using the print dialog'} onPress={() => go('/settings/printers')} />
+          <Group title={tr('common.this_device')}>
+            <ListRow icon="print-outline" title={tr('common.printers_receipts')} subtitle={printer ? tr('settings.SettingsHome.bills_print_on_name', { name: printer.name }) : tr('settings.SettingsHome.using_the_print_dialog')} onPress={() => go('/settings/printers')} />
           </Group>
 
           {has('channels') || has('brands') || has('staff') ? (
-            <Group title="Selling & team">
-              {has('channels') ? <ListRow icon="git-network-outline" title="Sales channels" subtitle={liveChannels ? `${liveChannels} channel${liveChannels === 1 ? '' : 's'} on · Swiggy, Zomato, ONDC…` : 'Swiggy, Zomato, ONDC, magicpin, QR, store'}
+            <Group title={tr('settings.SettingsHome.selling_team')}>
+              {has('channels') ? <ListRow icon="git-network-outline" title={tr('common.sales_channels')} subtitle={liveChannels ? tr('settings.SettingsHome.livechannels_channel_v_on_swiggy_zomato', { liveChannels, v: liveChannels === 1 ? '' : 's' }) : tr('settings.SettingsHome.swiggy_zomato_ondc_magicpin_qr_store')}
                 onPress={() => go('/settings/channels')} /> : null}
-              {has('brands') ? <ListRow icon="pricetags-outline" title="Brands" subtitle="Virtual brands for cloud kitchens" onPress={() => go('/settings/brands')} /> : null}
-              {has('staff') ? <ListRow icon="people-outline" title="Staff & roles" subtitle="Logins for cashiers, waiters and kitchen" onPress={() => go('/settings/staff')} /> : null}
+              {has('brands') ? <ListRow icon="pricetags-outline" title={tr('common.brands')} subtitle={tr('settings.SettingsHome.virtual_brands_for_cloud_kitchens')} onPress={() => go('/settings/brands')} /> : null}
+              {has('staff') ? <ListRow icon="people-outline" title={tr('common.staff_roles')} subtitle={tr('settings.SettingsHome.logins_for_cashiers_waiters_and_kitchen')} onPress={() => go('/settings/staff')} /> : null}
             </Group>
           ) : null}
 
           {extra.length ? (
-            <Group title="More settings">
+            <Group title={tr('settings.SettingsHome.more_settings')}>
               {extra.map((x) => (
                 <ListRow key={x.key} icon={x.icon} title={x.label} subtitle={x.key === 'billing' && accessLine ? accessLine.label : x.description} onPress={() => go(x.href)}
-                  right={x.key === 'billing' && accessLine ? <StatusPill status={accessLine.status} label={accessLine.status === 'development' ? 'Dev' : undefined} /> : undefined} />
+                  right={x.key === 'billing' && accessLine ? <StatusPill status={accessLine.status} label={accessLine.status === 'development' ? tr('settings.SettingsHome.dev') : undefined} /> : undefined} />
               ))}
             </Group>
           ) : null}
 
-          <Group title="You">
-            <ListRow icon="person-circle-outline" title="Account" subtitle={`${session?.email ?? ''} · ${theme === 'system' ? 'System' : theme === 'dark' ? 'Dark' : 'Light'} theme`}
+          <Group title={tr('settings.SettingsHome.you')}>
+            <ListRow icon="person-circle-outline" title={tr('common.account')} subtitle={tr('settings.SettingsHome.v_v2_theme', { v: session?.email ?? '', v2: theme === 'system' ? tr('common.system') : theme === 'dark' ? tr('settings.SettingsHome.dark') : tr('settings.SettingsHome.light') })}
               onPress={() => go('/settings/account')} />
           </Group>
         </>
@@ -126,12 +128,12 @@ function SetupChecklist() {
   if (!settings) return null;
 
   const items = [
-    { key: 'profile', title: 'Add your address and phone', detail: 'Printed at the top of every bill.', done: !!settings.address && !!settings.phone, href: '/settings/business?section=profile' },
-    { key: 'gst', title: 'Add GSTIN and FSSAI', detail: 'Optional if you are not GST registered.', done: !!settings.gstin || !!settings.fssai, optional: true, href: '/settings/business?section=tax' },
-    { key: 'upi', title: 'Add your UPI ID', detail: 'Customers scan the QR on the bill to pay.', done: !!settings.upi_id, href: '/settings/business?section=payments' },
-    { key: 'printer', title: 'Connect a receipt printer', detail: 'On this device. Bills use the print dialog until then.', done: !!printer, optional: true, href: '/settings/printers' },
-    { key: 'staff', title: 'Add staff logins', detail: 'So each bill shows who made it.', done: (staff.data?.length ?? 0) > 1, optional: true, href: '/settings/staff' },
-    { key: 'online', title: 'Take orders online', detail: 'Own store or QR table ordering, with no commission.', done: settings.store_enabled || settings.qr_ordering_enabled, optional: true, href: '/settings/business?section=online' },
+    { key: 'profile', title: tr('settings.SettingsHome.add_your_address_and_phone'), detail: tr('settings.SettingsHome.printed_at_the_top_of_every_bill'), done: !!settings.address && !!settings.phone, href: '/settings/business?section=profile' },
+    { key: 'gst', title: tr('settings.SettingsHome.add_gstin_and_fssai'), detail: tr('settings.SettingsHome.optional_if_you_are_not_gst_registered'), done: !!settings.gstin || !!settings.fssai, optional: true, href: '/settings/business?section=tax' },
+    { key: 'upi', title: tr('settings.SettingsHome.add_your_upi_id'), detail: tr('settings.SettingsHome.customers_scan_the_qr_on_the_bill_to_pay'), done: !!settings.upi_id, href: '/settings/business?section=payments' },
+    { key: 'printer', title: tr('settings.SettingsHome.connect_a_receipt_printer'), detail: tr('settings.SettingsHome.on_this_device_bills_use_the_print_dialog'), done: !!printer, optional: true, href: '/settings/printers' },
+    { key: 'staff', title: tr('settings.SettingsHome.add_staff_logins'), detail: tr('settings.SettingsHome.so_each_bill_shows_who_made_it'), done: (staff.data?.length ?? 0) > 1, optional: true, href: '/settings/staff' },
+    { key: 'online', title: tr('settings.SettingsHome.take_orders_online'), detail: tr('settings.SettingsHome.own_store_or_qr_table_ordering_with_no'), done: settings.store_enabled || settings.qr_ordering_enabled, optional: true, href: '/settings/business?section=online' },
   ];
   const done = items.filter((i) => i.done).length;
   const todo = items.filter((i) => !i.done);
@@ -142,10 +144,10 @@ function SetupChecklist() {
     <Card style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text variant="h3">{done === items.length ? 'Your shop is fully set up' : 'Finish setting up'}</Text>
-          <Text variant="small" tone="muted">{done} of {items.length} done</Text>
+          <Text variant="h3">{done === items.length ? tr('settings.SettingsHome.your_shop_is_fully_set_up') : tr('settings.SettingsHome.finish_setting_up')}</Text>
+          <Text variant="small" tone="muted">{done} {tr('settings.SettingsHome.of_length_done', { length: items.length })}</Text>
         </View>
-        {done === items.length ? <Badge label="All done" tone="success" icon="checkmark" /> : null}
+        {done === items.length ? <Badge label={tr('settings.SettingsHome.all_done')} tone="success" icon="checkmark" /> : null}
       </View>
       <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surfaceSunken, overflow: 'hidden' }}
         accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: items.length, now: done }}>
@@ -154,7 +156,7 @@ function SetupChecklist() {
       <View style={{ gap: 0 }}>
         {shown.map((i) => (
           <ListRow key={i.key} title={i.title} subtitle={i.detail} left={<StatusDot ok={i.done} />}
-            right={i.done ? <Text variant="small" tone="success">Done</Text> : i.optional ? <Text variant="small" tone="subtle">Optional</Text> : <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />}
+            right={i.done ? <Text variant="small" tone="success">{tr('common.done')}</Text> : i.optional ? <Text variant="small" tone="subtle">{tr('common.optional')}</Text> : <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />}
             onPress={() => go(i.href)} />
         ))}
       </View>
@@ -165,14 +167,14 @@ function SetupChecklist() {
 function QuickLinks({ manager, printerName, liveChannels }: { manager: boolean; printerName: string | null; liveChannels: number }) {
   const { colors } = useTheme();
   const tiles = [
-    ...(manager ? [{ icon: 'storefront-outline' as const, title: 'Business', detail: 'Profile, GST, UPI, loyalty, online ordering', href: '/settings/business' }] : []),
-    { icon: 'print-outline' as const, title: 'Printers & receipts', detail: printerName ? `Bills print on ${printerName}` : 'Using the print dialog', href: '/settings/printers' },
+    ...(manager ? [{ icon: 'storefront-outline' as const, title: tr('common.business'), detail: tr('settings.SettingsHome.profile_gst_upi_loyalty_online_ordering'), href: '/settings/business' }] : []),
+    { icon: 'print-outline' as const, title: tr('common.printers_receipts'), detail: printerName ? tr('settings.SettingsHome.bills_print_on_printername', { printerName }) : tr('settings.SettingsHome.using_the_print_dialog'), href: '/settings/printers' },
     ...(manager ? [
-      { icon: 'git-network-outline' as const, title: 'Sales channels', detail: liveChannels ? `${liveChannels} on` : 'Swiggy, Zomato, ONDC, magicpin', href: '/settings/channels' },
-      { icon: 'pricetags-outline' as const, title: 'Brands', detail: 'Virtual brands for cloud kitchens', href: '/settings/brands' },
-      { icon: 'people-outline' as const, title: 'Staff & roles', detail: 'Logins and permissions', href: '/settings/staff' },
+      { icon: 'git-network-outline' as const, title: tr('common.sales_channels'), detail: liveChannels ? tr('settings.SettingsHome.livechannels_on', { liveChannels }) : tr('settings.SettingsHome.swiggy_zomato_ondc_magicpin'), href: '/settings/channels' },
+      { icon: 'pricetags-outline' as const, title: tr('common.brands'), detail: tr('settings.SettingsHome.virtual_brands_for_cloud_kitchens'), href: '/settings/brands' },
+      { icon: 'people-outline' as const, title: tr('common.staff_roles'), detail: tr('settings.SettingsHome.logins_and_permissions'), href: '/settings/staff' },
     ] : []),
-    { icon: 'person-circle-outline' as const, title: 'Account', detail: 'Password, appearance, sign out', href: '/settings/account' },
+    { icon: 'person-circle-outline' as const, title: tr('common.account'), detail: tr('settings.SettingsHome.password_appearance_sign_out'), href: '/settings/account' },
   ];
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
@@ -194,10 +196,10 @@ function About() {
   const build = Platform.OS === 'ios' ? Constants.expoConfig?.ios?.buildNumber : Platform.OS === 'android' ? Constants.expoConfig?.android?.versionCode : null;
   const platform = Platform.OS === 'web' ? 'Web app' : Platform.OS === 'ios' ? 'iPhone / iPad app' : 'Android app';
   return (
-    <Group title="About">
-      <ListRow icon="information-circle-outline" title={`Tallyko ${version}${build ? ` (${build})` : ''}`} subtitle={platform} />
-      <ListRow icon="server-outline" title="Server" subtitle={serverOrigin()} />
-      <ListRow icon="shield-checkmark-outline" title="Privacy policy" subtitle="What we store and how to delete it" onPress={() => go('/privacy')} />
+    <Group title={tr('settings.SettingsHome.about')}>
+      <ListRow icon="information-circle-outline" title={`${brand.name} ${version}${build ? ` (${build})` : ''}`} subtitle={platform} />
+      <ListRow icon="server-outline" title={tr('settings.SettingsHome.server')} subtitle={serverOrigin()} />
+      <ListRow icon="shield-checkmark-outline" title={tr('common.privacy_policy')} subtitle={tr('settings.SettingsHome.what_we_store_and_how_to_delete_it')} onPress={() => go('/privacy')} />
     </Group>
   );
 }

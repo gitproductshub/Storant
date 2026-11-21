@@ -3,6 +3,8 @@ import type { BadgeTone } from '@/components/ui';
 import type { SubscriptionState } from '@/api/types';
 import type { PaymentMethod, PaymentRequest, SubscriptionPeriod } from '@/api/subscription';
 import { formatDate } from '@/lib/format';
+import { brand } from '@/config/brand';
+import { t, currentLocale } from '@/i18n';
 
 const DAY = 86_400_000;
 
@@ -26,11 +28,11 @@ export function daysText(n: number): string {
 }
 
 export const STATE_LABEL: Record<SubscriptionState['state'], string> = {
-  trial: 'Free demo',
-  development: 'Development access',
-  active: 'Active',
-  grace: 'Payment due',
-  lapsed: 'Ended',
+  get trial() { return t('common.free_demo'); },
+  get development() { return t('common.development_access'); },
+  get active() { return t('common.active'); },
+  get grace() { return t('common.payment_due'); },
+  get lapsed() { return t('common.ended'); },
 };
 
 export const STATE_TONE: Record<SubscriptionState['state'], BadgeTone> = {
@@ -42,25 +44,25 @@ export const STATE_TONE: Record<SubscriptionState['state'], BadgeTone> = {
 };
 
 export const KIND_LABEL: Record<string, string> = {
-  trial: 'Free demo',
-  paid: 'Paid',
-  complimentary: 'Complimentary',
-  development: 'Development access',
+  get trial() { return t('common.free_demo'); },
+  get paid() { return t('common.paid'); },
+  get complimentary() { return t('common.complimentary'); },
+  get development() { return t('common.development_access'); },
 };
 
 export const METHOD_LABEL: Record<PaymentMethod, string> = {
   upi: 'UPI',
-  bank_transfer: 'Bank transfer',
-  cash: 'Cash',
-  card: 'Card',
-  cheque: 'Cheque',
-  other: 'Other',
+  get bank_transfer() { return t('common.bank_transfer'); },
+  get cash() { return t('common.cash'); },
+  get card() { return t('common.card'); },
+  get cheque() { return t('common.cheque'); },
+  get other() { return t('common.other'); },
 };
 
 export const REQUEST_STATUS: Record<PaymentRequest['status'], { label: string; tone: BadgeTone }> = {
-  pending: { label: 'Waiting for confirmation', tone: 'warning' },
-  approved: { label: 'Approved', tone: 'success' },
-  rejected: { label: 'Not approved', tone: 'danger' },
+  pending: { get label() { return t('subscription.format.waiting_for_confirmation'); }, tone: 'warning' },
+  approved: { get label() { return t('subscription.format.approved'); }, tone: 'success' },
+  rejected: { get label() { return t('subscription.format.not_approved'); }, tone: 'danger' },
 };
 
 /** "Your free demo ended on 21 Oct 2026" / "Subscription ended" — headline of the renewal page. */
@@ -68,15 +70,15 @@ export function lockHeadline(sub: SubscriptionState | null | undefined): { title
   const ended = sub?.paid_until ? formatDate(sub.paid_until) : null;
   if (sub?.kind === 'trial') {
     return {
-      title: ended ? `Your free demo ended on ${ended}` : 'Your free demo has ended',
-      subtitle: 'Choose a plan to keep billing with Tallyko. Everything you set up during the demo is still here.',
+      title: ended ? t('subscription.format.your_free_demo_ended_on_ended', { ended }) : t('subscription.format.your_free_demo_has_ended'),
+      subtitle: t('subscription.format.choose_a_plan_to_keep_billing_with_brand', { brand: brand.name }),
     };
   }
   return {
-    title: 'Subscription ended',
+    title: t('subscription.format.subscription_ended'),
     subtitle: ended
-      ? `Your Tallyko subscription ended on ${ended}. Renew to switch billing, orders and reports back on.`
-      : 'Renew your Tallyko subscription to switch billing, orders and reports back on.',
+      ? t('subscription.format.your_brand_subscription_ended_on_ended', { brand: brand.name, ended })
+      : t('subscription.format.renew_your_brand_subscription_to_switch', { brand: brand.name }),
   };
 }
 
@@ -87,13 +89,13 @@ export function bannerFor(sub: SubscriptionState | null | undefined, now = Date.
   const left = liveDaysLeft(sub, now);
   if (sub.state === 'grace') {
     const stops = sub.lock_at ? formatDate(sub.lock_at) : null;
-    return { tone: 'danger', title: 'Payment due', detail: stops ? `access stops on ${stops}` : 'renew to keep using Tallyko', urgent: true };
+    return { tone: 'danger', title: t('common.payment_due'), detail: stops ? t('subscription.format.access_stops_on_stops', { stops }) : t('subscription.format.renew_to_keep_using_brand', { brand: brand.name }), urgent: true };
   }
   if (sub.state === 'trial') {
-    return { tone: left !== null && left <= 3 ? 'warning' : 'info', title: 'Free demo', detail: left === null ? 'renew any time' : daysText(left), urgent: left !== null && left <= 3 };
+    return { tone: left !== null && left <= 3 ? 'warning' : 'info', title: t('common.free_demo'), detail: left === null ? t('subscription.format.renew_any_time') : daysText(left), urgent: left !== null && left <= 3 };
   }
   if (left !== null && left <= 7) {
-    return { tone: left <= 3 ? 'warning' : 'info', title: 'Subscription ending', detail: `${daysText(left)} · renew by ${formatDate(sub.paid_until)}`, urgent: left <= 3 };
+    return { tone: left <= 3 ? 'warning' : 'info', title: t('subscription.format.subscription_ending'), detail: t('subscription.format.daystext_renew_by_formatdate', { daysText: daysText(left), formatDate: formatDate(sub.paid_until) }), urgent: left <= 3 };
   }
   return null;
 }
@@ -111,7 +113,7 @@ export function monthsText(months: number | null | undefined): string {
 
 /** upi://pay link that opens any UPI app with the amount filled in. */
 export function upiLink(opts: { upiId: string; payee: string; amount: number | null; note?: string }): string {
-  const parts = [`pa=${encodeURIComponent(opts.upiId)}`, `pn=${encodeURIComponent(opts.payee || 'Tallyko')}`];
+  const parts = [`pa=${encodeURIComponent(opts.upiId)}`, `pn=${encodeURIComponent(opts.payee || brand.name)}`];
   if (opts.amount && opts.amount > 0) parts.push(`am=${opts.amount.toFixed(2)}`);
   parts.push('cu=INR');
   if (opts.note) parts.push(`tn=${encodeURIComponent(opts.note.slice(0, 60))}`);
@@ -120,10 +122,10 @@ export function upiLink(opts: { upiId: string; payee: string; amount: number | n
 
 /** Readable names for plan feature keys (unknown keys are shown title-cased). */
 const FEATURE_LABEL: Record<string, string> = {
-  customers: 'Customers & CRM', inventory: 'Inventory', loyalty: 'Loyalty points', menu_ocr: 'Menu from a photo', offers: 'Offers & rewards',
-  reports: 'Reports', advanced_reports: 'Advanced reports', email: 'Customer emails', kitchen: 'Kitchen display', online_store: 'Online store',
-  qr_ordering: 'QR table ordering', staff: 'Staff logins', tables: 'Table management', audit_log: 'Activity log', brands: 'Cloud-kitchen brands',
-  custom_roles: 'Custom roles', integrations: 'Swiggy/Zomato integration', online_orders: 'Online orders',
+  get customers() { return t('subscription.format.customers_crm'); }, get inventory() { return t('common.inventory'); }, get loyalty() { return t('common.loyalty_points'); }, get menu_ocr() { return t('subscription.format.menu_from_a_photo'); }, get offers() { return t('common.offers_rewards'); },
+  get reports() { return t('common.reports'); }, get advanced_reports() { return t('subscription.format.advanced_reports'); }, get email() { return t('common.customer_emails'); }, get kitchen() { return t('subscription.format.kitchen_display'); }, get online_store() { return t('subscription.format.online_store'); },
+  get qr_ordering() { return t('common.qr_table_ordering'); }, get staff() { return t('common.staff_logins'); }, get tables() { return t('subscription.format.table_management'); }, get audit_log() { return t('common.activity_log'); }, get brands() { return t('subscription.format.cloud_kitchen_brands'); },
+  get custom_roles() { return t('subscription.format.custom_roles'); }, get integrations() { return t('subscription.format.swiggy_zomato_integration'); }, get online_orders() { return t('common.online_orders'); },
 };
 
 export function featureLabel(key: string): string {
@@ -137,7 +139,7 @@ export function limitsText(limits: Record<string, number | null> | null | undefi
   const items = limits.max_products;
   const outlets = limits.max_locations;
   parts.push(staff == null ? 'Unlimited staff' : `${staff} staff login${staff === 1 ? '' : 's'}`);
-  parts.push(items == null ? 'unlimited items' : `${items.toLocaleString('en-IN')} items`);
+  parts.push(items == null ? 'unlimited items' : `${items.toLocaleString(currentLocale())} items`);
   if (outlets != null && outlets > 1) parts.push(`${outlets} outlets`);
   return parts.join(' · ');
 }

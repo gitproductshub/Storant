@@ -9,12 +9,13 @@ import { useAuth } from '@/store/auth';
 import { errorMessage } from '@/api/client';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { BusinessType } from '@/api/types';
+import { t as tr } from '@/i18n';
 
 const TYPES: { value: BusinessType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'restaurant', label: 'Restaurant', icon: 'restaurant-outline' },
-  { value: 'cafe', label: 'Café / QSR', icon: 'cafe-outline' },
-  { value: 'cloud_kitchen', label: 'Cloud kitchen', icon: 'bicycle-outline' },
-  { value: 'retail', label: 'Retail store', icon: 'storefront-outline' },
+  { value: 'restaurant', get label() { return tr('common.restaurant'); }, icon: 'restaurant-outline' },
+  { value: 'cafe', get label() { return tr('routes.signup.caf_qsr'); }, icon: 'cafe-outline' },
+  { value: 'cloud_kitchen', get label() { return tr('common.cloud_kitchen'); }, icon: 'bicycle-outline' },
+  { value: 'retail', get label() { return tr('routes.signup.retail_store'); }, icon: 'storefront-outline' },
 ];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,12 +33,12 @@ export default function SignupScreen() {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (form.vendor_name.trim().length < 2) e.vendor_name = 'Enter your business name';
-    if (!EMAIL_RE.test(form.email.trim())) e.email = 'Enter a valid email address';
+    if (form.vendor_name.trim().length < 2) e.vendor_name = tr('routes.signup.enter_your_business_name');
+    if (!EMAIL_RE.test(form.email.trim())) e.email = tr('routes.signup.enter_a_valid_email_address');
     const digits = form.phone.replace(/\D/g, '');
-    if (digits.length < 10 || digits.length > 13) e.phone = 'Enter a valid mobile number';
-    if (form.password.length < 8) e.password = 'Use at least 8 characters';
-    if (!agreed) e.agreed = 'Please accept the privacy policy to continue';
+    if (digits.length < 10 || digits.length > 13) e.phone = tr('routes.signup.enter_a_valid_mobile_number');
+    if (form.password.length < 8) e.password = tr('routes.signup.use_at_least_8_characters');
+    if (!agreed) e.agreed = tr('routes.signup.please_accept_the_privacy_policy_to');
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -62,12 +63,12 @@ export default function SignupScreen() {
   return (
     <AuthLayout>
       <View style={{ gap: 6 }}>
-        <Text variant="h1">Create your business</Text>
-        <Text tone="muted">Free to start. Set up your menu in minutes.</Text>
+        <Text variant="h1">{tr('routes.signup.create_your_business')}</Text>
+        <Text tone="muted">{tr('routes.signup.free_to_start_set_up_your_menu_in_minutes')}</Text>
       </View>
 
       <View style={{ gap: 8 }}>
-        <Text variant="smallStrong" tone="muted">What do you run?</Text>
+        <Text variant="smallStrong" tone="muted">{tr('routes.signup.what_do_you_run')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {TYPES.map((t) => {
             const active = t.value === type;
@@ -84,16 +85,16 @@ export default function SignupScreen() {
         </View>
       </View>
 
-      <Input label="Business name" required value={form.vendor_name} onChangeText={set('vendor_name')} error={errors.vendor_name} placeholder="e.g. Sharma Dhaba" icon="business-outline" />
-      <Input label="Your name" value={form.owner_name} onChangeText={set('owner_name')} placeholder="Owner name" icon="person-outline" autoComplete="name" />
-      <Input label="Email" required value={form.email} onChangeText={set('email')} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" icon="mail-outline" />
-      <Input label="Mobile number" required value={form.phone} onChangeText={set('phone')} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" prefix="+91" placeholder="98765 43210" />
-      <Input label="Password" required value={form.password} onChangeText={set('password')} error={errors.password} secureTextEntry autoComplete="new-password" hint="At least 8 characters" icon="lock-closed-outline" />
+      <Input label={tr('common.business_name')} required value={form.vendor_name} onChangeText={set('vendor_name')} error={errors.vendor_name} placeholder={tr('routes.signup.e_g_sharma_dhaba')} icon="business-outline" />
+      <Input label={tr('routes.signup.your_name')} value={form.owner_name} onChangeText={set('owner_name')} placeholder={tr('routes.signup.owner_name')} icon="person-outline" autoComplete="name" />
+      <Input label={tr('common.email')} required value={form.email} onChangeText={set('email')} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" icon="mail-outline" />
+      <Input label={tr('common.mobile_number')} required value={form.phone} onChangeText={set('phone')} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" prefix="+91" placeholder="98765 43210" />
+      <Input label={tr('common.password')} required value={form.password} onChangeText={set('password')} error={errors.password} secureTextEntry autoComplete="new-password" hint={tr('routes.signup.at_least_8_characters')} icon="lock-closed-outline" />
 
       <Pressable onPress={() => setAgreed((a) => !a)} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
         <Ionicons name={agreed ? 'checkbox' : 'square-outline'} size={22} color={agreed ? colors.primary : colors.textSubtle} />
         <Text variant="small" tone="muted" style={{ flex: 1 }}>
-          I agree to the <Link href="/privacy"><Text variant="small" tone="primary">privacy policy</Text></Link> and confirm I'm allowed to store my customers' contact details for billing and loyalty.
+          {tr('routes.signup.i_agree_to_the')} <Link href="/privacy"><Text variant="small" tone="primary">{tr('routes.signup.privacy_policy')}</Text></Link> {tr('routes.signup.and_confirm_i_m_allowed_to_store_my')}
         </Text>
       </Pressable>
       {errors.agreed ? <Text variant="small" tone="danger">{errors.agreed}</Text> : null}
@@ -103,10 +104,10 @@ export default function SignupScreen() {
         </View>
       ) : null}
 
-      <Button title="Create account" size="lg" onPress={submit} loading={busy} full />
+      <Button title={tr('routes.signup.create_account')} size="lg" onPress={submit} loading={busy} full />
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-        <Text tone="muted">Already have an account?</Text>
-        <Link href="/login"><Text tone="primary" variant="bodyStrong">Sign in</Text></Link>
+        <Text tone="muted">{tr('routes.signup.already_have_an_account')}</Text>
+        <Link href="/login"><Text tone="primary" variant="bodyStrong">{tr('routes.signup.sign_in')}</Text></Link>
       </View>
       <ServerField />
     </AuthLayout>

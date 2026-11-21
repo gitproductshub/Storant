@@ -7,6 +7,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { Button, EmptyState, IconButton, Input, Sheet, Text, toast } from '@/components/ui';
 import { confirmTop } from './dialogs';
 import { plural } from './utils';
+import { t as tr } from '@/i18n';
 
 interface Props {
   visible: boolean;
@@ -43,7 +44,7 @@ export function CategoryManagerSheet({ visible, onClose, categories, products, o
       onCategories([withOrder]);
       setNewName('');
       setNewError(null);
-      toast.success(`Added “${name}”`);
+      toast.success(tr('common.added_name', { name }));
     } catch (e) {
       setNewError(errorMessage(e));
     } finally {
@@ -54,10 +55,10 @@ export function CategoryManagerSheet({ visible, onClose, categories, products, o
   const saveRename = async () => {
     if (!editing) return;
     const name = editing.name.trim();
-    if (!name) return setEditing({ ...editing, error: 'Enter a name.' });
-    if (name.length > 60) return setEditing({ ...editing, error: 'Keep it under 60 characters.' });
+    if (!name) return setEditing({ ...editing, error: tr('catalog.CategoryManagerSheet.enter_a_name') });
+    if (name.length > 60) return setEditing({ ...editing, error: tr('catalog.CategoryManagerSheet.keep_it_under_60_characters') });
     if (categories.some((c) => c.id !== editing.id && c.name.trim().toLowerCase() === name.toLowerCase())) {
-      return setEditing({ ...editing, error: 'Another category has this name.' });
+      return setEditing({ ...editing, error: tr('catalog.CategoryManagerSheet.another_category_has_this_name') });
     }
     const current = categories.find((c) => c.id === editing.id);
     if (current && current.name === name) return setEditing(null);
@@ -97,11 +98,11 @@ export function CategoryManagerSheet({ visible, onClose, categories, products, o
   const remove = async (cat: Category) => {
     const count = countFor(cat.id);
     const ok = await confirmTop({
-      title: `Delete “${cat.name}”?`,
+      title: tr('catalog.CategoryManagerSheet.delete_name', { name: cat.name }),
       message: count
-        ? `${plural(count, 'item')} in this category will stay on your menu as “Uncategorised”. You can move them to another category later.`
-        : 'This category has no items.',
-      confirmLabel: 'Delete category',
+        ? tr('catalog.CategoryManagerSheet.plural_in_this_category_will_stay_on_your', { plural: plural(count, 'item') })
+        : tr('catalog.CategoryManagerSheet.this_category_has_no_items'),
+      confirmLabel: tr('catalog.CategoryManagerSheet.delete_category'),
       danger: true,
     });
     if (!ok) return;
@@ -121,8 +122,8 @@ export function CategoryManagerSheet({ visible, onClose, categories, products, o
         }
       }
       onProducts(updated);
-      toast.success(`Deleted “${cat.name}”`);
-      if (failed) toast.warning(`${plural(failed, 'item')} could not be moved to Uncategorised. Pull to refresh and try again.`);
+      toast.success(tr('catalog.CategoryManagerSheet.deleted_name', { name: cat.name }));
+      if (failed) toast.warning(tr('catalog.CategoryManagerSheet.plural_could_not_be_moved_to', { plural: plural(failed, 'item') }));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -131,24 +132,24 @@ export function CategoryManagerSheet({ visible, onClose, categories, products, o
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Categories" subtitle="Rename, reorder or delete. Order here is the order on the billing screen." width={560}
-      footer={<View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}><Button title="Done" onPress={onClose} /></View>}>
+    <Sheet visible={visible} onClose={onClose} title={tr('catalog.CategoryManagerSheet.categories')} subtitle={tr('catalog.CategoryManagerSheet.rename_reorder_or_delete_order_here_is')} width={560}
+      footer={<View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}><Button title={tr('common.done')} onPress={onClose} /></View>}>
       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
         <Input
           containerStyle={{ flex: 1 }}
-          placeholder="New category, e.g. Starters"
+          placeholder={tr('catalog.CategoryManagerSheet.new_category_e_g_starters')}
           value={newName}
           onChangeText={(t) => { setNewName(t); setNewError(null); }}
           onSubmitEditing={add}
           error={newError}
           maxLength={60}
-          accessibilityLabel="New category name"
+          accessibilityLabel={tr('catalog.CategoryManagerSheet.new_category_name')}
           returnKeyType="done"
         />
-        <Button title="Add" icon="add" onPress={add} loading={busy === 'new'} disabled={!!busy && busy !== 'new'} />
+        <Button title={tr('common.add')} icon="add" onPress={add} loading={busy === 'new'} disabled={!!busy && busy !== 'new'} />
       </View>
       {categories.length === 0 ? (
-        <EmptyState icon="folder-open-outline" title="No categories yet" message="Group your items — e.g. Starters, Main course, Beverages — so billing is faster." />
+        <EmptyState icon="folder-open-outline" title={tr('catalog.CategoryManagerSheet.no_categories_yet')} message={tr('catalog.CategoryManagerSheet.group_your_items_e_g_starters_main_course')} />
       ) : (
         <View style={[styles.list, { borderColor: colors.border }]}>
           {categories.map((c, i) => {
@@ -166,10 +167,10 @@ export function CategoryManagerSheet({ visible, onClose, categories, products, o
                       onChangeText={(t) => setEditing({ id: c.id, name: t })}
                       onSubmitEditing={saveRename}
                       error={editing.error}
-                      accessibilityLabel={`Rename ${c.name}`}
+                      accessibilityLabel={tr('catalog.CategoryManagerSheet.rename_name', { name: c.name })}
                     />
-                    <IconButton icon="checkmark" variant="primary" accessibilityLabel="Save name" onPress={saveRename} disabled={rowBusy} />
-                    <IconButton icon="close" accessibilityLabel="Cancel rename" onPress={() => setEditing(null)} />
+                    <IconButton icon="checkmark" variant="primary" accessibilityLabel={tr('catalog.CategoryManagerSheet.save_name')} onPress={saveRename} disabled={rowBusy} />
+                    <IconButton icon="close" accessibilityLabel={tr('catalog.CategoryManagerSheet.cancel_rename')} onPress={() => setEditing(null)} />
                   </View>
                 ) : (
                   <>
@@ -177,10 +178,10 @@ export function CategoryManagerSheet({ visible, onClose, categories, products, o
                       <Text variant="bodyStrong" numberOfLines={1}>{c.name}</Text>
                       <Text variant="small" tone="muted">{plural(countFor(c.id), 'item')}</Text>
                     </View>
-                    <IconButton icon="arrow-up" accessibilityLabel={`Move ${c.name} up`} disabled={i === 0 || !!busy} onPress={() => move(i, -1)} />
-                    <IconButton icon="arrow-down" accessibilityLabel={`Move ${c.name} down`} disabled={i === categories.length - 1 || !!busy} onPress={() => move(i, 1)} />
-                    <IconButton icon="pencil-outline" accessibilityLabel={`Rename ${c.name}`} disabled={!!busy} onPress={() => setEditing({ id: c.id, name: c.name })} />
-                    <IconButton icon="trash-outline" accessibilityLabel={`Delete ${c.name}`} disabled={!!busy} onPress={() => remove(c)} />
+                    <IconButton icon="arrow-up" accessibilityLabel={tr('catalog.CategoryManagerSheet.move_name_up', { name: c.name })} disabled={i === 0 || !!busy} onPress={() => move(i, -1)} />
+                    <IconButton icon="arrow-down" accessibilityLabel={tr('catalog.CategoryManagerSheet.move_name_down', { name: c.name })} disabled={i === categories.length - 1 || !!busy} onPress={() => move(i, 1)} />
+                    <IconButton icon="pencil-outline" accessibilityLabel={tr('catalog.CategoryManagerSheet.rename_name', { name: c.name })} disabled={!!busy} onPress={() => setEditing({ id: c.id, name: c.name })} />
+                    <IconButton icon="trash-outline" accessibilityLabel={tr('catalog.CategoryManagerSheet.delete_name_2', { name: c.name })} disabled={!!busy} onPress={() => remove(c)} />
                   </>
                 )}
               </View>

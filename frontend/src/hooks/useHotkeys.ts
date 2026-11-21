@@ -19,6 +19,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import { t as tr } from '@/i18n';
 
 export type HotkeyHandler = (event: KeyboardEvent) => void | boolean;
 export interface HotkeyBinding {
@@ -208,8 +209,8 @@ export function formatShortcut(combo: string, mac = isMac()): string {
   }
   const c = parseCombo(first);
   const names: Record<string, string> = {
-    enter: '↵', escape: 'Esc', arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→', ' ': 'Space',
-    backspace: '⌫', delete: 'Del', tab: 'Tab', '/': '/', '+': '+', '-': '−',
+    enter: '↵', escape: tr('app.useHotkeys.esc'), arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→', ' ': tr('app.useHotkeys.space'),
+    backspace: '⌫', delete: tr('app.useHotkeys.del'), tab: tr('app.useHotkeys.tab'), '/': '/', '+': '+', '-': '−',
   };
   const key = names[c.key] ?? (c.key.length === 1 ? c.key.toUpperCase() : c.key.charAt(0).toUpperCase() + c.key.slice(1));
   const mods = [c.ctrl ? (mac ? '⌘' : 'Ctrl') : '', c.alt ? (mac ? '⌥' : 'Alt') : '', c.shift ? (mac ? '⇧' : 'Shift') : '', c.meta && !c.ctrl ? (mac ? '⌘' : 'Win') : '']

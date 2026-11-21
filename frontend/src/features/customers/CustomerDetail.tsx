@@ -6,7 +6,8 @@ import type { Customer } from '@/api/types';
 import { Badge, Button, Card, ErrorState, Loading, Text, toast, type BadgeTone } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { useData } from '@/store/data';
-import { CHANNEL_LABEL, ORDER_TYPE_LABEL, formatDate, formatDateTime, money } from '@/lib/format';
+import { formatDate, formatDateTime, money } from '@/lib/format';
+import { CHANNEL_UI, ORDER_TYPE_UI } from '@/lib/uiLabels';
 import { useTheme } from '@/theme/ThemeProvider';
 import { formatMobile, whatsappUrl } from '@/features/settings/validation';
 
@@ -19,17 +20,18 @@ export function tierProgress(points: number): { next: Customer['tier'] | null; n
 }
 
 import { initials } from '@/lib/initials';
+import { t } from '@/i18n';
 export { initials };
 
 async function open(url: string, what: string) {
   try {
     if (Platform.OS !== 'web' && !(await Linking.canOpenURL(url))) {
-      toast.error(`No app on this device can ${what}.`);
+      toast.error(t('customers.CustomerDetail.no_app_on_this_device_can_what', { what }));
       return;
     }
     await Linking.openURL(url);
   } catch {
-    toast.error(`Could not ${what}.`);
+    toast.error(t('customers.CustomerDetail.could_not_what', { what }));
   }
 }
 
@@ -64,48 +66,48 @@ export function CustomerDetail({ customer, onEdit, canEdit, compactHeader }: { c
 
       {!deleted ? (
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-          <Button title="Call" icon="call-outline" variant="secondary" size="sm" onPress={() => open(`tel:${c.phone.replace(/\s/g, '')}`, 'make calls')} />
-          {wa ? <Button title="WhatsApp" icon="logo-whatsapp" variant="secondary" size="sm" onPress={() => open(wa, 'open WhatsApp')} /> : null}
-          {c.email ? <Button title="Email" icon="mail-outline" variant="secondary" size="sm" onPress={() => open(`mailto:${c.email}`, 'send email')} /> : null}
-          {canEdit ? <Button title="Edit" icon="create-outline" variant="ghost" size="sm" onPress={onEdit} /> : null}
+          <Button title={t('customers.CustomerDetail.call')} icon="call-outline" variant="secondary" size="sm" onPress={() => open(`tel:${c.phone.replace(/\s/g, '')}`, 'make calls')} />
+          {wa ? <Button title={t('customers.CustomerDetail.whatsapp')} icon="logo-whatsapp" variant="secondary" size="sm" onPress={() => open(wa, 'open WhatsApp')} /> : null}
+          {c.email ? <Button title={t('common.email')} icon="mail-outline" variant="secondary" size="sm" onPress={() => open(`mailto:${c.email}`, 'send email')} /> : null}
+          {canEdit ? <Button title={t('common.edit')} icon="create-outline" variant="ghost" size="sm" onPress={onEdit} /> : null}
         </View>
       ) : null}
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-        <MiniStat label="Total spent" value={money(c.total_spent, '₹', true)} />
-        <MiniStat label="Visits" value={String(c.visits)} />
-        <MiniStat label="Average bill" value={c.visits ? money(avg, '₹', true) : '—'} />
-        <MiniStat label="Points" value={String(c.points)} hint={pointValue && c.points ? `worth ${money(c.points * pointValue, '₹', true)}` : undefined} />
+        <MiniStat label={t('customers.CustomerDetail.total_spent')} value={money(c.total_spent, '₹', true)} />
+        <MiniStat label={t('customers.CustomerDetail.visits')} value={String(c.visits)} />
+        <MiniStat label={t('customers.CustomerDetail.average_bill')} value={c.visits ? money(avg, '₹', true) : '—'} />
+        <MiniStat label={t('customers.CustomerDetail.points')} value={String(c.points)} hint={pointValue && c.points ? t('customers.CustomerDetail.worth_money', { money: money(c.points * pointValue, '₹', true) }) : undefined} />
       </View>
 
       <Card style={{ gap: 8 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text variant="smallStrong">{c.tier} member</Text>
-          <Text variant="small" tone="muted">{progress.next ? `${progress.needed} points to ${progress.next}` : 'Top tier'}</Text>
+          <Text variant="smallStrong">{c.tier} {t('customers.CustomerDetail.member')}</Text>
+          <Text variant="small" tone="muted">{progress.next ? t('customers.CustomerDetail.needed_points_to_next', { needed: progress.needed, next: progress.next }) : t('customers.CustomerDetail.top_tier')}</Text>
         </View>
         <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surfaceSunken, overflow: 'hidden' }} accessibilityRole="progressbar"
           accessibilityValue={{ min: 0, max: 100, now: Math.round(progress.pct * 100) }}>
           <View style={{ width: `${Math.round(progress.pct * 100)}%`, height: 6, backgroundColor: colors.accent }} />
         </View>
-        <Text variant="small" tone="subtle">Silver from 100 points, Gold from 500.{settings && !settings.loyalty_enabled ? ' Loyalty is off in Business settings.' : ''}</Text>
+        <Text variant="small" tone="subtle">{t('customers.CustomerDetail.silver_from_100_points_gold_from_500')}{settings && !settings.loyalty_enabled ? t('customers.CustomerDetail.loyalty_is_off_in_business_settings') : ''}</Text>
       </Card>
 
       <Card style={{ gap: 10 }}>
-        <Detail icon={c.marketing_opt_in ? 'mail' : 'mail-unread-outline'} label="Email offers"
+        <Detail icon={c.marketing_opt_in ? 'mail' : 'mail-unread-outline'} label={t('customers.CustomerDetail.email_offers')}
           value={c.marketing_opt_in
             ? c.email ? 'Agreed to receive offers by email' : 'Agreed, but no email address saved yet'
             : 'Not agreed — gets receipts and rewards only'} />
-        {c.last_visit_at ? <Detail icon="time-outline" label="Last visit" value={formatDateTime(c.last_visit_at)} /> : null}
-        {c.email ? <Detail icon="mail-outline" label="Email" value={c.email} /> : null}
-        {c.notes ? <Detail icon="document-text-outline" label="Notes" value={c.notes} /> : null}
+        {c.last_visit_at ? <Detail icon="time-outline" label={t('customers.CustomerDetail.last_visit')} value={formatDateTime(c.last_visit_at)} /> : null}
+        {c.email ? <Detail icon="mail-outline" label={t('common.email')} value={c.email} /> : null}
+        {c.notes ? <Detail icon="document-text-outline" label={t('customers.CustomerDetail.notes')} value={c.notes} /> : null}
       </Card>
 
       <View style={{ gap: 8 }}>
-        <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>Order history</Text>
+        <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>{t('customers.CustomerDetail.order_history')}</Text>
         {loading && !data ? <Loading /> : null}
         {error && !data ? <ErrorState message={error} onRetry={reload} /> : null}
         {data && data.orders.length === 0 ? (
-          <Card><Text tone="muted" align="center">No bills yet. Bills appear here when this phone number is added at checkout.</Text></Card>
+          <Card><Text tone="muted" align="center">{t('customers.CustomerDetail.no_bills_yet_bills_appear_here_when_this')}</Text></Card>
         ) : null}
         {data && data.orders.length > 0 ? (
           <Card padded={false}>
@@ -114,16 +116,16 @@ export function CustomerDetail({ customer, onEdit, canEdit, compactHeader }: { c
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text variant="smallStrong" numberOfLines={1}>{o.invoice_no ?? `#${o.code}`}</Text>
                   <Text variant="small" tone="muted" numberOfLines={1}>
-                    {formatDate(o.created_at)} · {o.channel !== 'POS' ? CHANNEL_LABEL[o.channel] ?? o.channel : ORDER_TYPE_LABEL[o.type] ?? o.type}
+                    {formatDate(o.created_at)} · {o.channel !== 'POS' ? CHANNEL_UI[o.channel] ?? o.channel : ORDER_TYPE_UI[o.type] ?? o.type}
                   </Text>
                 </View>
-                {o.status !== 'completed' ? <Badge label={o.status === 'open' ? 'Open' : o.status === 'placed' ? 'New' : 'Cancelled'} tone={STATUS_TONE[o.status] ?? 'neutral'} /> : null}
+                {o.status !== 'completed' ? <Badge label={o.status === 'open' ? t('common.open') : o.status === 'placed' ? t('common.new') : t('common.cancelled')} tone={STATUS_TONE[o.status] ?? 'neutral'} /> : null}
                 <Text variant="money" style={o.status === 'cancelled' ? { textDecorationLine: 'line-through', color: colors.textSubtle } : undefined}>{money(o.total_amount)}</Text>
               </View>
             ))}
           </Card>
         ) : null}
-        {data && data.orders.length >= 50 ? <Text variant="small" tone="subtle">Showing the latest 50 bills.</Text> : null}
+        {data && data.orders.length >= 50 ? <Text variant="small" tone="subtle">{t('customers.CustomerDetail.showing_the_latest_50_bills')}</Text> : null}
       </View>
     </View>
   );

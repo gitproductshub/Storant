@@ -21,16 +21,17 @@ import {
 } from './bulk';
 import type { BulkProductsBody } from '@/api/endpoints';
 import { plural } from './utils';
+import { t as tr } from '@/i18n';
 
 export type BulkKind = 'price' | 'tax' | 'category' | 'channel' | 'remove' | 'restore';
 
 const TITLES: Record<BulkKind, string> = {
-  price: 'Change prices',
-  tax: 'Set tax class',
-  category: 'Move to category',
-  channel: 'Show or hide on a menu',
-  remove: 'Remove from the menu',
-  restore: 'Bring back to the menu',
+  get price() { return tr('catalog.BulkEditSheet.change_prices'); },
+  get tax() { return tr('catalog.BulkEditSheet.set_tax_class'); },
+  get category() { return tr('catalog.BulkEditSheet.move_to_category'); },
+  get channel() { return tr('catalog.BulkEditSheet.show_or_hide_on_a_menu'); },
+  get remove() { return tr('catalog.BulkEditSheet.remove_from_the_menu'); },
+  get restore() { return tr('catalog.BulkEditSheet.bring_back_to_the_menu'); },
 };
 
 interface Failure { product: Product; error: string }
@@ -87,7 +88,7 @@ export function BulkEditSheet({ kind, products, categories, channels, symbol, on
   const plans = useMemo(() => (op ? products.map((p) => ({ product: p, plan: planPrice(p, op) })) : []), [products, op]);
   const priceChanges = plans.filter((x) => x.plan.body).length;
 
-  const channelChoices = [{ code: 'POS', label: 'Counter (billing)' }, ...channels.map((c) => ({ code: c.code, label: channelShortName(c) }))];
+  const channelChoices = [{ code: 'POS', label: tr('catalog.BulkEditSheet.counter_billing') }, ...channels.map((c) => ({ code: c.code, label: channelShortName(c) }))];
   const channelLabel = channelChoices.find((c) => c.code === channelCode)?.label ?? channelCode;
 
   /**
@@ -134,7 +135,7 @@ export function BulkEditSheet({ kind, products, categories, channels, symbol, on
   const run = async (list: Product[]) => {
     setError(null);
     if (kind === 'price' && !op) {
-      setError(parsed && 'error' in parsed ? parsed.error : 'Enter a value.');
+      setError(parsed && 'error' in parsed ? parsed.error : tr('catalog.BulkEditSheet.enter_a_value'));
       return;
     }
     stop.current = { cancelled: false };
@@ -174,7 +175,7 @@ export function BulkEditSheet({ kind, products, categories, channels, symbol, on
     // 1. The bulk endpoint, a chunk at a time (one transaction each)
     for (const part of body ? chunk(bulkRows, BULK_CHUNK) : []) {
       if (stop.current.cancelled) {
-        part.forEach((x) => failed.push({ product: x.p, error: 'Stopped' }));
+        part.forEach((x) => failed.push({ product: x.p, error: tr('catalog.BulkEditSheet.stopped') }));
       } else {
         try {
           const r = await catalogApi.bulkProducts({ ...body!, product_ids: part.map((x) => x.p.id) });
@@ -220,24 +221,24 @@ export function BulkEditSheet({ kind, products, categories, channels, symbol, on
   const formFooter = (
     <View style={styles.footer}>
       <Text variant="small" tone="muted" style={{ flex: 1, minWidth: 140 }}>
-        {kind === 'price' ? (op ? `${plural(priceChanges, 'item')} will change` : 'Enter a value to preview') : `${plural(n, 'item')} selected`}
+        {kind === 'price' ? (op ? tr('catalog.BulkEditSheet.plural_will_change', { plural: plural(priceChanges, 'item') }) : tr('catalog.BulkEditSheet.enter_a_value_to_preview')) : tr('catalog.BulkEditSheet.plural_selected', { plural: plural(n, 'item') })}
       </Text>
-      {isPhone ? null : <Button title="Cancel" variant="outline" onPress={onClose} />}
+      {isPhone ? null : <Button title={tr('common.cancel')} variant="outline" onPress={onClose} />}
       <Button title={applyLabel} icon={kind === 'remove' ? 'trash-outline' : 'checkmark'} variant={kind === 'remove' ? 'danger' : 'primary'}
         onPress={() => void run(products)} disabled={(kind === 'price' && (!op || !priceChanges)) || (kind === 'tax' && !tax && !taxError)} />
     </View>
   );
   const runningFooter = (
     <View style={styles.footer}>
-      <Text variant="small" tone="muted" style={{ flex: 1 }}>Saving {progress.done} of {progress.total}…</Text>
-      <Button title="Stop" variant="outline" onPress={() => { stop.current.cancelled = true; }} />
+      <Text variant="small" tone="muted" style={{ flex: 1 }}>{tr('catalog.BulkEditSheet.saving_done_of_total', { done: progress.done, total: progress.total })}</Text>
+      <Button title={tr('catalog.BulkEditSheet.stop')} variant="outline" onPress={() => { stop.current.cancelled = true; }} />
     </View>
   );
   const resultFooter = (
     <View style={styles.footer}>
       <View style={{ flex: 1 }} />
-      {failures.length ? <Button title={`Retry ${failures.length} failed`} icon="refresh" variant="outline" onPress={() => void run(failures.map((f) => f.product))} /> : null}
-      <Button title="Done" icon="checkmark" onPress={onClose} />
+      {failures.length ? <Button title={tr('catalog.BulkEditSheet.retry_length_failed', { length: failures.length })} icon="refresh" variant="outline" onPress={() => void run(failures.map((f) => f.product))} /> : null}
+      <Button title={tr('common.done')} icon="checkmark" onPress={onClose} />
     </View>
   );
 
@@ -251,17 +252,17 @@ export function BulkEditSheet({ kind, products, categories, channels, symbol, on
           {kind === 'price' ? (
             <>
               <Segmented<PriceOp['mode']> value={mode} onChange={(v) => { setMode(v); setError(null); }} options={[
-                { value: 'percent', label: isPhone ? '± %' : 'Change by %' },
-                { value: 'amount', label: isPhone ? `± ${symbol}` : `Change by ${symbol}` },
-                { value: 'set', label: isPhone ? 'Set price' : 'Set one price' },
+                { value: 'percent', label: isPhone ? '± %' : tr('catalog.BulkEditSheet.change_by') },
+                { value: 'amount', label: isPhone ? `± ${symbol}` : tr('catalog.BulkEditSheet.change_by_symbol', { symbol }) },
+                { value: 'set', label: isPhone ? tr('catalog.BulkEditSheet.set_price') : tr('catalog.BulkEditSheet.set_one_price') },
               ]} />
-              <Input autoFocus label={mode === 'set' ? 'New counter price' : mode === 'percent' ? 'Change (%) — use − to lower' : `Change (${symbol}) — use − to lower`}
+              <Input autoFocus label={mode === 'set' ? tr('catalog.BulkEditSheet.new_counter_price') : mode === 'percent' ? tr('catalog.BulkEditSheet.change_use_to_lower') : tr('catalog.BulkEditSheet.change_symbol_use_to_lower', { symbol })}
                 prefix={mode === 'percent' ? undefined : symbol} keyboardType="numbers-and-punctuation" value={amount} maxLength={10}
-                placeholder={mode === 'percent' ? 'e.g. 5 or -10' : mode === 'amount' ? 'e.g. 10 or -5' : '0'}
+                placeholder={mode === 'percent' ? tr('catalog.BulkEditSheet.e_g_5_or_10') : mode === 'amount' ? tr('catalog.BulkEditSheet.e_g_10_or_5') : '0'}
                 onChangeText={(t) => { setAmount(t.replace(/[^\d.-]/g, '')); setError(null); }} error={error}
                 onSubmitEditing={() => void run(products)} />
-              {mode === 'percent' ? <SwitchRow title="Round to whole rupees" subtitle="Apps and menus list whole-rupee prices" value={round} onValueChange={setRound} /> : null}
-              <Text variant="small" tone="subtle">Items with options (Half / Full) change every option. Delivery-app prices you set by hand are not touched.</Text>
+              {mode === 'percent' ? <SwitchRow title={tr('catalog.BulkEditSheet.round_to_whole_rupees')} subtitle={tr('catalog.BulkEditSheet.apps_and_menus_list_whole_rupee_prices')} value={round} onValueChange={setRound} /> : null}
+              <Text variant="small" tone="subtle">{tr('catalog.BulkEditSheet.items_with_options_half_full_change_every')}</Text>
               {op ? (
                 <View style={[styles.preview, { borderColor: colors.border }]}>
                   {plans.slice(0, 6).map(({ product, plan }) => (
@@ -272,55 +273,55 @@ export function BulkEditSheet({ kind, products, categories, channels, symbol, on
                       <Text variant="smallStrong" tone={plan.body ? 'primary' : 'muted'} style={styles.num}>{money(plan.after, symbol)}</Text>
                     </View>
                   ))}
-                  {plans.length > 6 ? <Text variant="caption" tone="subtle" style={{ padding: 8 }}>and {plans.length - 6} more</Text> : null}
+                  {plans.length > 6 ? <Text variant="caption" tone="subtle" style={{ padding: 8 }}>{tr('catalog.BulkEditSheet.and')} {plans.length - 6} {tr('catalog.BulkEditSheet.more')}</Text> : null}
                 </View>
               ) : null}
             </>
           ) : null}
 
           {kind === 'tax' ? (
-            <Field label="GST / tax class" hint={taxError ? `Couldn't load tax classes (${taxError}).` : 'Applies now and to future rate changes of that class. Saved in each item’s history.'}>
+            <Field label={tr('catalog.BulkEditSheet.gst_tax_class')} hint={taxError ? tr('catalog.BulkEditSheet.couldn_t_load_tax_classes_taxerror', { taxError }) : tr('catalog.BulkEditSheet.applies_now_and_to_future_rate_changes_of')}>
               {tax ? (
                 <ChoiceChips<string> value={taxClass} onChange={setTaxClass} options={[
-                  { value: '', label: 'Business default' },
+                  { value: '', label: tr('catalog.BulkEditSheet.business_default') },
                   ...tax.classes.filter((c) => c.is_active).map((c) => ({ value: c.id, label: `${c.name} · ${formatRate(c.current_rate)}%` })),
                 ]} />
-              ) : !taxError ? <Text tone="muted">Loading tax classes…</Text> : null}
+              ) : !taxError ? <Text tone="muted">{tr('catalog.BulkEditSheet.loading_tax_classes')}</Text> : null}
             </Field>
           ) : null}
 
           {kind === 'category' ? (
-            <Field label="Move to">
+            <Field label={tr('catalog.BulkEditSheet.move_to')}>
               <ChoiceChips<string | null> value={categoryId} onChange={setCategoryId}
-                options={[...categories.map((c) => ({ value: c.id as string | null, label: c.name })), { value: null, label: 'No category' }]} />
+                options={[...categories.map((c) => ({ value: c.id as string | null, label: c.name })), { value: null, label: tr('common.no_category') }]} />
             </Field>
           ) : null}
 
           {kind === 'channel' ? (
             <>
-              <Field label="Menu">
+              <Field label={tr('catalog.BulkEditSheet.menu')}>
                 <ChoiceChips<string> value={channelCode} onChange={setChannelCode} options={channelChoices.map((c) => ({ value: c.code, label: c.label }))} />
               </Field>
               <Segmented<'hide' | 'show'> value={show ? 'show' : 'hide'} onChange={(v) => setShow(v === 'show')} options={[
-                { value: 'hide', label: `Hide on ${channelLabel}`, icon: 'eye-off-outline' },
-                { value: 'show', label: `Show on ${channelLabel}`, icon: 'eye-outline' },
+                { value: 'hide', label: tr('catalog.BulkEditSheet.hide_on_channellabel', { channelLabel }), icon: 'eye-off-outline' },
+                { value: 'show', label: tr('catalog.BulkEditSheet.show_on_channellabel', { channelLabel }), icon: 'eye-outline' },
               ]} />
-              <Text variant="small" tone="subtle">Prices you set for {channelLabel} are kept, so showing an item again restores them.</Text>
+              <Text variant="small" tone="subtle">{tr('catalog.BulkEditSheet.prices_you_set_for_channellabel_are_kept', { channelLabel })}</Text>
             </>
           ) : null}
 
           {kind === 'remove' ? (
             <Text tone="muted">
-              The selected items disappear from billing and every online menu. Past bills keep them and nothing is deleted: bring them back any time from “Removed”.
+              {tr('catalog.BulkEditSheet.the_selected_items_disappear_from_billing')}
             </Text>
           ) : null}
-          {kind === 'restore' ? <Text tone="muted">The selected items go back on billing and the menus they were on before.</Text> : null}
+          {kind === 'restore' ? <Text tone="muted">{tr('catalog.BulkEditSheet.the_selected_items_go_back_on_billing_and')}</Text> : null}
         </>
       ) : (
         <View style={{ gap: 14 }}>
           <View style={{ gap: 8 }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: progress.total, now: progress.done }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text variant="bodyStrong">{phase === 'running' ? 'Saving…' : resultLine(okCount, failures.length, verb)}</Text>
+              <Text variant="bodyStrong">{phase === 'running' ? tr('catalog.BulkEditSheet.saving') : resultLine(okCount, failures.length, verb)}</Text>
               <Text variant="small" tone="muted" style={styles.num}>{progress.done} / {progress.total}</Text>
             </View>
             <View style={[styles.track, { backgroundColor: colors.surfaceSunken }]}>
@@ -329,7 +330,7 @@ export function BulkEditSheet({ kind, products, categories, channels, symbol, on
           </View>
           {phase === 'result' && failures.length ? (
             <View style={{ gap: 8 }}>
-              <Text variant="smallStrong" tone="danger">Not saved ({failures.length})</Text>
+              <Text variant="smallStrong" tone="danger">{tr('catalog.BulkEditSheet.not_saved_length', { length: failures.length })}</Text>
               <ScrollView style={[styles.failures, { borderColor: colors.border }]} nestedScrollEnabled>
                 {failures.map((f) => (
                   <View key={f.product.id} style={[styles.previewRow, { borderBottomColor: colors.divider }]}>
@@ -341,11 +342,11 @@ export function BulkEditSheet({ kind, products, categories, channels, symbol, on
                   </View>
                 ))}
               </ScrollView>
-              <Text variant="small" tone="subtle">The rest were saved. Check your connection and retry the failed ones — they stay selected.</Text>
+              <Text variant="small" tone="subtle">{tr('catalog.BulkEditSheet.the_rest_were_saved_check_your_connection')}</Text>
             </View>
           ) : null}
           {phase === 'result' && !failures.length ? (
-            <Text tone="muted">{`All ${plural(targets.length, 'item')} done.`}</Text>
+            <Text tone="muted">{tr('catalog.BulkEditSheet.all_plural_done', { plural: plural(targets.length, 'item') })}</Text>
           ) : null}
         </View>
       )}

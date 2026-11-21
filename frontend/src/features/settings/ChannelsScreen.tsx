@@ -14,6 +14,8 @@ import { SettingsFrame } from './SettingsFrame';
 import { Callout, FieldRow, Hairline, apiBase, copyText, monoFont, SettingSwitch } from './components';
 import { fieldErrorsFrom } from './validation';
 import { ChannelMenuSheet } from '@/features/catalog/ChannelMenuSheet';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -35,8 +37,8 @@ export default function ChannelsScreen() {
   const role = useAuth((s) => s.session?.role ?? null);
   if (!can(role, 'manage')) {
     return (
-      <SettingsFrame active="channels" title="Sales channels">
-        <EmptyState icon="lock-closed-outline" title="Managers only" message="Ask the owner or a manager to change sales channels." />
+      <SettingsFrame active="channels" title={t('common.sales_channels')}>
+        <EmptyState icon="lock-closed-outline" title={t('common.managers_only')} message={t('settings.ChannelsScreen.ask_the_owner_or_a_manager_to_change')} />
       </SettingsFrame>
     );
   }
@@ -58,25 +60,25 @@ function ChannelsList() {
   const extras = (data ?? []).filter((c) => c.code !== 'POS' && !AGGREGATORS.includes(c.code) && !OWN.includes(c.code));
 
   return (
-    <SettingsFrame active="channels" title="Sales channels" subtitle="Where your orders come from. Turn on the ones you use so they show up in Billing and reports."
+    <SettingsFrame active="channels" title={t('common.sales_channels')} subtitle={t('settings.ChannelsScreen.where_your_orders_come_from_turn_on_the')}
       refreshing={refreshing} onRefresh={reload}>
-      {loading && !data ? <Loading label="Loading channels" /> : null}
+      {loading && !data ? <Loading label={t('settings.ChannelsScreen.loading_channels')} /> : null}
       {error && !data ? <ErrorState message={error} onRetry={reload} /> : null}
       {data ? (
         <>
-          <Callout tone="info" icon="information-circle" title="How delivery-app orders reach Tallyko">
-            Swiggy and Zomato only send orders automatically to their approved POS partners. Most shops type these orders in from the aggregator tablet: in Billing, pick the channel (e.g. Swiggy) before adding items, so prices, commission and reports are right. ONDC seller apps or a custom bridge can send orders straight in using the webhook under each channel's Integration section.
+          <Callout tone="info" icon="information-circle" title={t('settings.ChannelsScreen.how_delivery_app_orders_reach_brand', { brand: brand.name })}>
+            {t('settings.ChannelsScreen.swiggy_and_zomato_only_send_orders')}
           </Callout>
 
           <View style={{ gap: 12 }}>
-            <SectionTitle title="Delivery apps" />
+            <SectionTitle title={t('settings.ChannelsScreen.delivery_apps')} />
             {byCode(AGGREGATORS).map((c) => (
               <ChannelCard key={c.code} channel={c} onSaved={onSaved} isOwner={role === 'owner'} tenantId={tenantId} />
             ))}
           </View>
 
           <View style={{ gap: 12 }}>
-            <SectionTitle title="Your own channels" />
+            <SectionTitle title={t('settings.ChannelsScreen.your_own_channels')} />
             {byCode(OWN).map((c) => (
               <ChannelCard key={c.code} channel={c} onSaved={onSaved} isOwner={role === 'owner'} tenantId={tenantId} />
             ))}
@@ -139,7 +141,7 @@ function ChannelCard({ channel, onSaved, isOwner, tenantId }: { channel: SalesCh
     try {
       const saved = await adminApi.updateChannel(channel.code, { enabled });
       onSaved(saved);
-      toast.success(`${channel.name} turned ${enabled ? 'on' : 'off'}`);
+      toast.success(t('settings.ChannelsScreen.name_turned_v', { name: channel.name, v: enabled ? 'on' : 'off' }));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -161,7 +163,7 @@ function ChannelCard({ channel, onSaved, isOwner, tenantId }: { channel: SalesCh
       const saved = await adminApi.updateChannel(channel.code, body);
       onSaved(saved);
       setDraft(draftOf(saved));
-      toast.success(`${channel.name} saved`);
+      toast.success(t('common.name_saved', { name: channel.name }));
     } catch (e) {
       setServerErrors(fieldErrorsFrom(e));
       toast.error(errorMessage(e));
@@ -183,22 +185,22 @@ function ChannelCard({ channel, onSaved, isOwner, tenantId }: { channel: SalesCh
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <Text variant="h3">{channel.name}</Text>
-            <Badge label={channel.enabled ? 'On' : 'Off'} tone={channel.enabled ? 'success' : 'neutral'} />
+            <Badge label={channel.enabled ? t('common.on') : t('common.off')} tone={channel.enabled ? 'success' : 'neutral'} />
           </View>
           {meta.blurb ? <Text variant="small" tone="muted">{meta.blurb}</Text> : null}
         </View>
         {linked ? null : (
           <View style={{ alignItems: 'flex-end' }}>
-            <SwitchToggle value={channel.enabled} disabled={toggling} onChange={toggle} label={`${channel.name} enabled`} />
+            <SwitchToggle value={channel.enabled} disabled={toggling} onChange={toggle} label={t('settings.ChannelsScreen.name_enabled', { name: channel.name })} />
           </View>
         )}
       </View>
 
       {linked ? (
         <Callout tone="neutral" icon="link-outline"
-          action={<Button title="Open business settings" size="sm" variant="secondary" iconRight="arrow-forward"
+          action={<Button title={t('settings.ChannelsScreen.open_business_settings')} size="sm" variant="secondary" iconRight="arrow-forward"
             onPress={() => router.navigate('/settings/business?section=online' as Href)} />}>
-          {channel.code === 'ONLINE' ? 'Turn your online store on or off, and get its link and QR, in Business → Online ordering.' : 'Turn QR table ordering on or off in Business → Online ordering. Table QR codes are printed from Tables.'}
+          {channel.code === 'ONLINE' ? t('settings.ChannelsScreen.turn_your_online_store_on_or_off_and_get') : t('settings.ChannelsScreen.turn_qr_table_ordering_on_or_off_in')}
         </Callout>
       ) : null}
 
@@ -208,35 +210,35 @@ function ChannelCard({ channel, onSaved, isOwner, tenantId }: { channel: SalesCh
           {!linked ? (
             <>
               <FieldRow>
-                <Input label="Commission" value={draft.commission} onChangeText={(v) => setDraft((d) => ({ ...d, commission: v.replace(/[^\d.]/g, '') }))}
-                  keyboardType="decimal-pad" maxLength={5} error={errors.commission} hint="% the app keeps. Reports show your net earnings." right={<Suffix />} />
-                <Input label="Menu price markup" value={draft.markup} onChangeText={(v) => setDraft((d) => ({ ...d, markup: v.replace(/[^\d.-]/g, '') }))}
+                <Input label={t('settings.ChannelsScreen.commission')} value={draft.commission} onChangeText={(v) => setDraft((d) => ({ ...d, commission: v.replace(/[^\d.]/g, '') }))}
+                  keyboardType="decimal-pad" maxLength={5} error={errors.commission} hint={t('settings.ChannelsScreen.the_app_keeps_reports_show_your_net')} right={<Suffix />} />
+                <Input label={t('settings.ChannelsScreen.menu_price_markup')} value={draft.markup} onChangeText={(v) => setDraft((d) => ({ ...d, markup: v.replace(/[^\d.-]/g, '') }))}
                   keyboardType="numbers-and-punctuation" maxLength={5} error={errors.markup} hint={markupExample} right={<Suffix />} />
               </FieldRow>
               {isAggregator || channel.code === 'OTHER' ? (
-                <Input label={isAggregator ? `${channel.name} store / outlet ID` : 'Reference ID'} value={draft.storeId}
+                <Input label={isAggregator ? t('settings.ChannelsScreen.name_store_outlet_id', { name: channel.name }) : t('settings.ChannelsScreen.reference_id')} value={draft.storeId}
                   onChangeText={(v) => setDraft((d) => ({ ...d, storeId: v }))} maxLength={64} error={errors.storeId}
-                  hint={isAggregator ? 'Optional. Shown on orders so staff know which outlet listing they came from.' : 'Optional.'}
-                  autoCapitalize="none" autoCorrect={false} placeholder="Optional" />
+                  hint={isAggregator ? t('settings.ChannelsScreen.optional_shown_on_orders_so_staff_know') : t('settings.ChannelsScreen.optional')}
+                  autoCapitalize="none" autoCorrect={false} placeholder={t('common.optional')} />
               ) : null}
             </>
           ) : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Ionicons name="list-outline" size={18} color={colors.textMuted} />
             <View style={{ flex: 1, minWidth: 180 }}>
-              <Text variant="smallStrong">{`Menu on ${channel.name}`}</Text>
-              <Text variant="small" tone="muted">Items, prices and what is hidden here. Copy or export it to update the partner portal.</Text>
+              <Text variant="smallStrong">{t('settings.ChannelsScreen.menu_on_name', { name: channel.name })}</Text>
+              <Text variant="small" tone="muted">{t('settings.ChannelsScreen.items_prices_and_what_is_hidden_here_copy')}</Text>
             </View>
-            <Button title="View menu" icon="eye-outline" size="sm" variant="secondary" onPress={() => setMenuOpen(true)}
-              accessibilityLabel={`View the ${channel.name} menu`} />
+            <Button title={t('settings.ChannelsScreen.view_menu')} icon="eye-outline" size="sm" variant="secondary" onPress={() => setMenuOpen(true)}
+              accessibilityLabel={t('settings.ChannelsScreen.view_the_name_menu', { name: channel.name })} />
           </View>
-          <SettingSwitch title="Auto-accept orders"
-            subtitle={linked ? 'New orders go straight to the kitchen without someone tapping Accept.' : 'Orders received through the webhook go straight to the kitchen.'}
+          <SettingSwitch title={t('settings.ChannelsScreen.auto_accept_orders')}
+            subtitle={linked ? t('settings.ChannelsScreen.new_orders_go_straight_to_the_kitchen') : t('settings.ChannelsScreen.orders_received_through_the_webhook_go')}
             value={draft.autoAccept} onValueChange={(v) => setDraft((d) => ({ ...d, autoAccept: v }))} />
           {dirty ? (
             <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <Button title="Discard" variant="secondary" size="sm" onPress={() => { setDraft(base); setServerErrors({}); }} disabled={saving} />
-              <Button title="Save" size="sm" icon="checkmark" onPress={save} loading={saving} disabled={invalid} />
+              <Button title={t('common.discard')} variant="secondary" size="sm" onPress={() => { setDraft(base); setServerErrors({}); }} disabled={saving} />
+              <Button title={t('common.save')} size="sm" icon="checkmark" onPress={save} loading={saving} disabled={invalid} />
             </View>
           ) : null}
         </>
@@ -246,11 +248,11 @@ function ChannelCard({ channel, onSaved, isOwner, tenantId }: { channel: SalesCh
         <>
           <Hairline />
           <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }}
-            accessibilityLabel={`${open ? 'Hide' : 'Show'} ${channel.name} integration details`}
+            accessibilityLabel={t('settings.ChannelsScreen.v_name_integration_details', { v: open ? t('common.hide') : t('common.show'), name: channel.name })}
             style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
             <Ionicons name="code-slash-outline" size={18} color={colors.textMuted} />
-            <Text variant="smallStrong" style={{ flex: 1 }}>Integration (webhook)</Text>
-            <Text variant="small" tone="subtle">{isPhone ? '' : 'For ONDC seller apps and custom bridges'}</Text>
+            <Text variant="smallStrong" style={{ flex: 1 }}>{t('settings.ChannelsScreen.integration_webhook')}</Text>
+            <Text variant="small" tone="subtle">{isPhone ? '' : t('settings.ChannelsScreen.for_ondc_seller_apps_and_custom_bridges')}</Text>
             <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
           </Pressable>
           {open ? <Integration channel={channel} isOwner={isOwner} tenantId={tenantId} onSaved={onSaved} /> : null}
@@ -283,9 +285,9 @@ function Integration({ channel, isOwner, tenantId, onSaved }: { channel: SalesCh
 
   const rotate = async () => {
     const ok = await confirm({
-      title: 'Create a new secret?',
-      message: `The current ${channel.name} secret stops working immediately. Anything sending orders with it will be rejected until you update it there.`,
-      confirmLabel: 'Create new secret',
+      title: t('settings.ChannelsScreen.create_a_new_secret'),
+      message: t('settings.ChannelsScreen.the_current_name_secret_stops_working', { name: channel.name }),
+      confirmLabel: t('settings.ChannelsScreen.create_new_secret'),
       danger: true,
     });
     if (!ok) return;
@@ -294,7 +296,7 @@ function Integration({ channel, isOwner, tenantId, onSaved }: { channel: SalesCh
       const saved = await adminApi.rotateChannelSecret(channel.code);
       onSaved(saved);
       setReveal(true);
-      toast.success('New secret created. Update it in your integration.');
+      toast.success(t('settings.ChannelsScreen.new_secret_created_update_it_in_your'));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -308,33 +310,33 @@ function Integration({ channel, isOwner, tenantId, onSaved }: { channel: SalesCh
     <View style={{ gap: 14 }}>
       <Text variant="small" tone="muted">
         {AGGREGATORS.includes(channel.code) && channel.code !== 'ONDC'
-          ? `${channel.name} does not send orders to this URL by itself. It is for an approved integration partner or your own bridge that forwards ${channel.name} orders.`
-          : 'Your ONDC seller app, website or a small script can create orders here. Matching is by product id, SKU or exact item name.'}
+          ? t('settings.ChannelsScreen.name_does_not_send_orders_to_this_url_by', { name: channel.name })
+          : t('settings.ChannelsScreen.your_ondc_seller_app_website_or_a_small')}
       </Text>
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Webhook URL (POST, JSON)</Text>
+        <Text variant="smallStrong" tone="muted">{t('settings.ChannelsScreen.webhook_url_post_json')}</Text>
         <View style={[box, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
           <Text selectable style={{ flex: 1, fontFamily: monoFont, fontSize: 12.5, color: colors.text }}>{url}</Text>
-          <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel="Copy webhook URL" onPress={() => copyText(url, 'Webhook URL')} />
+          <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel={t('settings.ChannelsScreen.copy_webhook_url')} onPress={() => copyText(url, 'Webhook URL')} />
         </View>
       </View>
       <View style={{ gap: 6 }}>
-        <Text variant="smallStrong" tone="muted">Signing secret</Text>
+        <Text variant="smallStrong" tone="muted">{t('settings.ChannelsScreen.signing_secret')}</Text>
         <View style={[box, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-          <Text selectable={reveal} style={{ flex: 1, fontFamily: monoFont, fontSize: 12.5, color: colors.text }} numberOfLines={reveal ? 3 : 1}>{reveal ? secret || 'Not set' : masked}</Text>
-          <Button icon={reveal ? 'eye-off-outline' : 'eye-outline'} size="sm" variant="ghost" accessibilityLabel={reveal ? 'Hide secret' : 'Show secret'} onPress={() => setReveal((r) => !r)} disabled={!secret} />
-          <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel="Copy secret" onPress={() => copyText(secret, 'Secret')} disabled={!secret} />
+          <Text selectable={reveal} style={{ flex: 1, fontFamily: monoFont, fontSize: 12.5, color: colors.text }} numberOfLines={reveal ? 3 : 1}>{reveal ? secret || t('common.not_set') : masked}</Text>
+          <Button icon={reveal ? 'eye-off-outline' : 'eye-outline'} size="sm" variant="ghost" accessibilityLabel={reveal ? t('settings.ChannelsScreen.hide_secret') : t('settings.ChannelsScreen.show_secret')} onPress={() => setReveal((r) => !r)} disabled={!secret} />
+          <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel={t('settings.ChannelsScreen.copy_secret')} onPress={() => copyText(secret, 'Secret')} disabled={!secret} />
         </View>
         <Text variant="small" tone="subtle">
-          Sign each request: header <Text variant="small" style={{ fontFamily: monoFont }}>X-Tallyko-Signature</Text> = hex HMAC-SHA256 of the raw request body, using this secret. Keep it private.
+          {t('settings.ChannelsScreen.sign_each_request_header')} <Text variant="small" style={{ fontFamily: monoFont }}>{t('settings.ChannelsScreen.x_tallyko_signature')}</Text> {t('settings.ChannelsScreen.hex_hmac_sha256_of_the_raw_request_body')}
         </Text>
       </View>
       {isOwner ? (
-        <Button title="Create new secret" icon="refresh" variant="secondary" size="sm" onPress={rotate} loading={rotating} style={{ alignSelf: 'flex-start' }} />
+        <Button title={t('settings.ChannelsScreen.create_new_secret')} icon="refresh" variant="secondary" size="sm" onPress={rotate} loading={rotating} style={{ alignSelf: 'flex-start' }} />
       ) : (
-        <Text variant="small" tone="subtle">Only the owner can create a new secret.</Text>
+        <Text variant="small" tone="subtle">{t('settings.ChannelsScreen.only_the_owner_can_create_a_new_secret')}</Text>
       )}
-      {!channel.enabled ? <Callout tone="warning">{`${channel.name} is off, so orders sent to this URL are rejected. Turn it on above first.`}</Callout> : null}
+      {!channel.enabled ? <Callout tone="warning">{t('settings.ChannelsScreen.name_is_off_so_orders_sent_to_this_url', { name: channel.name })}</Callout> : null}
     </View>
   );
 }

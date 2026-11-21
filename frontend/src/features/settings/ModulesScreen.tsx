@@ -1,6 +1,6 @@
 /**
  * Modules & plan (owner only): what the business's plan includes, its limits, and switches to hide
- * modules the owner doesn't use. Modules outside the plan can't be turned on here ("Contact Tallyko to upgrade").
+ * modules the owner doesn't use. Modules outside the plan can't be turned on here ("Contact Storant to upgrade").
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Switch, View } from 'react-native';
@@ -15,6 +15,8 @@ import { useAuth } from '@/store/auth';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { SettingsFrame } from './SettingsFrame';
 import { Callout, SaveBar } from './components';
+import { brand } from '@/config/brand';
+import { t, currentLocale } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -40,16 +42,16 @@ const META: Record<string, { icon: IconName; blurb: string }> = {
 };
 
 const GROUPS: { title: string; keys: string[] }[] = [
-  { title: 'Selling', keys: ['tables', 'kitchen', 'online_orders', 'qr_ordering', 'online_store', 'brands'] },
-  { title: 'Customers & marketing', keys: ['customers', 'loyalty', 'offers', 'email'] },
-  { title: 'Back office', keys: ['inventory', 'reports', 'advanced_reports', 'menu_ocr', 'integrations'] },
-  { title: 'Team & control', keys: ['staff', 'custom_roles', 'audit_log'] },
+  { get title() { return t('settings.ModulesScreen.selling'); }, keys: ['tables', 'kitchen', 'online_orders', 'qr_ordering', 'online_store', 'brands'] },
+  { get title() { return t('settings.ModulesScreen.customers_marketing'); }, keys: ['customers', 'loyalty', 'offers', 'email'] },
+  { get title() { return t('settings.ModulesScreen.back_office'); }, keys: ['inventory', 'reports', 'advanced_reports', 'menu_ocr', 'integrations'] },
+  { get title() { return t('settings.ModulesScreen.team_control'); }, keys: ['staff', 'custom_roles', 'audit_log'] },
 ];
 
 const LIMITS: { key: string; label: string; icon: IconName }[] = [
-  { key: 'max_staff', label: 'Staff logins', icon: 'people-outline' },
-  { key: 'max_products', label: 'Menu items', icon: 'restaurant-outline' },
-  { key: 'max_locations', label: 'Branches', icon: 'business-outline' },
+  { key: 'max_staff', get label() { return t('common.staff_logins'); }, icon: 'people-outline' },
+  { key: 'max_products', get label() { return t('settings.ModulesScreen.menu_items'); }, icon: 'restaurant-outline' },
+  { key: 'max_locations', get label() { return t('settings.ModulesScreen.branches'); }, icon: 'business-outline' },
 ];
 
 /** Modules whose screens need another module (their permissions/endpoints are gated by it on the server). */
@@ -61,8 +63,8 @@ export default function ModulesScreen() {
   const isOwner = (access?.role ?? sessionRole) === 'owner';
   if (!isOwner) {
     return (
-      <SettingsFrame active="modules" title="Modules & plan">
-        <EmptyState icon="lock-closed-outline" title="Owner only" message="Only the owner can see the plan and choose which modules the business uses." />
+      <SettingsFrame active="modules" title={t('common.modules_plan')}>
+        <EmptyState icon="lock-closed-outline" title={t('settings.ModulesScreen.owner_only')} message={t('settings.ModulesScreen.only_the_owner_can_see_the_plan_and')} />
       </SettingsFrame>
     );
   }
@@ -92,7 +94,7 @@ function Modules() {
     const known = new Set(GROUPS.flatMap((g) => g.keys));
     const groups = GROUPS.map((g) => ({ title: g.title, modules: g.keys.map((k) => byKey.get(k)).filter((m): m is ModuleInfo => !!m) }));
     const other = (q.data?.modules ?? []).filter((m) => !known.has(m.key));
-    if (other.length) groups.push({ title: 'Other', modules: other });
+    if (other.length) groups.push({ title: t('common.other'), modules: other });
     return groups.filter((g) => g.modules.length);
   }, [byKey, q.data]);
 
@@ -113,7 +115,7 @@ function Modules() {
       const saved: ModulesInfo = await teamApi.updateModules([...hidden].filter((k) => byKey.get(k)?.in_plan));
       q.setData(saved);
       await useAccess.getState().refresh();
-      toast.success('Modules updated. The menu now shows only what you use.');
+      toast.success(t('settings.ModulesScreen.modules_updated_the_menu_now_shows_only'));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -124,15 +126,15 @@ function Modules() {
   return (
     <SettingsFrame
       active="modules"
-      title="Modules & plan"
-      subtitle="Your plan and the parts of Tallyko your business uses. Hide what you don't need to keep the app simple for your staff."
+      title={t('common.modules_plan')}
+      subtitle={t('settings.ModulesScreen.your_plan_and_the_parts_of_brand_your', { brand: brand.name })}
       onRefresh={q.reload}
       refreshing={q.refreshing}
       dirty={dirty}
       footer={<SaveBar visible={dirty} saving={saving} onSave={save} onDiscard={() => setHidden(new Set(serverHidden))} disabled={!online}
-        message={online ? 'You have unsaved module changes' : "You're offline. Connect to save."} />}
+        message={online ? t('settings.ModulesScreen.you_have_unsaved_module_changes') : t('settings.ModulesScreen.you_re_offline_connect_to_save')} />}
     >
-      {q.loading && !q.data ? <Loading label="Loading your plan" /> : null}
+      {q.loading && !q.data ? <Loading label={t('settings.ModulesScreen.loading_your_plan')} /> : null}
       {q.error && !q.data ? <ErrorState message={q.error} onRetry={q.reload} /> : null}
 
       {q.data ? (
@@ -140,7 +142,7 @@ function Modules() {
           <PlanCard data={q.data} usedCount={usedCount} inPlanCount={inPlan.length} missing={missing} />
 
           <Callout tone="neutral" icon="eye-off-outline">
-            Hiding a module removes its screens and buttons for everyone. Your data is kept, and you can turn it back on any time.
+            {t('settings.ModulesScreen.hiding_a_module_removes_its_screens_and')}
           </Callout>
 
           {grouped.map((g) => (
@@ -168,7 +170,7 @@ function Modules() {
 function PlanCard({ data, usedCount, inPlanCount, missing }: { data: ModulesInfo; usedCount: number; inPlanCount: number; missing: number }) {
   const { colors } = useTheme();
   const { isPhone } = useLayout();
-  const limitText = (v: number | null | undefined) => (v === null || v === undefined ? 'Unlimited' : v.toLocaleString('en-IN'));
+  const limitText = (v: number | null | undefined) => (v === null || v === undefined ? 'Unlimited' : v.toLocaleString(currentLocale()));
   return (
     <Card style={{ gap: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -176,10 +178,10 @@ function PlanCard({ data, usedCount, inPlanCount, missing }: { data: ModulesInfo
           <Ionicons name="ribbon-outline" size={22} color={colors.primarySoftText} />
         </View>
         <View style={{ flex: 1, minWidth: 160 }}>
-          <Text variant="small" tone="muted">Your plan</Text>
+          <Text variant="small" tone="muted">{t('settings.ModulesScreen.your_plan')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <Text variant="h2">{data.plan_name}</Text>
-            <Badge label={`${usedCount} of ${inPlanCount} modules in use`} tone="primary" />
+            <Badge label={t('settings.ModulesScreen.usedcount_of_inplancount_modules_in_use', { usedCount, inPlanCount })} tone="primary" />
           </View>
         </View>
       </View>
@@ -195,8 +197,8 @@ function PlanCard({ data, usedCount, inPlanCount, missing }: { data: ModulesInfo
         ))}
       </View>
       {missing ? (
-        <Callout tone="info" icon="sparkles-outline" title={`${missing} module${missing === 1 ? ' is' : 's are'} not in your plan`}>
-          Contact Tallyko to upgrade if you need them.
+        <Callout tone="info" icon="sparkles-outline" title={t('settings.ModulesScreen.missing_module_v_not_in_your_plan', { missing, v: missing === 1 ? t('common.is') : t('common.s_are') })}>
+          {t('settings.ModulesScreen.contact_brand_to_upgrade_if_you_need_them', { brand: brand.name })}
         </Callout>
       ) : null}
     </Card>
@@ -216,10 +218,10 @@ function ModuleRow({ module: m, first, on, onChange, disabled, note, compact }: 
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Text variant="bodyStrong" tone={m.in_plan ? 'default' : 'muted'}>{m.name}</Text>
-          {!m.in_plan ? <Badge label="Not in your plan" icon="lock-closed-outline" /> : null}
+          {!m.in_plan ? <Badge label={t('common.not_in_your_plan')} icon="lock-closed-outline" /> : null}
         </View>
         {meta?.blurb && !(compact && !m.in_plan) ? <Text variant="small" tone="muted">{meta.blurb}</Text> : null}
-        {!m.in_plan ? <Text variant="small" tone="subtle">Contact Tallyko to upgrade.</Text> : null}
+        {!m.in_plan ? <Text variant="small" tone="subtle">{t('settings.ModulesScreen.contact_brand_to_upgrade', { brand: brand.name })}</Text> : null}
         {note ? <Text variant="small" tone="warning">{note}</Text> : null}
       </View>
       <Switch
@@ -228,7 +230,7 @@ function ModuleRow({ module: m, first, on, onChange, disabled, note, compact }: 
         disabled={disabled || !m.in_plan}
         trackColor={{ true: colors.primary, false: colors.borderStrong }}
         thumbColor="#FFFFFF"
-        accessibilityLabel={m.in_plan ? `Use ${m.name}` : `${m.name}, not in your plan`}
+        accessibilityLabel={m.in_plan ? t('settings.ModulesScreen.use_name', { name: m.name }) : t('settings.ModulesScreen.name_not_in_your_plan', { name: m.name })}
       />
     </View>
   );

@@ -80,7 +80,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.validate_for_production()
-    logger.info(f"Tallyko API {settings.APP_VERSION} starting ({settings.ENVIRONMENT})")
+    logger.info(f"Storant API {settings.APP_VERSION} starting ({settings.ENVIRONMENT})")
     import asyncio
     from app.services.email.service import run_worker
     from app.services.subscription import run_scheduler
@@ -97,9 +97,9 @@ async def lifespan(app: FastAPI):
 from app.api import auth, catalog, orders, reports, kitchen, inventory, tables, crm, ai, sync, admin, public, integrations, access, platform, offers, email, taxes, subscription, owner
 
 app = FastAPI(
-    title="Tallyko POS API",
+    title="Storant POS API",
     version=settings.APP_VERSION,
-    description="Multi-tenant POS backend for Tallyko",
+    description="Multi-tenant POS backend for Storant",
     lifespan=lifespan,
     docs_url=None if settings.ENVIRONMENT == "production" else "/docs",
     redoc_url=None,

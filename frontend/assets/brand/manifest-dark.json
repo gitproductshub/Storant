@@ -1,0 +1,28 @@
+{
+  "name": "Storant",
+  "short_name": "Storant",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#130D26",
+  "theme_color": "#241443",
+  "icons": [
+    {
+      "src": "./storant-dark-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./storant-dark-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./storant-dark-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -18,6 +18,7 @@ import { Text } from './Text';
 import { Button, IconButton } from './Button';
 import { ShortcutHint } from './ShortcutHint';
 import { computePopoverPosition, nextEnabledIndex, type PopoverPosition, type Rect } from './popover';
+import { t } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -206,7 +207,7 @@ export function ActionMenu({
 
   const triggerNode = trigger
     ? trigger(open, { visible })
-    : <IconButton icon="ellipsis-horizontal" accessibilityLabel={title ?? 'More actions'} onPress={open} />;
+    : <IconButton icon="ellipsis-horizontal" accessibilityLabel={title ?? t('ui.ActionMenu.more_actions')} onPress={open} />;
 
   return (
     <>
@@ -224,7 +225,7 @@ export function ActionMenu({
         >
           {asSheet ? (
             <View style={[styles.sheetBackdrop, { backgroundColor: colors.overlay }]}>
-              <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close menu" />
+              <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel={t('ui.ActionMenu.close_menu')} />
               <View
                 accessibilityRole="menu"
                 accessibilityViewIsModal
@@ -237,7 +238,7 @@ export function ActionMenu({
                 {title ? <Text variant="h3" style={styles.sheetTitle} numberOfLines={1}>{title}</Text> : null}
                 <ScrollView contentContainerStyle={styles.sheetBody} bounces={false}>{renderRows(true)}</ScrollView>
                 <View style={styles.sheetFooter}>
-                  <Button title="Cancel" variant="secondary" onPress={close} full />
+                  <Button title={t('common.cancel')} variant="secondary" onPress={close} full />
                 </View>
               </View>
             </View>
@@ -246,7 +247,7 @@ export function ActionMenu({
               <Pressable
                 style={[StyleSheet.absoluteFill, Platform.OS === 'web' && ({ cursor: 'default' } as any)]}
                 onPress={close}
-                accessibilityLabel="Close menu"
+                accessibilityLabel={t('ui.ActionMenu.close_menu')}
               />
               {position ? (
                 <View

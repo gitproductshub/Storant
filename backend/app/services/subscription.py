@@ -30,7 +30,7 @@ DEFAULT_SETTINGS = {
     "grace_days": 0,
     "reminder_days": 7,
     "payment": {
-        "upi_id": "", "payee_name": "Tallyko", "bank_details": "", "support_phone": "", "support_email": "",
+        "upi_id": "", "payee_name": "Storant", "bank_details": "", "support_phone": "", "support_email": "",
         "instructions": "Pay by UPI or bank transfer, then send us the reference (UTR) number below. "
                         "Your account is switched on as soon as we confirm the payment.",
     },
@@ -38,7 +38,7 @@ DEFAULT_SETTINGS = {
 # "Development access": no expiry until the super admin removes it (internal testing, pilot shops while we build).
 DEVELOPMENT_UNTIL = datetime(2099, 12, 31)
 KIND_LABELS = {"trial": "Free demo", "paid": "Paid", "complimentary": "Complimentary", "development": "Development access"}
-LAPSED_MESSAGE = "Your Tallyko subscription has ended. Renew to continue — your data and any offline bills are safe."
+LAPSED_MESSAGE = "Your Storant subscription has ended. Renew to continue — your data and any offline bills are safe."
 
 # --- platform settings ---------------------------------------------------------------------------------------------
 

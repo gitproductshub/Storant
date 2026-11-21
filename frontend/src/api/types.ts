@@ -1,4 +1,4 @@
-// Shapes returned by the Tallyko API (backend/app/api/*). Money is in rupees as numbers.
+// Shapes returned by the Storant API (backend/app/api/*). Money is in rupees as numbers.
 
 export type Role = 'owner' | 'manager' | 'cashier' | 'waiter' | 'kitchen';
 export type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' | 'RETAIL_WALKIN';
@@ -13,7 +13,7 @@ export type PlatformRole = 'super_admin' | 'support';
 export interface AuthResponse {
   access_token: string;
   refresh_token: string;
-  /** "platform" = Tallyko super admin / support (no business, no orders) */
+  /** "platform" = Storant super admin / support (no business, no orders) */
   account_type?: AccountType;
   tenant_id: string | null;
   /** Business role key; built-in ones are typed, owners can also create custom roles */
@@ -21,7 +21,7 @@ export interface AuthResponse {
   platform_role?: PlatformRole | null;
   user: { id: string; email: string; full_name: string | null; role: Role | null; staff_id?: string | null } | null;
   business_name: string | null;
-  /** The business's Tallyko subscription at sign-in (null for platform logins) */
+  /** The business's Storant subscription at sign-in (null for platform logins) */
   subscription?: SubscriptionState | null;
 }
 

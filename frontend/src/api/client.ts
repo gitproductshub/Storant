@@ -27,7 +27,7 @@ export function isOffline(error: unknown): boolean {
   return error instanceof ApiError && error.network;
 }
 
-/** The business's Tallyko subscription has ended (HTTP 402): the app shows the renewal page. */
+/** The business's Storant subscription has ended (HTTP 402): the app shows the renewal page. */
 export function isPaymentRequired(error: unknown): boolean {
   return error instanceof ApiError && error.status === 402;
 }

@@ -7,6 +7,7 @@ import { fonts } from '@/theme/tokens';
 import { Text } from '@/components/ui';
 import { money } from '@/lib/format';
 import { hourLabel } from './range';
+import { t as tr } from '@/i18n';
 
 /** ₹950, ₹1.2k, ₹15k, ₹1.5L — Indian short form for axis labels. */
 export function shortMoney(v: number, symbol = '₹'): string {
@@ -75,15 +76,15 @@ export function HourlyChart({ hourly, symbol, height = 220 }: { hourly: number[]
           </Text>
         ) : peak !== null ? (
           <Text variant="small" tone="muted">
-            Busiest hour: <Text variant="smallStrong">{hourLabel(peak)} – {hourLabel((peak + 1) % 24)}</Text> · {money(hourly[peak], symbol, true)}
+            {tr('reports.charts.busiest_hour')} <Text variant="smallStrong">{hourLabel(peak)} – {hourLabel((peak + 1) % 24)}</Text> · {money(hourly[peak], symbol, true)}
           </Text>
         ) : (
-          <Text variant="small" tone="muted">No sales in this period</Text>
+          <Text variant="small" tone="muted">{tr('reports.charts.no_sales_in_this_period')}</Text>
         )}
-        <Text variant="caption" tone="subtle">{Platform.OS === 'web' ? 'Hover or tap a bar for details' : 'Tap a bar for details'}</Text>
+        <Text variant="caption" tone="subtle">{Platform.OS === 'web' ? tr('reports.charts.hover_or_tap_a_bar_for_details') : tr('reports.charts.tap_a_bar_for_details')}</Text>
       </View>
       <View onLayout={onLayout} style={{ height, width: '100%' }}
-        accessible accessibilityLabel={`Sales by hour chart. ${peak !== null ? `Busiest hour ${hourLabel(peak)} with ${money(hourly[peak], symbol, true)}.` : 'No sales.'}`}>
+        accessible accessibilityLabel={tr('reports.charts.sales_by_hour_chart_v', { v: peak !== null ? tr('reports.charts.busiest_hour_hourlabel_with_money', { hourLabel: hourLabel(peak), money: money(hourly[peak], symbol, true) }) : tr('reports.charts.no_sales') })}>
         {width > 0 ? (
           <>
             <Svg width={width} height={height}>
@@ -158,7 +159,7 @@ export function BarList({ data, symbol, emptyLabel = 'Nothing to show' }: { data
       {data.map((d) => {
         const pct = total > 0 ? (d.value / total) * 100 : 0;
         return (
-          <View key={d.key} style={{ gap: 6 }} accessible accessibilityLabel={`${d.label}: ${money(d.value, symbol)}, ${pct.toFixed(0)} percent${d.detail ? `, ${d.detail}` : ''}`}>
+          <View key={d.key} style={{ gap: 6 }} accessible accessibilityLabel={tr('reports.charts.label_money_tofixed_percent_v', { label: d.label, money: money(d.value, symbol), toFixed: pct.toFixed(0), v: d.detail ? `, ${d.detail}` : '' })}>
             <View style={styles.barHead}>
               <Text variant="smallStrong" style={{ flex: 1 }} numberOfLines={1}>{d.label}</Text>
               <Text variant="smallStrong" style={{ fontVariant: ['tabular-nums'] }}>{money(d.value, symbol, true)}</Text>

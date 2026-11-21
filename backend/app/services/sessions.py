@@ -24,7 +24,7 @@ def describe_device(user_agent: str | None) -> str:
     ua = user_agent or ""
     if not ua:
         return "Unknown device"
-    app = "Tallyko app" if ("okhttp" in ua.lower() or "expo" in ua.lower() or "tallyko" in ua.lower()) else None
+    app = "Storant app" if ("storant" in ua.lower() or "okhttp" in ua.lower() or "expo" in ua.lower() or "tallyko" in ua.lower()) else None
     os_name = next((name for pattern, name in ((r"Android", "Android"), (r"iPhone|iPad|iOS", "iPhone/iPad"), (r"Windows", "Windows"),
                                                (r"Mac OS X|Macintosh", "Mac"), (r"Linux", "Linux")) if re.search(pattern, ua)), "")
     browser = next((name for pattern, name in ((r"Edg/", "Edge"), (r"OPR/|Opera", "Opera"), (r"Chrome/", "Chrome"),

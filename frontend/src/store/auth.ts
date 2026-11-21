@@ -4,6 +4,8 @@ import { configureAuth } from '@/api/client';
 import type { AccountType, AuthResponse, BusinessType, PlatformRole, Role, SubscriptionState } from '@/api/types';
 import { secureStore } from '@/lib/storage';
 import { useSubscription } from '@/store/subscription';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 const SESSION_KEY = 'tallyko.session';
 
@@ -20,7 +22,7 @@ export interface Session {
   email: string | null;
   fullName: string | null;
   businessName: string | null;
-  /** The business's Tallyko subscription as last reported by the server (login, refresh, GET /subscription) */
+  /** The business's Storant subscription as last reported by the server (login, refresh, GET /subscription) */
   subscription?: SubscriptionState | null;
 }
 
@@ -72,14 +74,14 @@ function reasonFor(message: string | undefined, status?: number): SignOutReason 
   const lapsed = !!useSubscription.getState().current?.locked;
   if (message && SIGNED_OUT_BY_SERVER.test(message)) {
     return {
-      title: 'You were signed out by Tallyko',
+      title: t('app.auth.you_were_signed_out_by_brand', { brand: brand.name }),
       message: lapsed
-        ? 'Your subscription has ended. Sign in again to renew. Bills saved offline on this device are kept and sync after renewal.'
-        : 'This device was signed out by Tallyko, from another device or after a password change. Sign in again. Bills saved offline on this device are kept.',
+        ? t('app.auth.your_subscription_has_ended_sign_in_again')
+        : t('app.auth.this_device_was_signed_out_by_brand_from', { brand: brand.name }),
     };
   }
-  if (status && status !== 401 && message) return { title: 'You were signed out', message };
-  return { title: 'Your session ended', message: 'Please sign in again. Bills saved offline on this device are kept.' };
+  if (status && status !== 401 && message) return { title: t('app.auth.you_were_signed_out'), message };
+  return { title: t('app.auth.your_session_ended'), message: t('app.auth.please_sign_in_again_bills_saved_offline') };
 }
 
 export const useAuth = create<AuthState>()((set, get) => ({

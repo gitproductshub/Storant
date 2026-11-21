@@ -545,7 +545,7 @@ async def give_demo(business_id: uuid.UUID, data: DemoIn, user: PlatformUser = D
         if data.plan_key and await db.get(Plan, data.plan_key) is None:
             raise HTTPException(status_code=404, detail="Plan not found")
         result = await subs.start_trial(db, business_id, plan_key=data.plan_key, days=data.days, recorded_by=user.email,
-                                        note=data.note or f"{data.days}-day demo given by Tallyko")
+                                        note=data.note or f"{data.days}-day demo given by Storant")
         audit.record_platform(db, user, "subscription.demo", tenant_id=business_id, details={"days": data.days, "plan": data.plan_key})
         await db.commit()
     await _drop_tenant_cache(business_id)
@@ -717,7 +717,7 @@ async def business_sessions(business_id: uuid.UUID, include_ended: bool = False,
     return out
 
 class SignOutIn(BaseModel):
-    reason: str = Field("Signed out by Tallyko", min_length=2, max_length=120)
+    reason: str = Field("Signed out by Storant", min_length=2, max_length=120)
 
 @router.post("/businesses/{business_id}/sign-out")
 async def sign_out_business(business_id: uuid.UUID, data: SignOutIn, user: PlatformUser = Depends(require_super_admin)):
@@ -744,7 +744,7 @@ async def revoke_session(session_id: uuid.UUID, data: SignOutIn, user: PlatformU
 
 class PaymentSettings(BaseModel):
     upi_id: str = Field("", max_length=80)
-    payee_name: str = Field("Tallyko", max_length=80)
+    payee_name: str = Field("Storant", max_length=80)
     bank_details: str = Field("", max_length=400)
     support_phone: str = Field("", max_length=30)
     support_email: str = Field("", max_length=120)

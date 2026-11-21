@@ -18,6 +18,8 @@ import { SettingsFrame } from './SettingsFrame';
 import { Callout, ChoiceChips, FieldRow, FormSection, Hairline, SaveBar, copyText, webAppOrigin, shareText, SettingSwitch } from './components';
 import { fieldErrorsFrom, INVOICE_PREFIX_PATTERN, validateEmail, validateFssai, validatePhone, validateUpi } from './validation';
 import { buildQrPosterHtml, upiPayUrl } from './poster';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 interface Form {
   business_name: string;
@@ -44,10 +46,10 @@ interface Form {
 type FieldKey = keyof Form;
 
 const BUSINESS_TYPES: { value: BusinessType; label: string }[] = [
-  { value: 'restaurant', label: 'Restaurant' },
-  { value: 'cafe', label: 'Café' },
-  { value: 'cloud_kitchen', label: 'Cloud kitchen' },
-  { value: 'retail', label: 'Retail shop' },
+  { value: 'restaurant', get label() { return tr('common.restaurant'); } },
+  { value: 'cafe', get label() { return tr('common.caf'); } },
+  { value: 'cloud_kitchen', get label() { return tr('common.cloud_kitchen'); } },
+  { value: 'retail', get label() { return tr('common.retail_shop'); } },
 ];
 
 const GST_RATES = [0, 5, 12, 18, 28];
@@ -104,9 +106,9 @@ function toPayload(f: Form): Partial<BusinessSettings> {
 }
 
 const GST_REGISTRATIONS: { value: GstRegistration; label: string }[] = [
-  { value: 'regular', label: 'Regular GST' },
-  { value: 'composition', label: 'Composition' },
-  { value: 'unregistered', label: 'Not registered' },
+  { value: 'regular', get label() { return tr('settings.BusinessSettingsScreen.regular_gst'); } },
+  { value: 'composition', get label() { return tr('settings.BusinessSettingsScreen.composition'); } },
+  { value: 'unregistered', get label() { return tr('settings.BusinessSettingsScreen.not_registered'); } },
 ];
 
 const NEEDS_GSTIN = 'Enter your GSTIN to bill as a GST-registered business, or choose “Not registered”';
@@ -122,9 +124,9 @@ function gstinError(f: Form, initial: Form | null): string | undefined {
 
 function validate(f: Form, initial: Form | null): Partial<Record<FieldKey, string>> {
   const e: Partial<Record<FieldKey, string>> = {};
-  if (!f.business_name.trim()) e.business_name = 'Business name is required.';
-  else if (f.business_name.trim().length > 100) e.business_name = 'Use 100 characters or fewer.';
-  if (f.address.length > 300) e.address = 'Use 300 characters or fewer.';
+  if (!f.business_name.trim()) e.business_name = tr('settings.BusinessSettingsScreen.business_name_is_required');
+  else if (f.business_name.trim().length > 100) e.business_name = tr('settings.BusinessSettingsScreen.use_100_characters_or_fewer');
+  if (f.address.length > 300) e.address = tr('settings.BusinessSettingsScreen.use_300_characters_or_fewer');
   const phone = validatePhone(f.phone);
   if (phone) e.phone = phone;
   const email = validateEmail(f.email);
@@ -133,17 +135,17 @@ function validate(f: Form, initial: Form | null): Partial<Record<FieldKey, strin
   if (gstin) e.gstin = gstin;
   const fssai = validateFssai(f.fssai);
   if (fssai) e.fssai = fssai;
-  if (!f.invoice_prefix.trim()) e.invoice_prefix = 'Invoice prefix is required.';
-  else if (!INVOICE_PREFIX_PATTERN.test(f.invoice_prefix.trim())) e.invoice_prefix = 'Use 1 to 10 letters, numbers or dashes.';
-  if (f.receipt_footer.length > 300) e.receipt_footer = 'Use 300 characters or fewer.';
+  if (!f.invoice_prefix.trim()) e.invoice_prefix = tr('settings.BusinessSettingsScreen.invoice_prefix_is_required');
+  else if (!INVOICE_PREFIX_PATTERN.test(f.invoice_prefix.trim())) e.invoice_prefix = tr('settings.BusinessSettingsScreen.use_1_to_10_letters_numbers_or_dashes');
+  if (f.receipt_footer.length > 300) e.receipt_footer = tr('settings.BusinessSettingsScreen.use_300_characters_or_fewer');
   const upi = validateUpi(f.upi_id);
   if (upi) e.upi_id = upi;
   const pp = toNum(f.loyalty_points_per_100);
-  if (!Number.isFinite(pp) || pp < 0 || pp > 100 || !Number.isInteger(pp)) e.loyalty_points_per_100 = 'Use a whole number from 0 to 100.';
+  if (!Number.isFinite(pp) || pp < 0 || pp > 100 || !Number.isInteger(pp)) e.loyalty_points_per_100 = tr('settings.BusinessSettingsScreen.use_a_whole_number_from_0_to_100');
   const pv = toNum(f.loyalty_point_value);
-  if (!Number.isFinite(pv) || pv < 0 || pv > 100) e.loyalty_point_value = 'Use a value from 0 to 100.';
+  if (!Number.isFinite(pv) || pv < 0 || pv > 100) e.loyalty_point_value = tr('settings.BusinessSettingsScreen.use_a_value_from_0_to_100');
   const ls = toNum(f.low_stock_default);
-  if (!Number.isFinite(ls) || ls < 0 || ls > 100000 || !Number.isInteger(ls)) e.low_stock_default = 'Use a whole number from 0 to 100000.';
+  if (!Number.isFinite(ls) || ls < 0 || ls > 100000 || !Number.isInteger(ls)) e.low_stock_default = tr('settings.BusinessSettingsScreen.use_a_whole_number_from_0_to_100000');
   return e;
 }
 
@@ -154,8 +156,8 @@ export default function BusinessSettingsScreen() {
   const role = useAuth((s) => s.session?.role ?? null);
   if (!can(role, 'manage')) {
     return (
-      <SettingsFrame active="business" title="Business">
-        <EmptyState icon="lock-closed-outline" title="Managers only" message="Ask the owner or a manager to change business settings." />
+      <SettingsFrame active="business" title={tr('common.business')}>
+        <EmptyState icon="lock-closed-outline" title={tr('common.managers_only')} message={tr('settings.BusinessSettingsScreen.ask_the_owner_or_a_manager_to_change')} />
       </SettingsFrame>
     );
   }
@@ -230,10 +232,10 @@ function BusinessSettingsForm() {
 
   if (loading && !form) {
     // scrollRef is passed from the first render: react-native-web's ScrollView only reports its node to the ref it mounted with.
-    return <SettingsFrame active="business" title="Business" scrollRef={scrollRef}><Loading label="Loading business settings" /></SettingsFrame>;
+    return <SettingsFrame active="business" title={tr('common.business')} scrollRef={scrollRef}><Loading label={tr('settings.BusinessSettingsScreen.loading_business_settings')} /></SettingsFrame>;
   }
   if (!form || !initial) {
-    return <SettingsFrame active="business" title="Business" scrollRef={scrollRef}><ErrorState message={error ?? 'Could not load settings.'} onRetry={reload} /></SettingsFrame>;
+    return <SettingsFrame active="business" title={tr('common.business')} scrollRef={scrollRef}><ErrorState message={error ?? tr('settings.BusinessSettingsScreen.could_not_load_settings')} onRetry={reload} /></SettingsFrame>;
   }
 
   const set = <K extends FieldKey>(key: K, value: Form[K]) => {
@@ -249,7 +251,7 @@ function BusinessSettingsForm() {
   const save = async () => {
     setSubmitted(true);
     if (hasErrors) {
-      toast.error('Fix the highlighted fields before saving.');
+      toast.error(tr('settings.BusinessSettingsScreen.fix_the_highlighted_fields_before_saving'));
       const first = SECTION_KEYS.find((k) => sectionHasError(k, errors));
       if (first) {
         scrollToSection(first, true);
@@ -270,7 +272,7 @@ function BusinessSettingsForm() {
       setForm(f);
       setSubmitted(false);
       setTouched({});
-      toast.success('Business settings saved');
+      toast.success(tr('settings.BusinessSettingsScreen.business_settings_saved'));
       // Store / QR switches also flip the matching sales channels on the server.
       void syncNow();
     } catch (e) {
@@ -281,7 +283,7 @@ function BusinessSettingsForm() {
         scrollToSection('tax', true);
       }
       setServerErrors(fields);
-      toast.error(Object.keys(fields).length ? 'Some fields need attention.' : errorMessage(e));
+      toast.error(Object.keys(fields).length ? tr('settings.BusinessSettingsScreen.some_fields_need_attention') : errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -301,20 +303,20 @@ function BusinessSettingsForm() {
   const gstStatus: { tone: 'success' | 'warning' | 'neutral' | 'danger'; icon: 'receipt' | 'alert-circle' | 'document-text-outline'; title: string; body: string } =
     form.gst_registration === 'regular'
       ? charges
-        ? { tone: 'success', icon: 'receipt', title: 'GST is charged on your bills (Tax invoice)',
-            body: `Bills show your GSTIN and the GST for each rate.${gst.state ? ` Registered in ${gst.state}.` : ''}` }
+        ? { tone: 'success', icon: 'receipt', title: tr('settings.BusinessSettingsScreen.gst_is_charged_on_your_bills_tax_invoice'),
+            body: tr('settings.BusinessSettingsScreen.bills_show_your_gstin_and_the_gst_for', { v: gst.state ? tr('settings.BusinessSettingsScreen.registered_in_state', { state: gst.state }) : '' }) }
         : { tone: gstinCleared ? 'danger' : 'warning', icon: 'alert-circle',
-            title: gst.gstin ? 'No GST on bills — fix your GSTIN' : 'No GST on bills — add your GSTIN',
+            title: gst.gstin ? tr('settings.BusinessSettingsScreen.no_gst_on_bills_fix_your_gstin') : tr('settings.BusinessSettingsScreen.no_gst_on_bills_add_your_gstin'),
             body: gstinCleared
-              ? 'You removed the GSTIN. A regular GST business needs one. If you are not registered for GST, choose “Not registered” so bills become a Bill of Supply without GST.'
+              ? tr('settings.BusinessSettingsScreen.you_removed_the_gstin_a_regular_gst')
               : gst.gstin
-                ? 'GST is only charged once the GSTIN is correct. Check it on your GST certificate.'
-                : 'GST is only charged when a valid GSTIN is set. If you are not registered for GST, choose “Not registered”.' }
+                ? tr('settings.BusinessSettingsScreen.gst_is_only_charged_once_the_gstin_is')
+                : tr('settings.BusinessSettingsScreen.gst_is_only_charged_when_a_valid_gstin_is') }
       : form.gst_registration === 'composition'
-        ? { tone: 'neutral', icon: 'document-text-outline', title: 'Composition: Bill of Supply, no GST',
-            body: 'Composition dealers don’t collect GST from customers. Your GSTIN is still printed on the bill.' }
-        : { tone: 'neutral', icon: 'document-text-outline', title: 'Not registered: Bill of Supply, no GST',
-            body: 'Bills don’t add GST. Add your GSTIN and choose Regular GST once you register.' };
+        ? { tone: 'neutral', icon: 'document-text-outline', title: tr('settings.BusinessSettingsScreen.composition_bill_of_supply_no_gst'),
+            body: tr('settings.BusinessSettingsScreen.composition_dealers_don_t_collect_gst') }
+        : { tone: 'neutral', icon: 'document-text-outline', title: tr('settings.BusinessSettingsScreen.not_registered_bill_of_supply_no_gst'),
+            body: tr('settings.BusinessSettingsScreen.bills_don_t_add_gst_add_your_gstin_and') };
   const upiValid = !!form.upi_id.trim() && !validateUpi(form.upi_id);
   const storeUrl = `${webAppOrigin()}/store/${tenantId}`;
   const pp = toNum(form.loyalty_points_per_100);
@@ -327,11 +329,11 @@ function BusinessSettingsForm() {
     setPrinting(true);
     try {
       await printHtml(buildQrPosterHtml({
-        title: `${form.business_name} online store`,
-        heading: form.business_name || 'Order online',
+        title: tr('settings.BusinessSettingsScreen.business_name_online_store', { business_name: form.business_name }),
+        heading: form.business_name || tr('settings.BusinessSettingsScreen.order_online'),
         subheading: 'Scan to see the menu and order',
         url: storeUrl,
-        footer: 'Powered by Tallyko',
+        footer: tr('settings.BusinessSettingsScreen.powered_by_brand', { brand: brand.name }),
       }));
     } catch (e) {
       toast.error(printErrorMessage(e));
@@ -343,93 +345,93 @@ function BusinessSettingsForm() {
   return (
     <SettingsFrame
       active="business"
-      title="Business"
-      subtitle="Shown on bills, your online store and GST reports."
+      title={tr('common.business')}
+      subtitle={tr('settings.BusinessSettingsScreen.shown_on_bills_your_online_store_and_gst')}
       dirty={dirty}
       scrollRef={scrollRef}
       onBodyOffset={(y) => { bodyOffset.current = y; }}
       footer={<SaveBar visible={dirty} saving={saving} onSave={save} onDiscard={discard} />}
     >
       {submitted && hasErrors ? (
-        <Callout tone="danger" title="Some details need fixing">
-          {`${Object.keys(errors).length} field${Object.keys(errors).length === 1 ? '' : 's'} below ${Object.keys(errors).length === 1 ? 'has' : 'have'} a problem. They are marked in red.`}
+        <Callout tone="danger" title={tr('settings.BusinessSettingsScreen.some_details_need_fixing')}>
+          {tr('settings.BusinessSettingsScreen.length_field_v_below_v2_a_problem_they', { length: Object.keys(errors).length, v: Object.keys(errors).length === 1 ? '' : 's', v2: Object.keys(errors).length === 1 ? 'has' : 'have' })}
         </Callout>
       ) : null}
 
-      <FormSection title="Profile" description="Your shop's name and contact details, printed at the top of every bill." onLayout={onSectionLayout('profile')} nativeID="business-profile">
-        <Input label="Business name" required value={form.business_name} onChangeText={(v) => set('business_name', v)} onBlur={touch('business_name')}
-          error={err('business_name')} maxLength={100} placeholder="e.g. Sharma Tiffin Centre" />
+      <FormSection title={tr('settings.BusinessSettingsScreen.profile')} description={tr('settings.BusinessSettingsScreen.your_shop_s_name_and_contact_details')} onLayout={onSectionLayout('profile')} nativeID="business-profile">
+        <Input label={tr('common.business_name')} required value={form.business_name} onChangeText={(v) => set('business_name', v)} onBlur={touch('business_name')}
+          error={err('business_name')} maxLength={100} placeholder={tr('settings.BusinessSettingsScreen.e_g_sharma_tiffin_centre')} />
         <View style={{ gap: 6 }}>
-          <Text variant="smallStrong" tone="muted">Business type</Text>
-          <ChoiceChips value={form.business_type} options={BUSINESS_TYPES} onChange={(v) => set('business_type', v)} accessibilityLabel="Business type" />
-          <Text variant="small" tone="subtle">Retail shops hide tables and the kitchen screen.</Text>
+          <Text variant="smallStrong" tone="muted">{tr('settings.BusinessSettingsScreen.business_type')}</Text>
+          <ChoiceChips value={form.business_type} options={BUSINESS_TYPES} onChange={(v) => set('business_type', v)} accessibilityLabel={tr('settings.BusinessSettingsScreen.business_type')} />
+          <Text variant="small" tone="subtle">{tr('settings.BusinessSettingsScreen.retail_shops_hide_tables_and_the_kitchen')}</Text>
         </View>
-        <Input label="Address" value={form.address} onChangeText={(v) => set('address', v)} onBlur={touch('address')} error={err('address')}
-          multiline numberOfLines={2} maxLength={300} placeholder="Shop no, street, area, city, PIN" style={{ minHeight: 64, textAlignVertical: 'top' }} />
+        <Input label={tr('settings.BusinessSettingsScreen.address')} value={form.address} onChangeText={(v) => set('address', v)} onBlur={touch('address')} error={err('address')}
+          multiline numberOfLines={2} maxLength={300} placeholder={tr('settings.BusinessSettingsScreen.shop_no_street_area_city_pin')} style={{ minHeight: 64, textAlignVertical: 'top' }} />
         <FieldRow>
-          <Input label="Phone" value={form.phone} onChangeText={(v) => set('phone', v)} onBlur={touch('phone')} error={err('phone')}
+          <Input label={tr('common.phone')} value={form.phone} onChangeText={(v) => set('phone', v)} onBlur={touch('phone')} error={err('phone')}
             keyboardType="phone-pad" maxLength={20} placeholder="98765 43210" icon="call-outline" />
-          <Input label="Email" value={form.email} onChangeText={(v) => set('email', v)} onBlur={touch('email')} error={err('email')}
+          <Input label={tr('common.email')} value={form.email} onChangeText={(v) => set('email', v)} onBlur={touch('email')} error={err('email')}
             keyboardType="email-address" autoCapitalize="none" autoCorrect={false} placeholder="hello@yourshop.in" icon="mail-outline" />
         </FieldRow>
       </FormSection>
 
-      <FormSection title="GST & invoices" description="GST is added to bills only when you have a regular GST registration and a valid GSTIN." onLayout={onSectionLayout('tax')} nativeID="business-tax">
+      <FormSection title={tr('settings.BusinessSettingsScreen.gst_invoices')} description={tr('settings.BusinessSettingsScreen.gst_is_added_to_bills_only_when_you_have')} onLayout={onSectionLayout('tax')} nativeID="business-tax">
         <View style={{ gap: 6 }}>
-          <Text variant="smallStrong" tone="muted">GST registration</Text>
-          <ChoiceChips value={form.gst_registration} options={GST_REGISTRATIONS} onChange={(v) => set('gst_registration', v)} accessibilityLabel="GST registration" />
+          <Text variant="smallStrong" tone="muted">{tr('settings.BusinessSettingsScreen.gst_registration')}</Text>
+          <ChoiceChips value={form.gst_registration} options={GST_REGISTRATIONS} onChange={(v) => set('gst_registration', v)} accessibilityLabel={tr('settings.BusinessSettingsScreen.gst_registration')} />
         </View>
         <FieldRow>
-          <Input label="GSTIN" required={form.gst_registration !== 'unregistered'} value={form.gstin}
+          <Input label={tr('settings.BusinessSettingsScreen.gstin')} required={form.gst_registration !== 'unregistered'} value={form.gstin}
             onChangeText={(v) => set('gstin', v.toUpperCase().replace(/[^0-9A-Z]/g, ''))} onBlur={touch('gstin')}
             error={gstinErr}
-            hint={gst.ok ? `Valid GSTIN · ${gst.state}` : gst.gstin ? `${gst.gstin.length}/15 characters` : '15 characters, from your GST certificate'}
-            autoCapitalize="characters" autoCorrect={false} maxLength={15} placeholder="29ABCDE1234F1ZW"
+            hint={gst.ok ? tr('settings.BusinessSettingsScreen.valid_gstin_state', { state: gst.state }) : gst.gstin ? tr('settings.BusinessSettingsScreen.length_15_characters', { length: gst.gstin.length }) : tr('settings.BusinessSettingsScreen.15_characters_from_your_gst_certificate')}
+            autoCapitalize="characters" autoCorrect={false} maxLength={15} placeholder={tr('settings.BusinessSettingsScreen.29abcde1234f1zw')}
             icon={gst.ok ? 'checkmark-circle' : 'document-text-outline'} />
-          <Input label="FSSAI licence no." value={form.fssai} onChangeText={(v) => set('fssai', v.replace(/\s/g, ''))} onBlur={touch('fssai')}
-            error={err('fssai')} hint="14 digits. Required on bills for food businesses." keyboardType="number-pad" maxLength={14} placeholder="12345678901234" />
+          <Input label={tr('settings.BusinessSettingsScreen.fssai_licence_no')} value={form.fssai} onChangeText={(v) => set('fssai', v.replace(/\s/g, ''))} onBlur={touch('fssai')}
+            error={err('fssai')} hint={tr('settings.BusinessSettingsScreen.14_digits_required_on_bills_for_food')} keyboardType="number-pad" maxLength={14} placeholder="12345678901234" />
         </FieldRow>
-        <Callout tone={gstStatus.tone} icon={gstStatus.icon} title={`${gstStatus.title}${dirty && gstChanged && !errors.gstin ? ' (after you save)' : ''}`}
+        <Callout tone={gstStatus.tone} icon={gstStatus.icon} title={`${gstStatus.title}${dirty && gstChanged && !errors.gstin ? tr('settings.BusinessSettingsScreen.after_you_save') : ''}`}
           action={gstinCleared && form.gst_registration === 'regular'
-            ? <Button title="Choose “Not registered”" size="sm" variant="secondary" onPress={() => set('gst_registration', 'unregistered')} />
-            : <Button title="GST rates & tax classes" size="sm" variant="ghost" iconRight="arrow-forward" onPress={() => router.navigate('/settings/taxes' as Href)} />}>
+            ? <Button title={tr('settings.BusinessSettingsScreen.choose_not_registered')} size="sm" variant="secondary" onPress={() => set('gst_registration', 'unregistered')} />
+            : <Button title={tr('settings.BusinessSettingsScreen.gst_rates_tax_classes')} size="sm" variant="ghost" iconRight="arrow-forward" onPress={() => router.navigate('/settings/taxes' as Href)} />}>
           {gstStatus.body}
         </Callout>
         <Hairline />
-        <SettingSwitch title="Menu prices include GST" value={form.prices_include_tax} onValueChange={(v) => set('prices_include_tax', v)}
+        <SettingSwitch title={tr('settings.BusinessSettingsScreen.menu_prices_include_gst')} value={form.prices_include_tax} onValueChange={(v) => set('prices_include_tax', v)}
           subtitle={form.prices_include_tax
-            ? 'A ₹100 item costs the customer ₹100; GST is worked out from inside the price.'
-            : `A ₹100 item at ${form.default_tax_rate || 5}% GST costs the customer ₹${100 + (form.default_tax_rate || 5)}; GST is added on top.`} />
+            ? tr('settings.BusinessSettingsScreen.a_100_item_costs_the_customer_100_gst_is')
+            : tr('settings.BusinessSettingsScreen.a_100_item_at_v_gst_costs_the_customer_v2', { v: form.default_tax_rate || 5, v2: 100 + (form.default_tax_rate || 5) })} />
         <View style={{ gap: 6 }}>
-          <Text variant="smallStrong" tone="muted">Default GST rate</Text>
+          <Text variant="smallStrong" tone="muted">{tr('settings.BusinessSettingsScreen.default_gst_rate')}</Text>
           <ChoiceChips
             value={form.default_tax_rate}
             options={[...new Set([...GST_RATES, form.default_tax_rate])].sort((a, b) => a - b).map((r) => ({ value: r, label: `${r}%` }))}
             onChange={(v) => set('default_tax_rate', v)}
-            accessibilityLabel="Default GST rate"
+            accessibilityLabel={tr('settings.BusinessSettingsScreen.default_gst_rate')}
           />
-          <Text variant="small" tone="subtle">Used for items that don't have their own rate. Most restaurants and cafés charge 5%.</Text>
+          <Text variant="small" tone="subtle">{tr('settings.BusinessSettingsScreen.used_for_items_that_don_t_have_their_own')}</Text>
         </View>
         <Hairline />
         <FieldRow>
-          <Input label="Invoice prefix" required value={form.invoice_prefix} onChangeText={(v) => set('invoice_prefix', v.toUpperCase().replace(/\s/g, ''))}
-            onBlur={touch('invoice_prefix')} error={err('invoice_prefix')} hint="Printed before each bill number. Letters, numbers and dashes."
+          <Input label={tr('settings.BusinessSettingsScreen.invoice_prefix')} required value={form.invoice_prefix} onChangeText={(v) => set('invoice_prefix', v.toUpperCase().replace(/\s/g, ''))}
+            onBlur={touch('invoice_prefix')} error={err('invoice_prefix')} hint={tr('settings.BusinessSettingsScreen.printed_before_each_bill_number_letters')}
             autoCapitalize="characters" maxLength={10} placeholder="INV" />
           <View />
         </FieldRow>
-        <Input label="Bill footer" value={form.receipt_footer} onChangeText={(v) => set('receipt_footer', v)} onBlur={touch('receipt_footer')}
-          error={err('receipt_footer')} hint={`${form.receipt_footer.length}/300 · Printed at the bottom of every bill, above "Thank you! Visit again."`} multiline maxLength={300}
-          placeholder="e.g. Free home delivery within 3 km. Call 98765 43210" style={{ minHeight: 64, textAlignVertical: 'top' }} />
+        <Input label={tr('settings.BusinessSettingsScreen.bill_footer')} value={form.receipt_footer} onChangeText={(v) => set('receipt_footer', v)} onBlur={touch('receipt_footer')}
+          error={err('receipt_footer')} hint={tr('settings.BusinessSettingsScreen.length_300_printed_at_the_bottom_of_every', { length: form.receipt_footer.length })} multiline maxLength={300}
+          placeholder={tr('settings.BusinessSettingsScreen.e_g_free_home_delivery_within_3_km_call')} style={{ minHeight: 64, textAlignVertical: 'top' }} />
       </FormSection>
 
-      <FormSection title="Payments" description="Your UPI ID is printed as a QR code on bills so customers can pay from any UPI app." onLayout={onSectionLayout('payments')} nativeID="business-payments">
+      <FormSection title={tr('common.payments')} description={tr('settings.BusinessSettingsScreen.your_upi_id_is_printed_as_a_qr_code_on')} onLayout={onSectionLayout('payments')} nativeID="business-payments">
         <View style={{ flexDirection: isPhone ? 'column' : 'row', gap: 16, alignItems: isPhone ? 'stretch' : 'flex-start' }}>
           <View style={{ flex: 1, gap: 12 }}>
-            <Input label="UPI ID" value={form.upi_id} onChangeText={(v) => set('upi_id', v.trim())} onBlur={touch('upi_id')} error={err('upi_id')}
-              hint="Use the UPI ID of your business bank account or merchant app." autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
+            <Input label={tr('settings.BusinessSettingsScreen.upi_id')} value={form.upi_id} onChangeText={(v) => set('upi_id', v.trim())} onBlur={touch('upi_id')} error={err('upi_id')}
+              hint={tr('settings.BusinessSettingsScreen.use_the_upi_id_of_your_business_bank')} autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
               placeholder="yourshop@okaxis" icon="qr-code-outline" />
             {upiValid ? (
-              <Text variant="small" tone="muted">Scan the preview with any UPI app to check it opens a payment to {form.business_name || 'your shop'}. Don't complete the payment.</Text>
+              <Text variant="small" tone="muted">{tr('settings.BusinessSettingsScreen.scan_the_preview_with_any_upi_app_to')} {form.business_name || tr('settings.BusinessSettingsScreen.your_shop')}{tr('settings.BusinessSettingsScreen.don_t_complete_the_payment')}</Text>
             ) : null}
           </View>
           <View style={{ alignItems: 'center', gap: 6, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, minWidth: 180 }}>
@@ -438,26 +440,26 @@ function BusinessSettingsForm() {
                 <View style={{ borderRadius: 8, overflow: 'hidden' }}>
                   <QrCode value={upiPayUrl(form.upi_id, form.business_name)} size={140} margin={3} />
                 </View>
-                <Text variant="caption" tone="muted">Preview · {form.upi_id}</Text>
+                <Text variant="caption" tone="muted">{tr('settings.BusinessSettingsScreen.preview')} {form.upi_id}</Text>
               </>
             ) : (
               <View style={{ width: 152, height: 152, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Text variant="small" tone="subtle" align="center">{form.upi_id ? 'Fix the UPI ID to see the QR' : 'QR preview appears here'}</Text>
+                <Text variant="small" tone="subtle" align="center">{form.upi_id ? tr('settings.BusinessSettingsScreen.fix_the_upi_id_to_see_the_qr') : tr('settings.BusinessSettingsScreen.qr_preview_appears_here')}</Text>
               </View>
             )}
           </View>
         </View>
       </FormSection>
 
-      <FormSection title="Loyalty" description="Reward regulars with points they can redeem on a later bill. Customers are saved when a phone number is added to a bill." onLayout={onSectionLayout('loyalty')} nativeID="business-loyalty">
-        <SettingSwitch title="Loyalty points" subtitle={form.loyalty_enabled ? 'Customers earn points on every paid bill.' : 'Turned off. No points are given or redeemed.'}
+      <FormSection title={tr('common.loyalty')} description={tr('settings.BusinessSettingsScreen.reward_regulars_with_points_they_can')} onLayout={onSectionLayout('loyalty')} nativeID="business-loyalty">
+        <SettingSwitch title={tr('common.loyalty_points')} subtitle={form.loyalty_enabled ? tr('settings.BusinessSettingsScreen.customers_earn_points_on_every_paid_bill') : tr('settings.BusinessSettingsScreen.turned_off_no_points_are_given_or_redeemed')}
           value={form.loyalty_enabled} onValueChange={(v) => set('loyalty_enabled', v)} />
         {form.loyalty_enabled ? (
           <>
             <FieldRow>
-              <Input label="Points per ₹100 spent" value={form.loyalty_points_per_100} onChangeText={(v) => set('loyalty_points_per_100', v.replace(/[^\d]/g, ''))}
+              <Input label={tr('settings.BusinessSettingsScreen.points_per_100_spent')} value={form.loyalty_points_per_100} onChangeText={(v) => set('loyalty_points_per_100', v.replace(/[^\d]/g, ''))}
                 onBlur={touch('loyalty_points_per_100')} error={err('loyalty_points_per_100')} keyboardType="number-pad" maxLength={3} placeholder="1" />
-              <Input label="Value of 1 point" prefix="₹" value={form.loyalty_point_value} onChangeText={(v) => set('loyalty_point_value', v.replace(/[^\d.]/g, ''))}
+              <Input label={tr('settings.BusinessSettingsScreen.value_of_1_point')} prefix="₹" value={form.loyalty_point_value} onChangeText={(v) => set('loyalty_point_value', v.replace(/[^\d.]/g, ''))}
                 onBlur={touch('loyalty_point_value')} error={err('loyalty_point_value')} keyboardType="decimal-pad" maxLength={6} placeholder="1" />
             </FieldRow>
             <Callout tone="neutral" icon="gift-outline">{loyaltyExample}</Callout>
@@ -465,10 +467,10 @@ function BusinessSettingsForm() {
         ) : null}
       </FormSection>
 
-      <FormSection title="Online ordering" description="Let customers order from their phone. Orders arrive in Online orders and the kitchen." onLayout={onSectionLayout('online')} nativeID="business-online">
-        <SettingSwitch title="Own online store" subtitle="A menu page customers can order from for takeaway or delivery. No commission."
+      <FormSection title={tr('settings.BusinessSettingsScreen.online_ordering')} description={tr('settings.BusinessSettingsScreen.let_customers_order_from_their_phone')} onLayout={onSectionLayout('online')} nativeID="business-online">
+        <SettingSwitch title={tr('settings.BusinessSettingsScreen.own_online_store')} subtitle={tr('settings.BusinessSettingsScreen.a_menu_page_customers_can_order_from_for')}
           value={form.store_enabled} onValueChange={(v) => set('store_enabled', v)} />
-        <SettingSwitch title="QR table ordering" subtitle="Guests scan the QR on their table and order without waiting. Print table QRs from Tables."
+        <SettingSwitch title={tr('common.qr_table_ordering')} subtitle={tr('settings.BusinessSettingsScreen.guests_scan_the_qr_on_their_table_and')}
           value={form.qr_ordering_enabled} onValueChange={(v) => set('qr_ordering_enabled', v)} />
         {form.store_enabled || initial.store_enabled ? (
           <>
@@ -476,17 +478,17 @@ function BusinessSettingsForm() {
             <View style={{ flexDirection: isPhone ? 'column' : 'row', gap: 16, alignItems: isPhone ? 'stretch' : 'center' }}>
               <View style={{ flex: 1, gap: 8, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text variant="smallStrong" tone="muted">Store link</Text>
-                  {initial.store_enabled ? <Badge label="Live" tone="success" icon="radio-button-on" /> : <Badge label="Save to go live" tone="warning" />}
+                  <Text variant="smallStrong" tone="muted">{tr('settings.BusinessSettingsScreen.store_link')}</Text>
+                  {initial.store_enabled ? <Badge label={tr('common.live')} tone="success" icon="radio-button-on" /> : <Badge label={tr('settings.BusinessSettingsScreen.save_to_go_live')} tone="warning" />}
                 </View>
                 <Text selectable variant="bodyStrong" style={{ fontFamily: Platform.select({ web: 'ui-monospace, Menlo, Consolas, monospace', ios: 'Menlo', default: 'monospace' }), fontSize: 13 }}>{storeUrl}</Text>
                 <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                  <Button title="Copy link" size="sm" variant="secondary" icon="copy-outline" onPress={() => copyText(storeUrl, 'Store link')} />
-                  <Button title="Share" size="sm" variant="secondary" icon="share-social-outline" onPress={() => shareText(`Order from ${form.business_name} online: ${storeUrl}`, form.business_name)} />
-                  <Button title="Print QR poster" size="sm" variant="secondary" icon="print-outline" loading={printing} onPress={printPoster} />
+                  <Button title={tr('settings.BusinessSettingsScreen.copy_link')} size="sm" variant="secondary" icon="copy-outline" onPress={() => copyText(storeUrl, 'Store link')} />
+                  <Button title={tr('common.share')} size="sm" variant="secondary" icon="share-social-outline" onPress={() => shareText(`Order from ${form.business_name} online: ${storeUrl}`, form.business_name)} />
+                  <Button title={tr('settings.BusinessSettingsScreen.print_qr_poster')} size="sm" variant="secondary" icon="print-outline" loading={printing} onPress={printPoster} />
                 </View>
                 {Platform.OS === 'web' && /localhost|127\.0\.0\.1/.test(storeUrl) ? (
-                  <Text variant="small" tone="warning">This link uses "localhost", so it only opens on this computer. Use your shop's public web address for customers.</Text>
+                  <Text variant="small" tone="warning">{tr('settings.BusinessSettingsScreen.this_link_uses_localhost_so_it_only_opens')}</Text>
                 ) : null}
               </View>
               <View style={{ alignItems: 'center', borderRadius: 10, overflow: 'hidden', alignSelf: 'center' }}>
@@ -497,13 +499,13 @@ function BusinessSettingsForm() {
         ) : null}
       </FormSection>
 
-      <FormSection title="Inventory" description="Items with stock tracking show a low-stock warning at this level unless the item has its own." onLayout={onSectionLayout('inventory')} nativeID="business-inventory">
+      <FormSection title={tr('common.inventory')} description={tr('settings.BusinessSettingsScreen.items_with_stock_tracking_show_a_low')} onLayout={onSectionLayout('inventory')} nativeID="business-inventory">
         <FieldRow>
-          <Input label="Low-stock alert at" value={form.low_stock_default} onChangeText={(v) => set('low_stock_default', v.replace(/[^\d]/g, ''))}
-            onBlur={touch('low_stock_default')} error={err('low_stock_default')} keyboardType="number-pad" maxLength={6} hint="Units left in stock" />
+          <Input label={tr('settings.BusinessSettingsScreen.low_stock_alert_at')} value={form.low_stock_default} onChangeText={(v) => set('low_stock_default', v.replace(/[^\d]/g, ''))}
+            onBlur={touch('low_stock_default')} error={err('low_stock_default')} keyboardType="number-pad" maxLength={6} hint={tr('settings.BusinessSettingsScreen.units_left_in_stock')} />
           <View />
         </FieldRow>
-        <Button title="Open inventory" variant="ghost" size="sm" iconRight="arrow-forward" onPress={() => router.navigate('/inventory' as Href)} style={{ alignSelf: 'flex-start' }} />
+        <Button title={tr('settings.BusinessSettingsScreen.open_inventory')} variant="ghost" size="sm" iconRight="arrow-forward" onPress={() => router.navigate('/inventory' as Href)} style={{ alignSelf: 'flex-start' }} />
       </FormSection>
     </SettingsFrame>
   );

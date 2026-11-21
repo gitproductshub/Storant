@@ -10,6 +10,7 @@ import { startSync } from '@/lib/sync';
 import { AppNav } from '@/components/nav/AppNav';
 import { SubscriptionBanner } from '@/components/SubscriptionBanner';
 import { useSubscription } from '@/store/subscription';
+import { t } from '@/i18n';
 
 export default function AppLayout() {
   const { colors } = useTheme();
@@ -27,7 +28,7 @@ export default function AppLayout() {
     void useAccess.getState().refresh();
     void useBadges.getState().refresh();
     const badgeTimer = setInterval(() => void useBadges.getState().refresh(), 20_000);
-    // Role or plan changes made by the owner / Tallyko reach open devices within a few minutes
+    // Role or plan changes made by the owner / Storant reach open devices within a few minutes
     const accessTimer = setInterval(() => void useAccess.getState().refresh(), 180_000);
     // Subscription state for the banner (days left); a lapse also shows up as 402 on the next call
     const checkSubscription = () => void useSubscription.getState().refresh().catch(() => {});
@@ -57,19 +58,19 @@ export default function AppLayout() {
         lazy: true,
       }}
     >
-      <Tabs.Screen name="pos" options={{ title: 'Billing' }} />
-      <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
-      <Tabs.Screen name="tables" options={{ title: 'Tables' }} />
-      <Tabs.Screen name="online" options={{ title: 'Online orders' }} />
-      <Tabs.Screen name="kitchen" options={{ title: 'Kitchen' }} />
-      <Tabs.Screen name="menu" options={{ title: 'Menu & items' }} />
-      <Tabs.Screen name="inventory" options={{ title: 'Inventory' }} />
-      <Tabs.Screen name="customers" options={{ title: 'Customers' }} />
-      <Tabs.Screen name="offers" options={{ title: 'Offers & rewards' }} />
-      <Tabs.Screen name="reports" options={{ title: 'Reports' }} />
-      <Tabs.Screen name="watch" options={{ title: "Owner's watch" }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
-      <Tabs.Screen name="more" options={{ title: 'More', href: null }} />
+      <Tabs.Screen name="pos" options={{ title: t('routes.layout.billing') }} />
+      <Tabs.Screen name="orders" options={{ title: t('common.orders') }} />
+      <Tabs.Screen name="tables" options={{ title: t('common.tables') }} />
+      <Tabs.Screen name="online" options={{ title: t('common.online_orders') }} />
+      <Tabs.Screen name="kitchen" options={{ title: t('common.kitchen') }} />
+      <Tabs.Screen name="menu" options={{ title: t('common.menu_items') }} />
+      <Tabs.Screen name="inventory" options={{ title: t('common.inventory') }} />
+      <Tabs.Screen name="customers" options={{ title: t('common.customers') }} />
+      <Tabs.Screen name="offers" options={{ title: t('common.offers_rewards') }} />
+      <Tabs.Screen name="reports" options={{ title: t('common.reports') }} />
+      <Tabs.Screen name="watch" options={{ title: t('common.owner_s_watch') }} />
+      <Tabs.Screen name="settings" options={{ title: t('common.settings') }} />
+      <Tabs.Screen name="more" options={{ title: t('common.more'), href: null }} />
     </Tabs>
   );
 }

@@ -33,6 +33,8 @@ import { ChannelPricesBulkSheet } from './ChannelPricesBulkSheet';
 import { BulkEditSheet, type BulkKind } from './BulkEditSheet';
 import { filterMenu, menuCounts, sortMenu, withChannelAvailability, type MenuFilter } from './bulk';
 import { channelsApi } from '@/api/channels';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 /** The counter menu (no channel filter). */
 const COUNTER = 'POS';
@@ -41,8 +43,8 @@ export function MenuScreen() {
   const role = useRole();
   if (!can(role, 'manage')) {
     return (
-      <Screen title="Menu & items">
-        <NoAccess title="Only owners and managers can edit the menu" message="Ask your owner or manager to add or change items, prices and categories." />
+      <Screen title={tr('common.menu_items')}>
+        <NoAccess title={tr('catalog.MenuScreen.only_owners_and_managers_can_edit_the_menu')} message={tr('catalog.MenuScreen.ask_your_owner_or_manager_to_add_or')} />
       </Screen>
     );
   }
@@ -141,7 +143,7 @@ function MenuManager() {
     try {
       const saved = await catalogApi.updateProduct(p.id, { is_active: true });
       catalog.upsertProduct(saved);
-      toast.success(`“${saved.name}” is back on the menu`);
+      toast.success(tr('catalog.MenuScreen.name_is_back_on_the_menu', { name: saved.name }));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -156,7 +158,7 @@ function MenuManager() {
     try {
       const saved = await channelsApi.setProductPrices(p.id, next);
       catalog.upsertProduct(saved);
-      toast.success(available ? `“${p.name}” is back on ${label}` : `“${p.name}” hidden on ${label}`);
+      toast.success(available ? tr('catalog.MenuScreen.name_is_back_on_label', { name: p.name, label }) : tr('catalog.MenuScreen.name_hidden_on_label', { name: p.name, label }));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -168,7 +170,7 @@ function MenuManager() {
     setEditingPrice(null);
     const price = parseMoney(text);
     if (price === null || price === p.base_price) return;
-    if (price > MAX_PRICE) { toast.error('Price is too high.'); return; }
+    if (price > MAX_PRICE) { toast.error(tr('common.price_is_too_high')); return; }
     markBusy(p.id, true);
     try {
       const saved = await catalogApi.updateProduct(p.id, { base_price: price });
@@ -183,13 +185,13 @@ function MenuManager() {
 
   const addCategory = async () => {
     if (addingCategory) return;
-    const name = await promptTop({ title: 'New category', label: 'Category name', placeholder: food ? 'e.g. Starters' : 'e.g. Dairy', confirmLabel: 'Add category', maxLength: 60 });
+    const name = await promptTop({ title: tr('catalog.MenuScreen.new_category'), label: tr('catalog.MenuScreen.category_name'), placeholder: food ? tr('catalog.MenuScreen.e_g_starters') : tr('catalog.MenuScreen.e_g_dairy'), confirmLabel: tr('catalog.MenuScreen.add_category'), maxLength: 60 });
     if (!name) return;
-    if (name.length > 60) return toast.error('Keep the category name under 60 characters.');
+    if (name.length > 60) return toast.error(tr('catalog.MenuScreen.keep_the_category_name_under_60_characters'));
     const existing = categories.find((c) => normName(c.name) === normName(name));
     if (existing) {
       setFilter(existing.id);
-      return toast.info(`“${existing.name}” already exists`);
+      return toast.info(tr('catalog.MenuScreen.name_already_exists', { name: existing.name }));
     }
     setAddingCategory(true);
     try {
@@ -198,7 +200,7 @@ function MenuManager() {
       if (last && cat.sort_order <= last.sort_order) cat = await catalogApi.updateCategory(cat.id, { sort_order: last.sort_order + 1 }).catch(() => cat);
       catalog.upsertCategories([cat]);
       setFilter(cat.id);
-      toast.success(`Added “${cat.name}”`);
+      toast.success(tr('common.added_name', { name: cat.name }));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -214,21 +216,21 @@ function MenuManager() {
   const columns = useMemo<DataColumn<Product>[]>(() => {
     const cols: DataColumn<Product>[] = [
       {
-        key: 'name', title: 'Item', flex: 2.4, minWidth: 180, sortable: true,
+        key: 'name', title: tr('common.item'), flex: 2.4, minWidth: 180, sortable: true,
         render: (p) => (
           <View style={styles.nameCell}>
             {p.is_veg === null ? <View style={[styles.dot, { backgroundColor: colors.border }]} /> : <VegMark veg={p.is_veg} size={12} />}
             <Text variant="bodyStrong" numberOfLines={1} style={[{ flexShrink: 1 }, !p.is_active && styles.struck]}>{p.name}</Text>
-            {p.variants.length ? <Badge label={`${p.variants.length} options`} tone="neutral" /> : null}
+            {p.variants.length ? <Badge label={tr('catalog.MenuScreen.length_options', { length: p.variants.length })} tone="neutral" /> : null}
           </View>
         ),
       },
       {
-        key: 'category', title: 'Category', flex: 1, minWidth: 100, hideBelow: 760, sortable: true,
+        key: 'category', title: tr('common.category'), flex: 1, minWidth: 100, hideBelow: 760, sortable: true,
         value: (p) => (p.category_id ? categoryName.get(p.category_id) ?? 'Uncategorised' : 'Uncategorised'),
       },
       {
-        key: 'price', title: viewChannel ? `${channelShortName(viewChannel)} price` : 'Price', width: 132, numeric: true, sortable: !viewChannel,
+        key: 'price', title: viewChannel ? tr('catalog.MenuScreen.channelshortname_price', { channelShortName: channelShortName(viewChannel) }) : tr('common.price'), width: 132, numeric: true, sortable: !viewChannel,
         render: (p) => (
           <PriceCell
             product={p}
@@ -254,10 +256,10 @@ function MenuManager() {
     ];
     if (appChannels.length && !viewChannel && !removedView) {
       cols.push({
-        key: 'apps', title: 'Apps', flex: 1.5, minWidth: 140, hideBelow: 860,
+        key: 'apps', title: tr('catalog.MenuScreen.apps'), flex: 1.5, minWidth: 140, hideBelow: 860,
         render: (p) => {
           const b = channelBadges(p, appChannels, symbol);
-          if (!b.length) return <Text variant="small" tone="subtle">Same as counter</Text>;
+          if (!b.length) return <Text variant="small" tone="subtle">{tr('common.same_as_counter')}</Text>;
           return (
             <View style={styles.badges}>
               {b.slice(0, 2).map((x) => <Badge key={x.key} label={x.label} tone={x.tone} />)}
@@ -269,7 +271,7 @@ function MenuManager() {
     }
     if (tracksStock) {
       cols.push({
-        key: 'stock', title: 'Stock', width: 92, numeric: true, sortable: true, hideBelow: 480,
+        key: 'stock', title: tr('catalog.MenuScreen.stock'), width: 92, numeric: true, sortable: true, hideBelow: 480,
         render: (p) => {
           const s = stock.get(p.id);
           if (!p.track_stock || !s) return <Text variant="small" tone="subtle">—</Text>;
@@ -278,7 +280,7 @@ function MenuManager() {
       });
     }
     cols.push({
-      key: 'status', title: 'Status', width: 116,
+      key: 'status', title: tr('common.status'), width: 116,
       render: (p) => <ProductStatus product={p} stockRow={p.track_stock ? stock.get(p.id) : undefined} />,
     });
     return cols;
@@ -286,27 +288,27 @@ function MenuManager() {
 
   const menuFor = useCallback((p: Product): ActionMenuItem[] => {
     const items: ActionMenuItem[] = [
-      { key: 'edit', label: 'Edit item', icon: 'create-outline', onPress: () => openProduct(p) },
-      { key: 'history', label: 'History & restore', icon: 'time-outline', description: 'Every change, with who made it', onPress: () => setHistory(p) },
+      { key: 'edit', label: tr('catalog.MenuScreen.edit_item'), icon: 'create-outline', onPress: () => openProduct(p) },
+      { key: 'history', label: tr('catalog.MenuScreen.history_restore'), icon: 'time-outline', description: tr('catalog.MenuScreen.every_change_with_who_made_it'), onPress: () => setHistory(p) },
     ];
     if (p.is_active) {
-      if (p.barcode) items.push({ key: 'label', label: 'Print label', icon: 'print-outline', onPress: () => printLabels([p.id]) });
+      if (p.barcode) items.push({ key: 'label', label: tr('catalog.MenuScreen.print_label'), icon: 'print-outline', onPress: () => printLabels([p.id]) });
       const posOn = isOnChannel(p, 'POS');
       items.push({
-        key: 'pos', label: posOn ? 'Hide at the counter' : 'Show at the counter', icon: posOn ? 'eye-off-outline' : 'eye-outline', group: 'menus',
+        key: 'pos', label: posOn ? tr('catalog.MenuScreen.hide_at_the_counter') : tr('catalog.MenuScreen.show_at_the_counter'), icon: posOn ? 'eye-off-outline' : 'eye-outline', group: 'menus',
         onPress: () => void toggleChannel(p, 'POS', 'the counter', !posOn),
       });
       for (const c of appChannels) {
         const on = isOnChannel(p, c.code);
         const name = channelShortName(c);
         items.push({
-          key: `ch-${c.code}`, label: on ? `Hide on ${name}` : `Show on ${name}`, icon: on ? 'eye-off-outline' : 'eye-outline', group: 'menus',
+          key: `ch-${c.code}`, label: on ? tr('catalog.MenuScreen.hide_on_name', { name }) : tr('catalog.MenuScreen.show_on_name', { name }), icon: on ? 'eye-off-outline' : 'eye-outline', group: 'menus',
           onPress: () => void toggleChannel(p, c.code, name, !on),
         });
       }
-      items.push({ key: 'remove', label: 'Remove from menu…', icon: 'trash-outline', danger: true, group: 'danger', onPress: () => setBulk({ kind: 'remove', ids: [p.id], key: Date.now() }) });
+      items.push({ key: 'remove', label: tr('catalog.MenuScreen.remove_from_menu'), icon: 'trash-outline', danger: true, group: 'danger', onPress: () => setBulk({ kind: 'remove', ids: [p.id], key: Date.now() }) });
     } else {
-      items.push({ key: 'back', label: 'Bring back', icon: 'refresh', onPress: () => void bringBack(p) });
+      items.push({ key: 'back', label: tr('catalog.MenuScreen.bring_back'), icon: 'refresh', onPress: () => void bringBack(p) });
     }
     return items;
   }, [appChannels, bringBack, openProduct, toggleChannel]);
@@ -317,12 +319,12 @@ function MenuManager() {
   const rowActions = useCallback((p: Product) => (
     <>
       {!p.is_active ? (
-        <Button title={isPhone ? undefined : 'Bring back'} icon="refresh" size="sm" variant="tonal" onPress={() => void bringBack(p)}
-          loading={!!busyIds[p.id]} disabled={!!busyIds[p.id]} accessibilityLabel={`Put ${p.name} back on the menu`} />
+        <Button title={isPhone ? undefined : tr('catalog.MenuScreen.bring_back')} icon="refresh" size="sm" variant="tonal" onPress={() => void bringBack(p)}
+          loading={!!busyIds[p.id]} disabled={!!busyIds[p.id]} accessibilityLabel={tr('catalog.MenuScreen.put_name_back_on_the_menu', { name: p.name })} />
       ) : null}
       <ActionMenu items={menuFor(p)} align="end" title={p.name}
         menuRef={(h) => { if (h) rowMenus.current.set(p.id, h); else rowMenus.current.delete(p.id); }}
-        trigger={(open) => <IconButton icon="ellipsis-horizontal" accessibilityLabel={`Actions for ${p.name}`} onPress={open} />} />
+        trigger={(open) => <IconButton icon="ellipsis-horizontal" accessibilityLabel={tr('catalog.MenuScreen.actions_for_name', { name: p.name })} onPress={open} />} />
     </>
   ), [menuFor, bringBack, busyIds, isPhone]);
 
@@ -353,30 +355,30 @@ function MenuManager() {
 
   // --- filters ---
   const filters = useMemo<FilterOption[]>(() => {
-    const f: FilterOption[] = [{ key: 'all', label: 'All', count: counts.all }];
+    const f: FilterOption[] = [{ key: 'all', label: tr('common.all'), count: counts.all }];
     for (const c of categories) {
       const n = counts.byCategory[c.id] ?? 0;
       if (n || effectiveFilter === c.id || !query) f.push({ key: c.id, label: c.name, count: n });
     }
-    if (counts.none || effectiveFilter === 'none') f.push({ key: 'none', label: 'Uncategorised', count: counts.none });
-    if (counts.removed || removedView) f.push({ key: 'removed', label: 'Removed', icon: 'archive-outline', count: counts.removed });
+    if (counts.none || effectiveFilter === 'none') f.push({ key: 'none', label: tr('catalog.MenuScreen.uncategorised'), count: counts.none });
+    if (counts.removed || removedView) f.push({ key: 'removed', label: tr('catalog.MenuScreen.removed'), icon: 'archive-outline', count: counts.removed });
     return f;
   }, [counts, categories, effectiveFilter, query, removedView]);
 
   const channelMenu: ActionMenuItem[] = [
-    { key: 'pos', label: 'Counter menu', icon: 'storefront-outline', selected: !viewChannel, description: 'Everything you sell at the counter', onPress: () => setView(COUNTER) },
+    { key: 'pos', label: tr('catalog.MenuScreen.counter_menu'), icon: 'storefront-outline', selected: !viewChannel, description: tr('catalog.MenuScreen.everything_you_sell_at_the_counter'), onPress: () => setView(COUNTER) },
     ...appChannels.map((c) => ({
-      key: c.code, label: `${channelShortName(c)} menu`, icon: 'bicycle-outline' as const, selected: view === c.code,
-      description: Number(c.price_adjust_pct) ? `Counter price ${formatPct(c.price_adjust_pct)} unless set` : 'Counter price unless set',
+      key: c.code, label: tr('catalog.MenuScreen.channelshortname_menu', { channelShortName: channelShortName(c) }), icon: 'bicycle-outline' as const, selected: view === c.code,
+      description: Number(c.price_adjust_pct) ? tr('catalog.MenuScreen.counter_price_formatpct_unless_set', { formatPct: formatPct(c.price_adjust_pct) }) : tr('catalog.MenuScreen.counter_price_unless_set'),
       onPress: () => { setView(c.code); if (removedView) setFilter('all'); },
     })),
   ];
   const channelPicker = appChannels.length ? (
-    <ActionMenu items={channelMenu} title="Menu on" align="end"
+    <ActionMenu items={channelMenu} title={tr('catalog.MenuScreen.menu_on')} align="end"
       trigger={(open) => (
-        <Button title={isPhone ? (viewChannel ? channelShortName(viewChannel) : 'Counter') : `Menu on: ${viewChannel ? channelShortName(viewChannel) : 'Counter'}`}
+        <Button title={isPhone ? (viewChannel ? channelShortName(viewChannel) : tr('catalog.MenuScreen.counter')) : tr('catalog.MenuScreen.menu_on_v', { v: viewChannel ? channelShortName(viewChannel) : tr('catalog.MenuScreen.counter') })}
           icon={viewChannel ? 'bicycle-outline' : 'storefront-outline'} iconRight="chevron-down" variant="outline" onPress={open}
-          accessibilityLabel="Choose which menu to show" />
+          accessibilityLabel={tr('catalog.MenuScreen.choose_which_menu_to_show')} />
       )} />
   ) : null;
 
@@ -384,18 +386,18 @@ function MenuManager() {
   const selectionActions = useMemo<SelectionAction[]>(() => {
     const ids = selected;
     if (removedView) {
-      return [{ key: 'back', label: 'Bring back', icon: 'refresh', onPress: () => setBulk({ kind: 'restore', ids, key: Date.now() }) }];
+      return [{ key: 'back', label: tr('catalog.MenuScreen.bring_back'), icon: 'refresh', onPress: () => setBulk({ kind: 'restore', ids, key: Date.now() }) }];
     }
     const a: SelectionAction[] = [
-      { key: 'price', label: 'Price', icon: 'pricetag-outline', description: 'Set a price or change by % / ₹', onPress: () => setBulk({ kind: 'price', ids, key: Date.now() }) },
+      { key: 'price', label: tr('common.price'), icon: 'pricetag-outline', description: tr('catalog.MenuScreen.set_a_price_or_change_by'), onPress: () => setBulk({ kind: 'price', ids, key: Date.now() }) },
     ];
-    if (appChannels.length) a.push({ key: 'apps', label: 'App prices', icon: 'bicycle-outline', onPress: () => setAppBulk({ code: viewChannel?.code ?? null, ids, key: Date.now() }) });
+    if (appChannels.length) a.push({ key: 'apps', label: tr('catalog.MenuScreen.app_prices'), icon: 'bicycle-outline', onPress: () => setAppBulk({ code: viewChannel?.code ?? null, ids, key: Date.now() }) });
     a.push(
-      { key: 'tax', label: 'Tax class', icon: 'document-text-outline', onPress: () => setBulk({ kind: 'tax', ids, key: Date.now() }) },
-      { key: 'category', label: 'Move', icon: 'folder-open-outline', description: 'Move to another category', onPress: () => setBulk({ kind: 'category', ids, key: Date.now() }) },
-      { key: 'channel', label: 'Show / hide', icon: 'eye-off-outline', description: 'On the counter or a delivery app', onPress: () => setBulk({ kind: 'channel', ids, key: Date.now() }) },
-      { key: 'labels', label: 'Print labels', icon: 'print-outline', onPress: () => printLabels(ids) },
-      { key: 'remove', label: 'Remove', icon: 'trash-outline', danger: true, onPress: () => setBulk({ kind: 'remove', ids, key: Date.now() }) },
+      { key: 'tax', label: tr('catalog.MenuScreen.tax_class'), icon: 'document-text-outline', onPress: () => setBulk({ kind: 'tax', ids, key: Date.now() }) },
+      { key: 'category', label: tr('catalog.MenuScreen.move'), icon: 'folder-open-outline', description: tr('catalog.MenuScreen.move_to_another_category'), onPress: () => setBulk({ kind: 'category', ids, key: Date.now() }) },
+      { key: 'channel', label: tr('catalog.MenuScreen.show_hide'), icon: 'eye-off-outline', description: tr('catalog.MenuScreen.on_the_counter_or_a_delivery_app'), onPress: () => setBulk({ kind: 'channel', ids, key: Date.now() }) },
+      { key: 'labels', label: tr('catalog.MenuScreen.print_labels'), icon: 'print-outline', onPress: () => printLabels(ids) },
+      { key: 'remove', label: tr('common.remove'), icon: 'trash-outline', danger: true, onPress: () => setBulk({ kind: 'remove', ids, key: Date.now() }) },
     );
     return a;
   }, [selected, removedView, appChannels.length, viewChannel]);
@@ -408,25 +410,25 @@ function MenuManager() {
 
   // --- header actions ---
   const moreItems: ActionMenuItem[] = [
-    { key: 'scan', label: 'Scan menu photo', icon: 'camera-outline', description: 'Add many items from a picture', hidden: !isPhone, onPress: openScan },
-    { key: 'labels', label: 'Print barcode labels', icon: 'print-outline', disabled: !activeProducts.length, onPress: () => printLabels() },
-    { key: 'apps', label: 'Set app prices', icon: 'pricetags-outline', hidden: !appChannels.length, onPress: () => setAppBulk({ code: viewChannel?.code ?? null, ids: null, key: Date.now() }) },
-    { key: 'cats', label: 'Edit categories', icon: 'albums-outline', description: 'Rename, reorder, delete', onPress: () => setManageOpen(true) },
-    { key: 'newcat', label: 'New category', icon: 'add-circle-outline', disabled: addingCategory, onPress: () => void addCategory() },
+    { key: 'scan', label: tr('catalog.MenuScreen.scan_menu_photo'), icon: 'camera-outline', description: tr('catalog.MenuScreen.add_many_items_from_a_picture'), hidden: !isPhone, onPress: openScan },
+    { key: 'labels', label: tr('catalog.MenuScreen.print_barcode_labels'), icon: 'print-outline', disabled: !activeProducts.length, onPress: () => printLabels() },
+    { key: 'apps', label: tr('catalog.MenuScreen.set_app_prices'), icon: 'pricetags-outline', hidden: !appChannels.length, onPress: () => setAppBulk({ code: viewChannel?.code ?? null, ids: null, key: Date.now() }) },
+    { key: 'cats', label: tr('catalog.MenuScreen.edit_categories'), icon: 'albums-outline', description: tr('catalog.MenuScreen.rename_reorder_delete'), onPress: () => setManageOpen(true) },
+    { key: 'newcat', label: tr('catalog.MenuScreen.new_category'), icon: 'add-circle-outline', disabled: addingCategory, onPress: () => void addCategory() },
   ];
   const actions = (
     <>
-      <ActionMenu items={moreItems} align="end" title="Menu tools"
+      <ActionMenu items={moreItems} align="end" title={tr('catalog.MenuScreen.menu_tools')}
         trigger={(open) => (isPhone
-          ? <IconButton icon="ellipsis-horizontal" variant="secondary" accessibilityLabel="More menu tools" onPress={open} />
-          : <Button title="More" icon="ellipsis-horizontal" variant="outline" onPress={open} />)} />
-      {isPhone ? null : <Button title="Scan menu photo" icon="camera-outline" variant="tonal" onPress={openScan} />}
-      <Button title={isPhone ? 'Add' : 'Add item'} icon="add" onPress={addItem} shortcut="N" />
+          ? <IconButton icon="ellipsis-horizontal" variant="secondary" accessibilityLabel={tr('catalog.MenuScreen.more_menu_tools')} onPress={open} />
+          : <Button title={tr('common.more')} icon="ellipsis-horizontal" variant="outline" onPress={open} />)} />
+      {isPhone ? null : <Button title={tr('catalog.MenuScreen.scan_menu_photo')} icon="camera-outline" variant="tonal" onPress={openScan} />}
+      <Button title={isPhone ? tr('common.add') : tr('common.add_item')} icon="add" onPress={addItem} shortcut="N" />
     </>
   );
 
   const subtitle = catalog.products
-    ? `${plural(activeProducts.length, 'item')} · ${plural(categories.length, 'category', 'categories')}${viewChannel ? ` · showing the ${channelShortName(viewChannel)} menu` : ''}`
+    ? `${plural(activeProducts.length, 'item')} · ${plural(categories.length, 'category', 'categories')}${viewChannel ? tr('catalog.MenuScreen.showing_the_channelshortname_menu', { channelShortName: channelShortName(viewChannel) }) : ''}`
     : undefined;
 
   const emptyTitle = removedView ? 'No removed items' : query ? 'No items match your search' : viewChannel ? `Nothing here is on ${channelShortName(viewChannel)}` : 'No items in this category';
@@ -442,12 +444,12 @@ function MenuManager() {
             <View style={[styles.banner, { backgroundColor: colors.infoSoft, borderColor: colors.info }]}>
               <Ionicons name="bicycle-outline" size={16} color={colors.infoText} />
               <Text variant="small" tone="info" style={{ flex: 1 }} numberOfLines={2}>
-                {`${channelShortName(viewChannel)}: ${plural(counts.all, 'item')} on the menu. `}
+                {tr('catalog.MenuScreen.channelshortname_plural_on_the_menu', { channelShortName: channelShortName(viewChannel), plural: plural(counts.all, 'item') })}
                 {Number(viewChannel.price_adjust_pct)
-                  ? `No own price → counter price ${formatPct(viewChannel.price_adjust_pct)}.`
-                  : 'No own price → counter price.'}
+                  ? tr('catalog.MenuScreen.no_own_price_counter_price_formatpct', { formatPct: formatPct(viewChannel.price_adjust_pct) })
+                  : tr('catalog.MenuScreen.no_own_price_counter_price')}
               </Text>
-              <Button title={isPhone ? 'Prices' : `Set ${channelShortName(viewChannel)} prices`} size="sm" variant="outline" icon="pricetags-outline"
+              <Button title={isPhone ? tr('catalog.MenuScreen.prices') : tr('catalog.MenuScreen.set_channelshortname_prices', { channelShortName: channelShortName(viewChannel) })} size="sm" variant="outline" icon="pricetags-outline"
                 onPress={() => setAppBulk({ code: viewChannel.code, ids: null, key: Date.now() })} />
             </View>
           ) : null}
@@ -467,7 +469,7 @@ function MenuManager() {
               empty={{
                 icon: query ? 'search-outline' : removedView ? 'archive-outline' : 'file-tray-outline',
                 title: emptyTitle,
-                action: removedView ? undefined : { label: 'Add item', icon: 'add', onPress: addItem },
+                action: removedView ? undefined : { label: tr('common.add_item'), icon: 'add', onPress: addItem },
               }}
               refreshing={catalog.refreshing}
               onRefresh={catalog.reload}
@@ -512,12 +514,12 @@ function MenuManager() {
 
   // One bar: FilterBar keeps the search box its width and scrolls the category chips (or stacks them when narrow)
   const toolbar = catalog.products && products.length ? (
-    <FilterBar onSearch={setQuery} search={query} searchPlaceholder="Name, SKU or barcode" right={channelPicker}
+    <FilterBar onSearch={setQuery} search={query} searchPlaceholder={tr('catalog.MenuScreen.name_sku_or_barcode_x')} right={channelPicker}
       filters={filters} value={effectiveFilter} onChange={(k) => setFilter(k)} />
   ) : undefined;
 
   return (
-    <Screen title="Menu & items" subtitle={subtitle} actions={actions} toolbar={toolbar} scroll={false} contentStyle={{ flex: 1, paddingBottom: 16 }}
+    <Screen title={tr('common.menu_items')} subtitle={subtitle} actions={actions} toolbar={toolbar} scroll={false} contentStyle={{ flex: 1, paddingBottom: 16 }}
       maxWidth={isDesktop ? 1680 : 1280}>
       {body}
       <CategoryManagerSheet
@@ -575,11 +577,11 @@ function MenuManager() {
 
 /** Status pill: removed (red, struck), not sold at the counter, low / out of stock, or on the menu. */
 function ProductStatus({ product: p, stockRow }: { product: Product; stockRow?: StockRow }) {
-  if (!p.is_active) return <StatusPill status="void" label="Removed" />;
-  if (!isOnChannel(p, 'POS')) return <StatusPill status="served" label="Apps only" showIcon={false} />;
-  if (stockRow && stockRow.stock <= 0) return <StatusPill status="lapsed" label="Out of stock" />;
-  if (stockRow?.is_low) return <StatusPill status="pending" label="Low stock" />;
-  return <StatusPill status="active" label="On menu" />;
+  if (!p.is_active) return <StatusPill status="void" label={tr('catalog.MenuScreen.removed')} />;
+  if (!isOnChannel(p, 'POS')) return <StatusPill status="served" label={tr('catalog.MenuScreen.apps_only')} showIcon={false} />;
+  if (stockRow && stockRow.stock <= 0) return <StatusPill status="lapsed" label={tr('catalog.MenuScreen.out_of_stock')} />;
+  if (stockRow?.is_low) return <StatusPill status="pending" label={tr('catalog.MenuScreen.low_stock')} />;
+  return <StatusPill status="active" label={tr('catalog.MenuScreen.on_menu')} />;
 }
 
 /** Price cell; on desktop web a click turns it into an input (Enter saves, Esc cancels). */
@@ -613,7 +615,7 @@ function PriceCell({ product, label, own, editable, editing, busy, symbol, onSta
           onBlur={() => finish(!!text.trim())}
           onKeyPress={(e: any) => { if (e.nativeEvent?.key === 'Escape') { e.preventDefault?.(); e.stopPropagation?.(); finish(false); } }}
           keyboardType="decimal-pad"
-          accessibilityLabel={`New price for ${product.name}`}
+          accessibilityLabel={tr('catalog.MenuScreen.new_price_for_name', { name: product.name })}
           style={[styles.priceInput, { color: colors.text }, Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)]}
         />
       </View>
@@ -622,7 +624,7 @@ function PriceCell({ product, label, own, editable, editing, busy, symbol, onSta
   const textEl = <Text variant="money" numberOfLines={1} tone={own ? 'primary' : 'default'}>{label}</Text>;
   if (!editable) return textEl;
   return (
-    <Pressable onPress={onStart} accessibilityRole="button" accessibilityLabel={`Change price of ${product.name}, now ${label}`}
+    <Pressable onPress={onStart} accessibilityRole="button" accessibilityLabel={tr('catalog.MenuScreen.change_price_of_name_now_label', { name: product.name, label })}
       style={({ hovered }: any) => [styles.pricePress, { borderRadius: radius.sm, borderColor: hovered ? colors.borderStrong : 'transparent' }, Platform.OS === 'web' && ({ cursor: 'text' } as any)]}>
       {textEl}
     </Pressable>
@@ -633,9 +635,9 @@ function FirstRun({ food, onScan, onAdd, onCategory }: { food: boolean; onScan: 
   const { colors } = useTheme();
   const { isPhone } = useLayout();
   const steps = [
-    { icon: 'camera-outline' as const, title: 'Snap your menu', text: 'A clear photo of each page — printed menus and boards work.' },
-    { icon: 'create-outline' as const, title: 'Check the list', text: 'Fix any name or price we misread, set categories and GST.' },
-    { icon: 'checkmark-done-outline' as const, title: 'Start billing', text: 'Items appear on the billing screen right away.' },
+    { icon: 'camera-outline' as const, title: tr('catalog.MenuScreen.snap_your_menu'), text: tr('catalog.MenuScreen.a_clear_photo_of_each_page_printed_menus') },
+    { icon: 'create-outline' as const, title: tr('catalog.MenuScreen.check_the_list'), text: tr('catalog.MenuScreen.fix_any_name_or_price_we_misread_set') },
+    { icon: 'checkmark-done-outline' as const, title: tr('catalog.MenuScreen.start_billing'), text: tr('catalog.MenuScreen.items_appear_on_the_billing_screen_right') },
   ];
   return (
     <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 12 }}>
@@ -643,17 +645,17 @@ function FirstRun({ food, onScan, onAdd, onCategory }: { food: boolean; onScan: 
         <View style={[styles.heroIcon, { backgroundColor: colors.primarySoft }]}>
           <Ionicons name="sparkles" size={30} color={colors.primary} />
         </View>
-        <Text variant={isPhone ? 'h1' : 'display'} align="center">{food ? 'Add your whole menu from a photo' : 'Add your products'}</Text>
+        <Text variant={isPhone ? 'h1' : 'display'} align="center">{food ? tr('catalog.MenuScreen.add_your_whole_menu_from_a_photo') : tr('catalog.MenuScreen.add_your_products')}</Text>
         <Text tone="muted" align="center" style={{ maxWidth: 520 }}>
           {food
-            ? 'Take a picture of your printed menu. Tallyko reads the item names and prices, you check them, and your menu is ready in a couple of minutes.'
-            : 'Scan a printed price list, add items one by one, or scan product barcodes as you go.'}
+            ? tr('catalog.MenuScreen.take_a_picture_of_your_printed_menu_brand', { brand: brand.name })
+            : tr('catalog.MenuScreen.scan_a_printed_price_list_add_items_one')}
         </Text>
         <View style={[styles.heroActions, isPhone && { flexDirection: 'column', alignSelf: 'stretch' }]}>
-          <Button title="Scan menu photo" icon="camera" size="lg" onPress={onScan} full={isPhone} />
-          <Button title="Add items manually" icon="add" size="lg" variant="outline" onPress={onAdd} full={isPhone} />
+          <Button title={tr('catalog.MenuScreen.scan_menu_photo')} icon="camera" size="lg" onPress={onScan} full={isPhone} />
+          <Button title={tr('catalog.MenuScreen.add_items_manually')} icon="add" size="lg" variant="outline" onPress={onAdd} full={isPhone} />
         </View>
-        <Button title="or start by creating categories" variant="ghost" size="sm" onPress={onCategory} />
+        <Button title={tr('catalog.MenuScreen.or_start_by_creating_categories')} variant="ghost" size="sm" onPress={onCategory} />
         <View style={[styles.steps, isPhone && { flexDirection: 'column' }]}>
           {steps.map((s, i) => (
             <View key={s.title} style={[styles.step, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>

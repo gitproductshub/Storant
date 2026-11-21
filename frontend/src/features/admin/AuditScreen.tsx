@@ -1,4 +1,4 @@
-/** Every change Tallyko staff made on the platform: who, what, which business, when. */
+/** Every change Storant staff made on the platform: who, what, which business, when. */
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { platformApi, type AuditEntry } from '@/api/platform';
@@ -8,6 +8,8 @@ import { formatDateTime } from '@/lib/format';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { monoFont } from '@/features/settings/components';
 import { AdminPage, actionLabel, goTo } from './shared';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 type Size = '100' | '250' | '500';
 
@@ -39,36 +41,36 @@ export default function AuditScreen() {
 
   return (
     <AdminPage
-      title="Audit log"
-      subtitle="Platform actions by Tallyko staff: onboarding, plan and feature changes, payments, suspensions, password resets and GST changes."
+      title={t('admin.AuditScreen.audit_log')}
+      subtitle={t('admin.AuditScreen.platform_actions_by_brand_staff', { brand: brand.name })}
       refreshing={refreshing}
       onRefresh={reload}
       toolbar={
         <View style={{ gap: 10 }}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <View style={{ flex: 1, minWidth: 220 }}>
-              <Input value={query} onChangeText={setQuery} icon="search" placeholder="Filter by person, business id or detail" autoCapitalize="none" autoCorrect={false}
-                accessibilityLabel="Filter audit log" />
+              <Input value={query} onChangeText={setQuery} icon="search" placeholder={t('admin.AuditScreen.filter_by_person_business_id_or_detail')} autoCapitalize="none" autoCorrect={false}
+                accessibilityLabel={t('admin.AuditScreen.filter_audit_log')} />
             </View>
             <View style={{ width: 240 }}>
               <Segmented size="sm" value={size} onChange={setSize}
-                options={[{ value: '100', label: 'Last 100' }, { value: '250', label: '250' }, { value: '500', label: '500' }]} />
+                options={[{ value: '100', label: t('admin.AuditScreen.last_100') }, { value: '250', label: '250' }, { value: '500', label: '500' }]} />
             </View>
           </View>
           {actions.length > 1 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              <Chip label="All actions" selected={action === 'all'} onPress={() => setAction('all')} />
+              <Chip label={t('admin.AuditScreen.all_actions')} selected={action === 'all'} onPress={() => setAction('all')} />
               {actions.map((a) => <Chip key={a} label={actionLabel(a)} selected={action === a} onPress={() => setAction(a)} />)}
             </ScrollView>
           ) : null}
         </View>
       }
     >
-      {loading && !data ? <Loading label="Loading audit log" /> : null}
+      {loading && !data ? <Loading label={t('admin.AuditScreen.loading_audit_log')} /> : null}
       {error && !data ? <ErrorState message={error} onRetry={reload} /> : null}
-      {data && data.length === 0 ? <EmptyState icon="time-outline" title="No platform actions yet" message="Changes made in this console are recorded here." /> : null}
+      {data && data.length === 0 ? <EmptyState icon="time-outline" title={t('admin.AuditScreen.no_platform_actions_yet')} message={t('admin.AuditScreen.changes_made_in_this_console_are_recorded')} /> : null}
       {data && data.length > 0 && rows.length === 0 ? (
-        <EmptyState icon="search-outline" title="Nothing matches" message="Try another filter." action={{ label: 'Clear filters', icon: 'close-circle-outline', onPress: () => { setQuery(''); setAction('all'); } }} />
+        <EmptyState icon="search-outline" title={t('admin.AuditScreen.nothing_matches')} message={t('admin.AuditScreen.try_another_filter')} action={{ label: t('common.clear_filters'), icon: 'close-circle-outline', onPress: () => { setQuery(''); setAction('all'); } }} />
       ) : null}
       {rows.length ? (
         <Card padded={false} style={{ overflow: 'hidden' }}>
@@ -77,7 +79,7 @@ export default function AuditScreen() {
         </Card>
       ) : null}
       {data && data.length >= Number(size) ? (
-        <Text variant="small" tone="subtle" align="center">Showing the latest {size} actions. Choose a larger number to see further back.</Text>
+        <Text variant="small" tone="subtle" align="center">{t('admin.AuditScreen.showing_the_latest_size_actions_choose_a', { size })}</Text>
       ) : null}
     </AdminPage>
   );
@@ -100,9 +102,9 @@ function Header() {
 }
 
 function BusinessLink({ id }: { id: string | null }) {
-  if (!id) return <Text variant="small" tone="subtle">Platform</Text>;
+  if (!id) return <Text variant="small" tone="subtle">{t('admin.AuditScreen.platform')}</Text>;
   return (
-    <Pressable onPress={() => goTo(`/admin/businesses/${id}`)} accessibilityRole="link" accessibilityLabel="Open business"
+    <Pressable onPress={() => goTo(`/admin/businesses/${id}`)} accessibilityRole="link" accessibilityLabel={t('common.open_business')}
       style={({ hovered }: any) => [hovered && { opacity: 0.7 }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
       <Text variant="small" tone="primary" style={{ fontFamily: monoFont }} numberOfLines={1}>{id.slice(0, 8)}…</Text>
     </Pressable>

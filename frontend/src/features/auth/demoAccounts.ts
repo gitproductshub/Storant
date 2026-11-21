@@ -3,6 +3,7 @@
  * and the picker is shown only in development builds or when EXPO_PUBLIC_DEMO_LOGINS=true.
  */
 import type { PlatformRole, Role } from '@/api/types';
+import { brand } from '@/config/brand';
 
 export type DemoRole = Role | PlatformRole;
 
@@ -17,10 +18,10 @@ export interface DemoAccount {
 }
 
 export const DEMO_ACCOUNTS: DemoAccount[] = [
-  { email: 'superadmin@example.com', name: 'Tallyko Super Admin', role: 'super_admin', business: 'Tallyko platform', note: 'Businesses, plans, payments, features' },
-  { email: 'superadmin2@example.com', name: 'Priya Nair', role: 'super_admin', business: 'Tallyko platform', note: 'Businesses, plans, payments, features' },
-  { email: 'support@example.com', name: 'Tallyko Support', role: 'support', business: 'Tallyko platform', note: 'Read-only console' },
-  { email: 'support2@example.com', name: 'Arjun Rao', role: 'support', business: 'Tallyko platform', note: 'Read-only console' },
+  { email: 'superadmin@example.com', name: `${brand.name} Super Admin`, role: 'super_admin', business: `${brand.name} platform`, note: 'Businesses, plans, payments, features' },
+  { email: 'superadmin2@example.com', name: 'Priya Nair', role: 'super_admin', business: `${brand.name} platform`, note: 'Businesses, plans, payments, features' },
+  { email: 'support@example.com', name: `${brand.name} Support`, role: 'support', business: `${brand.name} platform`, note: 'Read-only console' },
+  { email: 'support2@example.com', name: 'Arjun Rao', role: 'support', business: `${brand.name} platform`, note: 'Read-only console' },
   { email: 'owner.dhaba@example.com', name: 'Rajesh Sharma', role: 'owner', business: 'Sharma Da Dhaba', note: 'Restaurant · everything' },
   { email: 'owner.store@example.com', name: 'Sunita Gupta', role: 'owner', business: 'Gupta General Store', note: 'Retail · barcodes & stock' },
   { email: 'owner.cloud@example.com', name: 'Farhan Qureshi', role: 'owner', business: 'Biryani Box Cloud Kitchen', note: 'Swiggy & Zomato · own prices & menus' },

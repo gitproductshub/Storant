@@ -26,6 +26,8 @@ import { VariantSheet } from './VariantSheet';
 import { CartSheet, type CheckoutInput } from './CartSheet';
 import { OrderTracker } from './OrderTracker';
 import { TableOrderTracker } from './TableOrderTracker';
+import { brand } from '@/config/brand';
+import { t as tr } from '@/i18n';
 
 const MAX_WIDTH = 720;
 const CART_TTL_MS = 2 * 24 * 3600 * 1000;
@@ -40,9 +42,9 @@ function param(v: string | string[] | undefined): string {
   return (Array.isArray(v) ? v[0] : v) ?? '';
 }
 
-const STATUS_LABEL: Record<string, string> = { placed: 'Received', open: 'Being prepared', completed: 'Completed', cancelled: 'Cancelled' };
+const STATUS_LABEL: Record<string, string> = { get placed() { return tr('public.store_StoreScreen.received'); }, get open() { return tr('public.store_StoreScreen.being_prepared'); }, get completed() { return tr('common.completed'); }, get cancelled() { return tr('common.cancelled'); } };
 const TABLE_STATUS_LABEL: Record<string, string> = {
-  placed: 'Waiting for the restaurant to confirm', open: 'In the kitchen', completed: 'Paid — thank you!', cancelled: 'Cancelled',
+  get placed() { return tr('public.store_StoreScreen.waiting_for_the_restaurant_to_confirm'); }, get open() { return tr('common.in_the_kitchen'); }, get completed() { return tr('public.store_StoreScreen.paid_thank_you'); }, get cancelled() { return tr('common.cancelled'); },
 };
 
 export default function StoreScreen() {
@@ -101,7 +103,7 @@ export default function StoreScreen() {
     setLoadError(null);
     try {
       const tablePromise = tableParam
-        ? (UUID_RE.test(tableParam) ? storeApi.table(tenantId, tableParam) : Promise.reject(new ApiError('Not found', 404)))
+        ? (UUID_RE.test(tableParam) ? storeApi.table(tenantId, tableParam) : Promise.reject(new ApiError(tr('public.store_StoreScreen.not_found'), 404)))
         : Promise.resolve(null);
       const [m, t] = await Promise.all([storeApi.menu(tenantId, mode), tablePromise.then((v) => ({ ok: true as const, v }), (e) => ({ ok: false as const, e }))]);
       setMenu(m);
@@ -142,11 +144,11 @@ export default function StoreScreen() {
       if (err && (err.status === 404 || err.status === 422)) setLoadError({ kind: 'notfound', message: '' });
       else if (err && (err.status === 402 || err.status === 403)) {
         setLoadError({ kind: 'unavailable', message: mode === 'QR'
-          ? "The menu isn't available online right now. Please ask the staff — they'll take your order at the table."
-          : "This shop's online menu isn't available right now. Please contact the shop directly." });
+          ? tr('public.store_StoreScreen.the_menu_isn_t_available_online_right_now')
+          : tr('public.store_StoreScreen.this_shop_s_online_menu_isn_t_available') });
       }
-      else if (err?.status === 429) setLoadError({ kind: 'ratelimit', message: 'Too many requests from your network. Please wait a minute and try again.' });
-      else if (err?.network) setLoadError({ kind: 'network', message: "Can't reach the shop right now. Check your internet connection and try again." });
+      else if (err?.status === 429) setLoadError({ kind: 'ratelimit', message: tr('public.store_StoreScreen.too_many_requests_from_your_network') });
+      else if (err?.network) setLoadError({ kind: 'network', message: tr('public.store_StoreScreen.can_t_reach_the_shop_right_now_check_your') });
       else setLoadError({ kind: 'other', message: errorMessage(e) });
     } finally {
       setLoading(false);
@@ -229,7 +231,7 @@ export default function StoreScreen() {
       const existing = ls.find((l) => l.key === key);
       if (existing) return ls.map((l) => (l.key === key ? { ...l, qty: Math.min(MAX_QTY, l.qty + qty) } : l));
       if (ls.length >= 50) {
-        toast.warning('Your cart is full. Place this order first.');
+        toast.warning(tr('public.store_StoreScreen.your_cart_is_full_place_this_order_first'));
         return ls;
       }
       return [...ls, {
@@ -290,7 +292,7 @@ export default function StoreScreen() {
         if (e.status === 403 || e.status === 402) {
           setOrderingBlocked(true);
           setCartOpen(false);
-          toast.warning(mode === 'QR' ? "Ordering isn't available right now — please ask the staff." : "This shop isn't taking online orders right now.");
+          toast.warning(mode === 'QR' ? tr('public.store_StoreScreen.ordering_isn_t_available_right_now_please') : tr('public.store_StoreScreen.this_shop_isn_t_taking_online_orders'));
           return e.message;
         }
         if (e.status === 400 && mode === 'QR' && /payment option/i.test(e.message)) {
@@ -380,7 +382,7 @@ export default function StoreScreen() {
   if (loading && !menu) {
     return (
       <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <PageTitle title="Loading menu…" />
+        <PageTitle title={tr('public.store_StoreScreen.loading_menu')} />
         <View style={[styles.hero, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 24, paddingHorizontal: pad }]}>
           <View style={{ width: '100%', maxWidth: MAX_WIDTH, gap: 12 }}>
             <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: colors.surfaceSunken }} />
@@ -388,7 +390,7 @@ export default function StoreScreen() {
             <View style={{ width: '40%', height: 14, borderRadius: radius.sm, backgroundColor: colors.surfaceSunken }} />
           </View>
         </View>
-        <View style={{ width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center', padding: pad, paddingTop: 28 }} accessibilityLabel="Loading menu">
+        <View style={{ width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center', padding: pad, paddingTop: 28 }} accessibilityLabel={tr('public.store_StoreScreen.loading_menu_2')}>
           <ProductSkeleton />
         </View>
       </View>
@@ -396,20 +398,20 @@ export default function StoreScreen() {
   }
 
   if (loadError || !menu) {
-    const e = loadError ?? { kind: 'other' as const, message: 'Something went wrong.' };
+    const e = loadError ?? { kind: 'other' as const, message: tr('public.store_StoreScreen.something_went_wrong') };
     return (
       <View style={[styles.root, styles.center, { backgroundColor: colors.background, padding: pad }]}>
-        <PageTitle title={e.kind === 'notfound' ? 'Shop not found' : 'Order online'} />
+        <PageTitle title={e.kind === 'notfound' ? tr('public.store_StoreScreen.shop_not_found') : tr('public.store_StoreScreen.order_online')} />
         <View style={{ maxWidth: 440, width: '100%' }}>
           {e.kind === 'notfound' ? (
-            <EmptyState icon="storefront-outline" title="We couldn't find this shop"
-              message="The link may be mistyped, or this shop is no longer taking orders through Tallyko. Please check the link or ask the shop for a new one." />
+            <EmptyState icon="storefront-outline" title={tr('public.store_StoreScreen.we_couldn_t_find_this_shop')}
+              message={tr('public.store_StoreScreen.the_link_may_be_mistyped_or_this_shop_is', { brand: brand.name })} />
           ) : e.kind === 'unavailable' ? (
-            <EmptyState icon="restaurant-outline" title="Menu unavailable" message={e.message} />
+            <EmptyState icon="restaurant-outline" title={tr('public.store_StoreScreen.menu_unavailable')} message={e.message} />
           ) : (
             <EmptyState icon={e.kind === 'network' ? 'cloud-offline-outline' : e.kind === 'ratelimit' ? 'hourglass-outline' : 'alert-circle-outline'}
-              title={e.kind === 'network' ? "You're offline" : e.kind === 'ratelimit' ? 'Please wait a moment' : "Couldn't load the menu"}
-              message={e.message} action={{ label: 'Try again', icon: 'refresh', onPress: () => void load() }} />
+              title={e.kind === 'network' ? tr('common.you_re_offline') : e.kind === 'ratelimit' ? tr('public.store_StoreScreen.please_wait_a_moment') : tr('public.store_StoreScreen.couldn_t_load_the_menu')}
+              message={e.message} action={{ label: tr('common.try_again'), icon: 'refresh', onPress: () => void load() }} />
           )}
           <PublicFooter />
         </View>
@@ -433,7 +435,7 @@ export default function StoreScreen() {
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
             {mode === 'QR' && table ? (
               <Text variant="smallStrong" tone="primary" style={{ textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                {tableName(table.table_number)} · Dine-in
+                {tr('public.store_StoreScreen.tablename_dine_in', { tableName: tableName(table.table_number) })}
               </Text>
             ) : null}
             <Text variant={isPhone ? 'h1' : 'display'} accessibilityRole="header" numberOfLines={2}
@@ -455,7 +457,7 @@ export default function StoreScreen() {
           ) : null}
           <View style={[styles.pill, { backgroundColor: canOrder ? colors.successSoft : colors.surfaceSunken }]}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: canOrder ? colors.success : colors.textSubtle }} />
-            <Text variant="smallStrong" color={canOrder ? colors.successText : colors.textMuted}>{canOrder ? 'Taking orders' : 'Menu only'}</Text>
+            <Text variant="smallStrong" color={canOrder ? colors.successText : colors.textMuted}>{canOrder ? tr('public.store_StoreScreen.taking_orders') : tr('public.store_StoreScreen.menu_only')}</Text>
           </View>
           <View style={[styles.pill, { backgroundColor: colors.surfaceSunken }]}>
             <Ionicons name="pricetag-outline" size={13} color={colors.textMuted} />
@@ -463,7 +465,7 @@ export default function StoreScreen() {
           </View>
           {business.phone ? (
             <Pressable onPress={() => void Linking.openURL(`tel:${business.phone!.replace(/\s/g, '')}`).catch(() => {})} accessibilityRole="link"
-              accessibilityLabel={`Call ${business.name}`} style={[styles.pill, { backgroundColor: colors.surfaceSunken }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
+              accessibilityLabel={tr('public.store_StoreScreen.call_name', { name: business.name })} style={[styles.pill, { backgroundColor: colors.surfaceSunken }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
               <Ionicons name="call-outline" size={13} color={colors.primary} />
               <Text variant="smallStrong" tone="primary">{business.phone}</Text>
             </Pressable>
@@ -476,7 +478,7 @@ export default function StoreScreen() {
   if (view === 'tracker' && savedOrder) {
     return (
       <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <PageTitle title={`Order #${savedOrder.code} · ${business.name}`} />
+        <PageTitle title={tr('public.store_StoreScreen.order_code_name', { code: savedOrder.code, name: business.name })} />
         <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
           {hero}
           <View style={{ width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center', padding: pad, paddingTop: 20 }}>
@@ -505,13 +507,13 @@ export default function StoreScreen() {
 
   const vegToggle = (
     <Pressable onPress={() => setVegOnly((v) => !v)} accessibilityRole="switch" accessibilityState={{ checked: vegOnly }}
-      accessibilityLabel="Show vegetarian items only"
+      accessibilityLabel={tr('public.store_StoreScreen.show_vegetarian_items_only')}
       style={[styles.vegToggle, {
         borderRadius: radius.md, borderColor: vegOnly ? colors.veg : colors.border,
         backgroundColor: vegOnly ? colors.successSoft : colors.surface,
       }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
       <VegMark veg size={14} />
-      <Text variant="smallStrong" color={vegOnly ? colors.successText : colors.text}>{isPhone ? 'Veg' : 'Veg only'}</Text>
+      <Text variant="smallStrong" color={vegOnly ? colors.successText : colors.text}>{isPhone ? tr('common.veg') : tr('public.store_StoreScreen.veg_only')}</Text>
       <View style={[styles.track, { backgroundColor: vegOnly ? colors.veg : colors.borderStrong }]}>
         <View style={[styles.thumb, { backgroundColor: colors.surface, alignSelf: vegOnly ? 'flex-end' : 'flex-start' }]} />
       </View>
@@ -520,7 +522,7 @@ export default function StoreScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <PageTitle title={pageTitle} description={menu ? `Order from ${menu.business.name}${menu.business.address ? `, ${menu.business.address}` : ''}.` : undefined} />
+      <PageTitle title={pageTitle} description={menu ? tr('public.store_StoreScreen.order_from_name_v', { name: menu.business.name, v: menu.business.address ? `, ${menu.business.address}` : '' }) : undefined} />
       <ScrollView
         ref={scrollRef}
         stickyHeaderIndices={[1]}
@@ -537,17 +539,17 @@ export default function StoreScreen() {
           <View style={{ width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center', gap: 8, paddingHorizontal: pad, paddingTop: 8 }}>
             {!isPhone || searchOpen || query ? (
               <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                <Input value={query} onChangeText={setQuery} placeholder="Search the menu" icon="search" containerStyle={{ flex: 1 }}
-                  accessibilityLabel="Search the menu" returnKeyType="search" autoCorrect={false} autoFocus={isPhone && searchOpen && !query}
-                  right={query ? <IconButton icon="close-circle" accessibilityLabel="Clear search" onPress={() => setQuery('')} size="sm" /> : undefined} />
-                {isPhone ? <Button title="Done" variant="ghost" size="sm" onPress={() => { setSearchOpen(false); }} /> : null}
+                <Input value={query} onChangeText={setQuery} placeholder={tr('public.store_StoreScreen.search_the_menu')} icon="search" containerStyle={{ flex: 1 }}
+                  accessibilityLabel={tr('public.store_StoreScreen.search_the_menu')} returnKeyType="search" autoCorrect={false} autoFocus={isPhone && searchOpen && !query}
+                  right={query ? <IconButton icon="close-circle" accessibilityLabel={tr('common.clear_search')} onPress={() => setQuery('')} size="sm" /> : undefined} />
+                {isPhone ? <Button title={tr('common.done')} variant="ghost" size="sm" onPress={() => { setSearchOpen(false); }} /> : null}
                 {!isPhone && hasVegInfo ? vegToggle : null}
               </View>
             ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {sections.length > 1 ? (
                 <ScrollView ref={chipsRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={{ flex: 1 }}
-                  accessibilityRole="tablist" accessibilityLabel="Menu categories">
+                  accessibilityRole="tablist" accessibilityLabel={tr('public.store_StoreScreen.menu_categories')}>
                   {sections.map((s) => (
                     <View key={s.id} onLayout={(e) => { chipX.current[s.id] = e.nativeEvent.layout.x; }}>
                       <Chip label={s.name} count={s.products.length} selected={activeCat === s.id} onPress={() => jumpTo(s.id)} />
@@ -557,7 +559,7 @@ export default function StoreScreen() {
               ) : <View style={{ flex: 1 }} />}
               {isPhone && !searchOpen && !query ? (
                 <>
-                  <IconButton icon="search" variant="outline" accessibilityLabel="Search the menu" onPress={() => setSearchOpen(true)} />
+                  <IconButton icon="search" variant="outline" accessibilityLabel={tr('public.store_StoreScreen.search_the_menu')} onPress={() => setSearchOpen(true)} />
                   {hasVegInfo ? vegToggle : null}
                 </>
               ) : null}
@@ -570,22 +572,22 @@ export default function StoreScreen() {
           style={{ width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center', paddingHorizontal: pad, paddingTop: 16, gap: 12 }}>
           {savedOrder ? (
             <View style={[styles.trackBanner, { borderRadius: radius.lg, borderColor: colors.primary, backgroundColor: colors.primarySoft }]}>
-              <Pressable onPress={() => setView('tracker')} accessibilityRole="button" accessibilityLabel={`Track order ${savedOrder.code}`}
+              <Pressable onPress={() => setView('tracker')} accessibilityRole="button" accessibilityLabel={tr('public.store_StoreScreen.track_order_code', { code: savedOrder.code })}
                 style={({ hovered }: any) => [styles.trackMain, { opacity: hovered ? 0.8 : 1 }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
                 <Ionicons name={statusStage(savedOrder.status) === -1 ? 'close-circle' : 'receipt'} size={22} color={colors.primary} />
                 <View style={{ flex: 1 }}>
                   <Text variant="bodyStrong" color={colors.primarySoftText}>
-                    {savedOrder.mode === 'QR' ? `Your bill #${savedOrder.code} · ${price(savedOrder.total_amount, symbol)}` : `Your order #${savedOrder.code}`}
+                    {savedOrder.mode === 'QR' ? tr('public.store_StoreScreen.your_bill_code_price', { code: savedOrder.code, price: price(savedOrder.total_amount, symbol) }) : tr('public.store_StoreScreen.your_order_code', { code: savedOrder.code })}
                   </Text>
                   <Text variant="small" color={colors.primarySoftText}>
                     {savedOrder.mode === 'QR'
-                      ? `${savedOrder.paid ? 'Paid ✓' : TABLE_STATUS_LABEL[savedOrder.status] ?? 'Sent'} · tap to track${savedOrder.paid ? '' : ' or pay'}`
-                      : `${STATUS_LABEL[savedOrder.status] ?? 'Received'} · tap to track`}
+                      ? tr('public.store_StoreScreen.v_tap_to_track_v2', { v: savedOrder.paid ? tr('public.store_StoreScreen.paid') : TABLE_STATUS_LABEL[savedOrder.status] ?? tr('common.sent'), v2: savedOrder.paid ? '' : tr('public.store_StoreScreen.or_pay') })
+                      : tr('public.store_StoreScreen.v_tap_to_track', { v: STATUS_LABEL[savedOrder.status] ?? tr('public.store_StoreScreen.received') })}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.primary} />
               </Pressable>
-              <IconButton icon="close" size="sm" accessibilityLabel="Hide this order" onPress={dismissSavedOrder} />
+              <IconButton icon="close" size="sm" accessibilityLabel={tr('public.store_StoreScreen.hide_this_order')} onPress={dismissSavedOrder} />
             </View>
           ) : null}
           {!canOrder ? <Notice tone="warning" icon="time-outline" title={blockedTitle}>{blockedBody}</Notice> : null}
@@ -593,26 +595,26 @@ export default function StoreScreen() {
             <Notice tone="info">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text variant="small" color={colors.infoText} style={{ flex: 1 }}>{cartNotice}</Text>
-                <IconButton icon="close" size="sm" accessibilityLabel="Dismiss" onPress={() => setCartNotice(null)} />
+                <IconButton icon="close" size="sm" accessibilityLabel={tr('public.store_StoreScreen.dismiss')} onPress={() => setCartNotice(null)} />
               </View>
             </Notice>
           ) : null}
           {tableError && mode === 'QR' ? (
-            <Button title="Check table again" variant="secondary" icon="refresh" onPress={() => void load()} loading={loading} style={{ alignSelf: 'flex-start' }} />
+            <Button title={tr('public.store_StoreScreen.check_table_again')} variant="secondary" icon="refresh" onPress={() => void load()} loading={loading} style={{ alignSelf: 'flex-start' }} />
           ) : null}
 
           {menu.products.length === 0 ? (
-            <EmptyState icon="restaurant-outline" title="Menu coming soon" message={`${business.name} hasn't added any items yet. Please check back later.`} />
+            <EmptyState icon="restaurant-outline" title={tr('public.store_StoreScreen.menu_coming_soon')} message={tr('public.store_StoreScreen.name_hasn_t_added_any_items_yet_please', { name: business.name })} />
           ) : sections.length === 0 ? (
-            <EmptyState icon="search-outline" title="No matching items"
-              message={query ? `Nothing on the menu matches “${query.trim()}”${vegOnly ? ' in veg items' : ''}.` : 'No vegetarian items on this menu.'}
-              action={{ label: 'Clear filters', icon: 'close', onPress: () => { setQuery(''); setVegOnly(false); } }} />
+            <EmptyState icon="search-outline" title={tr('public.store_StoreScreen.no_matching_items')}
+              message={query ? tr('public.store_StoreScreen.nothing_on_the_menu_matches_trim_v', { trim: query.trim(), v: vegOnly ? tr('public.store_StoreScreen.in_veg_items') : '' }) : tr('public.store_StoreScreen.no_vegetarian_items_on_this_menu')}
+              action={{ label: tr('common.clear_filters'), icon: 'close', onPress: () => { setQuery(''); setVegOnly(false); } }} />
           ) : (
             visibleSections.map((section) => (
               <View key={section.id} onLayout={(e) => { sectionY.current[section.id] = e.nativeEvent.layout.y; }} style={{ marginTop: 8 }}>
                 <View style={styles.sectionHead}>
                   <Text variant="h2" accessibilityRole="header">{section.name}</Text>
-                  <Text variant="small" tone="subtle">{section.products.length} item{section.products.length === 1 ? '' : 's'}</Text>
+                  <Text variant="small" tone="subtle">{section.products.length} {tr('common.item_2')}{section.products.length === 1 ? '' : 's'}</Text>
                 </View>
                 {section.products.map((p) => (
                   <ProductRow key={p.id} product={p} symbol={symbol} qty={qtyByProduct[p.id] ?? 0} canOrder={canOrder}
@@ -621,7 +623,7 @@ export default function StoreScreen() {
               </View>
             ))
           )}
-          {business.fssai ? <Text variant="small" tone="subtle" align="center" style={{ marginTop: 16 }}>FSSAI Lic. No. {business.fssai}</Text> : null}
+          {business.fssai ? <Text variant="small" tone="subtle" align="center" style={{ marginTop: 16 }}>{tr('public.store_StoreScreen.fssai_lic_no')} {business.fssai}</Text> : null}
           <PublicFooter businessName={business.name} />
         </View>
       </ScrollView>
@@ -629,7 +631,7 @@ export default function StoreScreen() {
       {cartCount > 0 && canOrder ? (
         <View pointerEvents="box-none" style={[styles.cartBarWrap, { bottom: insets.bottom + 16, paddingHorizontal: pad }]}>
           <Pressable onPress={() => setCartOpen(true)} accessibilityRole="button"
-            accessibilityLabel={`View cart, ${cartCount} item${cartCount === 1 ? '' : 's'}, ${price(cartTotal, symbol)}`}
+            accessibilityLabel={tr('public.store_StoreScreen.view_cart_cartcount_item_v_price', { cartCount, v: cartCount === 1 ? '' : 's', price: price(cartTotal, symbol) })}
             style={({ hovered, pressed }: any) => [styles.cartBar, shadow(3), {
               borderRadius: radius.lg, backgroundColor: hovered || pressed ? colors.primaryHover : colors.primary, maxWidth: MAX_WIDTH - 2 * pad,
             }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
@@ -638,9 +640,9 @@ export default function StoreScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="bodyStrong" color={colors.primaryText}>{price(cartTotal, symbol)}</Text>
-              <Text variant="caption" color={colors.primaryText} style={{ opacity: 0.85 }}>{business.prices_include_tax ? 'incl. GST' : 'plus GST'}</Text>
+              <Text variant="caption" color={colors.primaryText} style={{ opacity: 0.85 }}>{business.prices_include_tax ? tr('public.store_StoreScreen.incl_gst') : tr('public.store_StoreScreen.plus_gst')}</Text>
             </View>
-            <Text variant="bodyStrong" color={colors.primaryText}>View cart</Text>
+            <Text variant="bodyStrong" color={colors.primaryText}>{tr('public.store_StoreScreen.view_cart')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.primaryText} />
           </Pressable>
         </View>
@@ -648,19 +650,19 @@ export default function StoreScreen() {
 
       {!(cartCount > 0 && canOrder) && savedOrder && statusStage(savedOrder.status) !== -1 && !(savedOrder.mode === 'QR' && savedOrder.paid) ? (
         <View pointerEvents="box-none" style={[styles.cartBarWrap, { bottom: insets.bottom + 16, paddingHorizontal: pad }]}>
-          <Pressable onPress={() => setView('tracker')} accessibilityRole="button" accessibilityLabel={`Track order ${savedOrder.code}`}
+          <Pressable onPress={() => setView('tracker')} accessibilityRole="button" accessibilityLabel={tr('public.store_StoreScreen.track_order_code', { code: savedOrder.code })}
             style={({ hovered, pressed }: any) => [styles.cartBar, shadow(3), {
               borderRadius: radius.lg, backgroundColor: hovered || pressed ? colors.surfaceSunken : colors.surface, borderWidth: 1, borderColor: colors.primary,
               maxWidth: MAX_WIDTH - 2 * pad,
             }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
             <Ionicons name="receipt" size={22} color={colors.primary} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text variant="bodyStrong" numberOfLines={1}>{savedOrder.mode === 'QR' ? `Your bill #${savedOrder.code}` : `Your order #${savedOrder.code}`}</Text>
+              <Text variant="bodyStrong" numberOfLines={1}>{savedOrder.mode === 'QR' ? tr('public.store_StoreScreen.your_bill_code', { code: savedOrder.code }) : tr('public.store_StoreScreen.your_order_code', { code: savedOrder.code })}</Text>
               <Text variant="caption" tone="muted" numberOfLines={1}>
-                {savedOrder.mode === 'QR' ? TABLE_STATUS_LABEL[savedOrder.status] ?? 'Sent' : STATUS_LABEL[savedOrder.status] ?? 'Received'}
+                {savedOrder.mode === 'QR' ? TABLE_STATUS_LABEL[savedOrder.status] ?? tr('common.sent') : STATUS_LABEL[savedOrder.status] ?? tr('public.store_StoreScreen.received')}
               </Text>
             </View>
-            <Text variant="bodyStrong" tone="primary">{savedOrder.mode === 'QR' ? 'Track & pay' : 'Track'}</Text>
+            <Text variant="bodyStrong" tone="primary">{savedOrder.mode === 'QR' ? tr('public.store_StoreScreen.track_pay') : tr('public.store_StoreScreen.track')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.primary} />
           </Pressable>
         </View>

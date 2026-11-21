@@ -13,6 +13,7 @@ import { Badge, Button, EmptyState, ErrorState, Loading, Sheet, Text, toast } fr
 import { confirmTop } from './dialogs';
 import { olderOf, priceDiff, snapshotFacts, snapshotPrice, whenLabel } from './history';
 import { channelShortName } from './channelPricing';
+import { t } from '@/i18n';
 
 export function ProductHistorySheet({ product, onClose, onRestored, categories, channels, symbol, unsaved }: {
   product: Product;
@@ -47,17 +48,17 @@ export function ProductHistorySheet({ product, onClose, onRestored, categories, 
 
   const restore = async (v: ProductVersion) => {
     const ok = await confirmTop({
-      title: `Restore version ${v.version}?`,
+      title: t('catalog.ProductHistorySheet.restore_version_version', { version: v.version }),
       message: `“${v.snapshot.name ?? product.name}” goes back to version ${v.version} (${[whenLabel(v.created_at), snapshotPrice(v.snapshot, symbol)].filter(Boolean).join(', ')}). `
         + `This is saved as a new version, so you can undo it from here.${unsaved ? ' Your unsaved changes in the editor will be discarded.' : ''}`,
-      confirmLabel: 'Restore this version',
+      confirmLabel: t('catalog.ProductHistorySheet.restore_this_version'),
     });
     if (!ok) return;
     setRestoring(v.version);
     try {
       const saved = await menuHistoryApi.restore(product.id, v.version);
       onRestored(saved);
-      toast.success(`Restored version ${v.version}`);
+      toast.success(t('catalog.ProductHistorySheet.restored_version_version', { version: v.version }));
       onClose();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -67,11 +68,11 @@ export function ProductHistorySheet({ product, onClose, onRestored, categories, 
   };
 
   return (
-    <Sheet visible onClose={onClose} title="Item history" subtitle={`${product.name} · every change is kept`} width={640} dismissable={restoring === null}>
-      {!versions && !error ? <Loading label="Loading history…" /> : null}
+    <Sheet visible onClose={onClose} title={t('catalog.ProductHistorySheet.item_history')} subtitle={t('catalog.ProductHistorySheet.name_every_change_is_kept', { name: product.name })} width={640} dismissable={restoring === null}>
+      {!versions && !error ? <Loading label={t('catalog.ProductHistorySheet.loading_history')} /> : null}
       {error && !versions ? <ErrorState message={error} onRetry={() => setAttempt((n) => n + 1)} /> : null}
       {versions && !versions.length ? (
-        <EmptyState icon="time-outline" title="No changes recorded yet" message="From now on, every change to this item is kept here with who made it and when." />
+        <EmptyState icon="time-outline" title={t('catalog.ProductHistorySheet.no_changes_recorded_yet')} message={t('catalog.ProductHistorySheet.from_now_on_every_change_to_this_item_is')} />
       ) : null}
       {versions?.length ? (
         <View>
@@ -90,12 +91,12 @@ export function ProductHistorySheet({ product, onClose, onRestored, categories, 
                 </View>
                 <View style={{ flex: 1, minWidth: 0, paddingBottom: 18, gap: 4 }}>
                   <Pressable onPress={() => setOpen(expanded ? null : v.version)} accessibilityRole="button" accessibilityState={{ expanded }}
-                    accessibilityLabel={`Version ${v.version}: ${v.change}. ${expanded ? 'Hide' : 'Show'} details`}
+                    accessibilityLabel={t('catalog.ProductHistorySheet.version_version_change_v_details', { version: v.version, change: v.change, v: expanded ? t('common.hide') : t('common.show') })}
                     style={[{ gap: 4 }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
                     <View style={styles.titleRow}>
                       <Text variant="bodyStrong" style={{ flexShrink: 1 }}>{v.change}</Text>
-                      {latest ? <Badge label="Current" tone="primary" /> : null}
-                      {removed ? <Badge label="Removed" tone="danger" /> : null}
+                      {latest ? <Badge label={t('common.current')} tone="primary" /> : null}
+                      {removed ? <Badge label={t('catalog.ProductHistorySheet.removed')} tone="danger" /> : null}
                     </View>
                     <Text variant="small" tone="muted">
                       {[`Version ${v.version}`, whenLabel(v.created_at), v.changed_by ? `by ${v.changed_by}` : null].filter(Boolean).join(' · ')}
@@ -117,10 +118,10 @@ export function ProductHistorySheet({ product, onClose, onRestored, categories, 
                         </View>
                       ))}
                       {!latest ? (
-                        <Button title="Restore this version" icon="arrow-undo-outline" size="sm" variant="secondary" style={{ alignSelf: 'flex-start', marginTop: 4 }}
+                        <Button title={t('catalog.ProductHistorySheet.restore_this_version')} icon="arrow-undo-outline" size="sm" variant="secondary" style={{ alignSelf: 'flex-start', marginTop: 4 }}
                           onPress={() => void restore(v)} loading={restoring === v.version} disabled={restoring !== null} />
                       ) : (
-                        <Text variant="small" tone="subtle">This is how the item is now.</Text>
+                        <Text variant="small" tone="subtle">{t('catalog.ProductHistorySheet.this_is_how_the_item_is_now')}</Text>
                       )}
                     </View>
                   ) : null}

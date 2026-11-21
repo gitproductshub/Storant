@@ -33,7 +33,7 @@ async def archive_orders(db: AsyncSession, tenant_id, order_ids, reason: str, un
             order.archived_at, order.archived_reason = None, None
         else:
             if order.status in order_service.OPEN_STATUSES:
-                order = await order_service.cancel(db, str(tenant_id), order.id, f"Archived by Tallyko: {reason}")
+                order = await order_service.cancel(db, str(tenant_id), order.id, f"Archived by Storant: {reason}")
             order.archived_at, order.archived_reason = datetime.utcnow(), reason[:200]
         out.append(bill_snapshot(order))
     await db.flush()
@@ -44,7 +44,7 @@ async def hard_delete_orders(db: AsyncSession, tenant_id, order_ids, reason: str
     for order in await _orders(db, tenant_id, order_ids):
         snapshots.append(bill_snapshot(order))
         if order.status not in ("cancelled", "merged"):
-            await order_service.cancel(db, str(tenant_id), order.id, f"Deleted by Tallyko: {reason}")  # reverse stock & loyalty
+            await order_service.cancel(db, str(tenant_id), order.id, f"Deleted by Storant: {reason}")  # reverse stock & loyalty
         await db.execute(update(TableEntity).where(TableEntity.current_order_id == order.id).values(current_order_id=None))
         await db.execute(delete(OfferRedemption).where(OfferRedemption.order_id == order.id))
         await db.execute(delete(InventoryLog).where(InventoryLog.order_id == order.id))  # its sale and its reversal net to zero

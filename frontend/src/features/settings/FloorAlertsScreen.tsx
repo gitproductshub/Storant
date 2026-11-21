@@ -13,6 +13,7 @@ import { useData } from '@/store/data';
 import { SettingsFrame } from './SettingsFrame';
 import { Callout, FieldRow, FormSection, SaveBar } from './components';
 import { OPS_DEFAULTS, opsFormOf, opsValues, validateOps, type OpsForm, type OpsKey } from './floorAlerts';
+import { t } from '@/i18n';
 
 export default function FloorAlertsScreen() {
   const role = useAuth((s) => s.session?.role ?? null);
@@ -20,8 +21,8 @@ export default function FloorAlertsScreen() {
   const allowed = hasAccess(access, { permissions: ['settings.manage'] }) ?? can(role, 'manage');
   if (!allowed) {
     return (
-      <SettingsFrame active="floor" title="Floor alerts">
-        <EmptyState icon="lock-closed-outline" title="Owners and managers only" message="Ask the owner or a manager to change the floor alert times." />
+      <SettingsFrame active="floor" title={t('common.floor_alerts')}>
+        <EmptyState icon="lock-closed-outline" title={t('settings.FloorAlertsScreen.owners_and_managers_only')} message={t('settings.FloorAlertsScreen.ask_the_owner_or_a_manager_to_change_the')} />
       </SettingsFrame>
     );
   }
@@ -43,9 +44,9 @@ function FloorAlertsSettings() {
     setForm((f) => (!f || previous === null || JSON.stringify(f) === previous ? initial : f));
   }, [initial]);
 
-  if (loading && !data) return <SettingsFrame active="floor" title="Floor alerts"><Loading label="Loading floor alerts" /></SettingsFrame>;
+  if (loading && !data) return <SettingsFrame active="floor" title={t('common.floor_alerts')}><Loading label={t('settings.FloorAlertsScreen.loading_floor_alerts')} /></SettingsFrame>;
   if (!data || !form || !initial) {
-    return <SettingsFrame active="floor" title="Floor alerts"><ErrorState message={error ?? 'Couldn’t load the settings.'} onRetry={reload} /></SettingsFrame>;
+    return <SettingsFrame active="floor" title={t('common.floor_alerts')}><ErrorState message={error ?? t('settings.FloorAlertsScreen.couldn_t_load_the_settings')} onRetry={reload} /></SettingsFrame>;
   }
 
   const errors = validateOps(form);
@@ -56,7 +57,7 @@ function FloorAlertsSettings() {
 
   const save = async () => {
     if (invalid) {
-      toast.error(Object.values(errors)[0] ?? 'Check the times');
+      toast.error(Object.values(errors)[0] ?? t('settings.FloorAlertsScreen.check_the_times'));
       return;
     }
     setSaving(true);
@@ -65,7 +66,7 @@ function FloorAlertsSettings() {
       useData.getState().setSettings(settings); // the floor screens read the times from here
       setData(settings);
       setForm(opsFormOf(settings.ops_thresholds));
-      toast.success('Floor alerts saved');
+      toast.success(t('settings.FloorAlertsScreen.floor_alerts_saved'));
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -75,32 +76,32 @@ function FloorAlertsSettings() {
 
   const field = (k: OpsKey, label: string, hint?: string) => (
     <Input label={label} value={form[k]} onChangeText={set(k)} keyboardType="number-pad" maxLength={3} error={errors[k]} hint={hint}
-      right={<Text variant="small" tone="subtle">min</Text>} />
+      right={<Text variant="small" tone="subtle">{t('settings.FloorAlertsScreen.min')}</Text>} />
   );
 
   return (
-    <SettingsFrame active="floor" title="Floor alerts"
-      subtitle="When tables, kitchen tickets and online orders turn amber and then red, so staff see what needs attention first."
+    <SettingsFrame active="floor" title={t('common.floor_alerts')}
+      subtitle={t('settings.FloorAlertsScreen.when_tables_kitchen_tickets_and_online')}
       dirty={dirty} refreshing={refreshing} onRefresh={reload}
-      actions={!isDefault ? <Button title="Use defaults" size="sm" variant="ghost" icon="refresh-outline" onPress={() => setForm(opsFormOf(OPS_DEFAULTS))} /> : undefined}
+      actions={!isDefault ? <Button title={t('settings.FloorAlertsScreen.use_defaults')} size="sm" variant="ghost" icon="refresh-outline" onPress={() => setForm(opsFormOf(OPS_DEFAULTS))} /> : undefined}
       footer={<SaveBar visible={dirty} saving={saving} onSave={save} onDiscard={() => setForm(initial)} disabled={invalid} />}>
-      <FormSection title="Tables" description="Time since the first bill on the table was opened.">
+      <FormSection title={t('common.tables')} description={t('settings.FloorAlertsScreen.time_since_the_first_bill_on_the_table')}>
         <FieldRow>
           {field('table_amber_min', 'Amber after', `Default ${OPS_DEFAULTS.table_amber_min}`)}
           {field('table_red_min', 'Red after', `Default ${OPS_DEFAULTS.table_red_min}`)}
         </FieldRow>
       </FormSection>
-      <FormSection title="Kitchen" description="Time since the KOT reached the kitchen.">
+      <FormSection title={t('common.kitchen')} description={t('settings.FloorAlertsScreen.time_since_the_kot_reached_the_kitchen')}>
         <FieldRow>
           {field('kitchen_amber_min', 'Amber after', `Default ${OPS_DEFAULTS.kitchen_amber_min}`)}
           {field('kitchen_red_min', 'Red after', `Default ${OPS_DEFAULTS.kitchen_red_min}`)}
         </FieldRow>
       </FormSection>
-      <FormSection title="Online orders" description="Time a new Swiggy, Zomato, QR or store order has been waiting to be accepted.">
+      <FormSection title={t('common.online_orders')} description={t('settings.FloorAlertsScreen.time_a_new_swiggy_zomato_qr_or_store')}>
         {field('online_wait_min', 'Amber after', `Turns red at twice this time. Default ${OPS_DEFAULTS.online_wait_min}`)}
       </FormSection>
       <Callout tone="neutral" icon="phone-portrait-outline">
-        This device uses the new times straight away; other tills, tablets and kitchen screens pick them up at their next sync (about a minute).
+        {t('settings.FloorAlertsScreen.this_device_uses_the_new_times_straight')}
       </Callout>
     </SettingsFrame>
   );

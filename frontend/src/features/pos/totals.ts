@@ -5,7 +5,8 @@
 import type { BusinessSettings, ChannelCode, Order, OrderItem, PaymentInput, Product, SalesChannel, TaxSnapshot } from '@/api/types';
 import type { BillCreateInput } from '@/api/floor';
 import { availableOn, isFreeItem, markupPrice, isVoidItem, previewTotals, spreadOfferDiscount, taxRateFor, unitPriceFor, type PricePreview } from '@/lib/billing';
-import { CHANNEL_LABEL, round2, shortCode } from '@/lib/format';
+import { round2, shortCode } from '@/lib/format';
+import { CHANNEL_UI } from '@/lib/uiLabels';
 import { ApiError } from '@/api/client';
 import type { CartLine, Draft } from './cart';
 
@@ -118,7 +119,7 @@ export function validateDraft(draft: Draft, priced: PricedDraft, opts: { require
   if (priced.missing.length) {
     const line = priced.lines.find((l) => l.line.id === priced.missing[0].id);
     return line?.unavailable
-      ? `${line.line.name} isn't on the ${CHANNEL_LABEL[draft.channel] ?? draft.channel} menu. Remove it to continue.`
+      ? `${line.line.name} isn't on the ${CHANNEL_UI[draft.channel] ?? draft.channel} menu. Remove it to continue.`
       : `${priced.missing[0].name} is no longer on the menu. Remove it to continue.`;
   }
   if (!draft.resume) {

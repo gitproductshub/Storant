@@ -7,9 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Badge, Sheet, StatusPill, Text, toast, type BadgeTone } from '@/components/ui';
 import type { ChannelCode, Order, OrderStatus } from '@/api/types';
-import { CHANNEL_LABEL, PAYMENT_LABEL, ORDER_TYPE_LABEL, formatDateTime, money } from '@/lib/format';
+import { formatDateTime, money } from '@/lib/format';
+import { CHANNEL_UI, PAYMENT_UI, ORDER_TYPE_UI } from '@/lib/uiLabels';
 import { getServerUrl } from '@/store/prefs';
 import { isCompItem, isVoidItem } from '@/lib/billing';
+import { t as tr } from '@/i18n';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -59,7 +61,7 @@ const CHANNEL_ICON: Record<string, IconName> = {
 export const AGGREGATOR_CODES: ChannelCode[] = ['SWIGGY', 'ZOMATO', 'ONDC', 'MAGICPIN', 'OTHER'];
 
 export function channelLabel(code: string): string {
-  return CHANNEL_LABEL[code] ?? code;
+  return CHANNEL_UI[code] ?? code;
 }
 
 /** Logo-style square tile for a sales channel (brand-ish tone from theme tokens). */
@@ -132,7 +134,7 @@ export function billText(order: Order, businessName: string, symbol = '₹'): st
   const lines: string[] = [];
   lines.push(businessName);
   lines.push(`Bill ${billNo(order)} · ${formatDateTime(order.created_at)}`);
-  const meta = [ORDER_TYPE_LABEL[order.type] ?? order.type];
+  const meta = [ORDER_TYPE_UI[order.type] ?? order.type];
   if (order.table_label) meta.push(`Table ${order.table_label}`);
   if (order.channel !== 'POS') meta.push(channelLabel(order.channel));
   lines.push(meta.join(' · '));
@@ -149,7 +151,7 @@ export function billText(order: Order, businessName: string, symbol = '₹'): st
   if (order.tax_amount) lines.push(`GST: ${money(order.tax_amount, symbol)}`);
   if (order.round_off) lines.push(`Round off: ${money(order.round_off, symbol)}`);
   lines.push(`Total: ${money(order.total_amount, symbol)}`);
-  if (order.payments.length) lines.push(`Paid: ${order.payments.map((p) => `${PAYMENT_LABEL[p.method] ?? p.method} ${money(p.amount, symbol)}`).join(', ')}`);
+  if (order.payments.length) lines.push(`Paid: ${order.payments.map((p) => `${PAYMENT_UI[p.method] ?? p.method} ${money(p.amount, symbol)}`).join(', ')}`);
   if (order.status === 'cancelled') lines.push('*** CANCELLED ***');
   if (order.status === 'merged') lines.push('*** MERGED INTO ANOTHER BILL ***');
   lines.push('');
@@ -170,10 +172,10 @@ export async function shareText(text: string, title: string): Promise<void> {
     }
     if (nav?.clipboard?.writeText) {
       await nav.clipboard.writeText(text);
-      toast.success('Bill copied — paste it into WhatsApp or SMS');
+      toast.success(tr('ops.common.bill_copied_paste_it_into_whatsapp_or_sms'));
       return;
     }
-    throw new Error('Sharing is not available in this browser.');
+    throw new Error(tr('ops.common.sharing_is_not_available_in_this_browser'));
   }
   await Share.share({ message: text, title });
 }
@@ -258,7 +260,7 @@ export function Notice({ tone = 'info', icon, title, message, action, onClose }:
         ) : null}
       </View>
       {onClose ? (
-        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss" hitSlop={12}>
+        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={tr('ops.common.dismiss')} hitSlop={12}>
           <Ionicons name="close" size={18} color={fg} />
         </Pressable>
       ) : null}
@@ -317,7 +319,7 @@ export function SkeletonRows({ count = 6, height = 64 }: { count?: number; heigh
     return () => clearInterval(id);
   }, []);
   return (
-    <View style={{ gap: 10 }} accessibilityLabel="Loading" accessibilityRole="progressbar">
+    <View style={{ gap: 10 }} accessibilityLabel={tr('ops.common.loading')} accessibilityRole="progressbar">
       {Array.from({ length: count }).map((_, i) => (
         <View key={i} style={{ height, borderRadius: radius.lg, backgroundColor: colors.surfaceSunken, opacity: on ? 1 : 0.55,
           ...(Platform.OS === 'web' ? ({ transitionDuration: '700ms' } as any) : null) }} />

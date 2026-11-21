@@ -11,6 +11,8 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/components/ui';
 import { Logo } from '@/components/Logo';
 import { PageTitle } from './PageTitle';
+import { brand } from '@/config/brand';
+import { t } from '@/i18n';
 
 export function PublicPage({ title, children, maxWidth = 760 }: { title: string; children: React.ReactNode; maxWidth?: number }) {
   const { colors } = useTheme();
@@ -28,7 +30,7 @@ export function PublicPage({ title, children, maxWidth = 760 }: { title: string;
       <PageTitle title={title} />
       <View style={[styles.topBar, { paddingTop: insets.top + 10, paddingHorizontal: pad, borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <View style={[styles.topInner, { maxWidth }]}>
-          <Pressable onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back"
+          <Pressable onPress={goBack} accessibilityRole="button" accessibilityLabel={t('public.PublicPage.go_back')}
             style={({ hovered }: any) => [styles.back, { backgroundColor: hovered ? colors.surfaceSunken : 'transparent' }, Platform.OS === 'web' && ({ cursor: 'pointer' } as any)]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </Pressable>
@@ -51,12 +53,12 @@ export function PublicFooter({ businessName }: { businessName?: string }) {
   return (
     <View style={[styles.footer, { borderTopColor: colors.border }]}>
       <Text variant="small" tone="subtle" align="center">
-        {businessName ? `${businessName} · ` : ''}Powered by Tallyko
+        {businessName ? `${businessName} · ` : ''}{t('public.PublicPage.powered_by_brand', { brand: brand.name })}
       </Text>
       <View style={styles.footerLinks}>
-        <Link href="/privacy" accessibilityRole="link"><Text variant="small" tone="muted">Privacy policy</Text></Link>
+        <Link href="/privacy" accessibilityRole="link"><Text variant="small" tone="muted">{t('common.privacy_policy')}</Text></Link>
         <Text variant="small" tone="subtle">·</Text>
-        <Link href="/delete-account" accessibilityRole="link"><Text variant="small" tone="muted">Delete account</Text></Link>
+        <Link href="/delete-account" accessibilityRole="link"><Text variant="small" tone="muted">{t('public.PublicPage.delete_account')}</Text></Link>
       </View>
     </View>
   );

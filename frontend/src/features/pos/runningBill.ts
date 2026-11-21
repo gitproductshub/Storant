@@ -6,15 +6,16 @@
 import type { KitchenStatus, Order, OrderItem, TableBill } from '@/api/types';
 import type { ItemQty, ItemStatus } from '@/api/floor';
 import { isCompItem, isFreeItem, isVoidItem } from '@/lib/billing';
+import { t } from '@/i18n';
 
 export const KITCHEN_FLOW: ItemStatus[] = ['pending', 'preparing', 'ready', 'served'];
 
 export const KITCHEN_META: Record<KitchenStatus, { label: string; tone: 'neutral' | 'info' | 'success' | 'primary' | 'danger' | 'warning'; icon: string }> = {
-  pending: { label: 'Pending', tone: 'warning', icon: 'time-outline' },
-  preparing: { label: 'Preparing', tone: 'info', icon: 'flame-outline' },
-  ready: { label: 'Ready', tone: 'success', icon: 'checkmark-circle-outline' },
-  served: { label: 'Served', tone: 'neutral', icon: 'checkmark-done-outline' },
-  void: { label: 'Cancelled', tone: 'danger', icon: 'close-circle-outline' },
+  pending: { get label() { return t('common.pending'); }, tone: 'warning', icon: 'time-outline' },
+  preparing: { get label() { return t('common.preparing'); }, tone: 'info', icon: 'flame-outline' },
+  ready: { get label() { return t('common.ready'); }, tone: 'success', icon: 'checkmark-circle-outline' },
+  served: { get label() { return t('common.served'); }, tone: 'neutral', icon: 'checkmark-done-outline' },
+  void: { get label() { return t('common.cancelled'); }, tone: 'danger', icon: 'close-circle-outline' },
 };
 
 /** Items a person can tick: everything except cancelled lines. */
@@ -88,10 +89,10 @@ export function kitchenProgress(kitchen: TableBill['kitchen'] | null | undefined
   const k = kitchen ?? {};
   const ready = k.ready ?? 0;
   const cooking = (k.pending ?? 0) + (k.preparing ?? 0);
-  if (ready) return { label: `${ready} ready to serve`, tone: 'success' };
-  if (k.preparing) return { label: `${cooking} cooking`, tone: 'info' };
-  if (k.pending) return { label: `${k.pending} waiting`, tone: 'warning' };
-  if (k.served) return { label: 'All served', tone: 'neutral' };
+  if (ready) return { label: t('pos.runningBill.ready_ready_to_serve', { ready }), tone: 'success' };
+  if (k.preparing) return { label: t('pos.runningBill.cooking_cooking', { cooking }), tone: 'info' };
+  if (k.pending) return { label: t('pos.runningBill.pending_waiting', { pending: k.pending }), tone: 'warning' };
+  if (k.served) return { label: t('pos.runningBill.all_served'), tone: 'neutral' };
   return null;
 }
 

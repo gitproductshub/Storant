@@ -3,6 +3,7 @@ import type { SalesSummary } from '@/api/types';
 import { CHANNEL_LABEL, ORDER_TYPE_LABEL, PAYMENT_LABEL, money } from '@/lib/format';
 import { hourLabel } from './range';
 import type { ItemRow, StaffRow, WastageRow } from './useReports';
+import { brand } from '@/config/brand';
 
 type Cell = string | number | null | undefined;
 
@@ -127,6 +128,6 @@ ${s.by_type.length ? section('Order types', s.by_type.map((t) => row(`${ORDER_TY
 ${section('Exceptions', row(`Cancelled orders (${s.cancelled_orders})`, m(s.cancelled_value)) + row(`Open orders now (${s.open_orders})`, m(s.open_value)))}
 ${s.top_items.length ? section('Top items', s.top_items.slice(0, 5).map((t) => row(`${t.name} × ${t.quantity}`, m(t.revenue))).join('')) : ''}
 <div class="sign"><span>Cashier</span><span>Manager</span></div>
-<p class="foot">Printed ${esc(printedAt)}${opts.printedBy ? ` by ${esc(opts.printedBy)}` : ''} · Tallyko</p>
+<p class="foot">Printed ${esc(printedAt)}${opts.printedBy ? ` by ${esc(opts.printedBy)}` : ''} · {brand.name}</p>
 </div></body></html>`;
 }

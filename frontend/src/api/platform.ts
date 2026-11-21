@@ -1,5 +1,5 @@
 /**
- * Tallyko platform (super admin console) API: `/api/v1/platform/*`.
+ * Storant platform (super admin console) API: `/api/v1/platform/*`.
  * Only platform logins can call these; `support` may read, every write needs `super_admin` (403 otherwise).
  * Shapes mirror `backend/app/api/platform.py`.
  */
@@ -477,7 +477,7 @@ export const platformApi = {
   me: () => api.get<PlatformMe>(`${P}/me`),
   overview: () => api.get<PlatformOverview>(`${P}/overview`),
 
-  /** Server-paged; `access` filters by Tallyko access (locked = subscription ended, expiring = ends within 7 days). */
+  /** Server-paged; `access` filters by Storant access (locked = subscription ended, expiring = ends within 7 days). */
   businesses: (params: { q?: string; status?: BusinessStatus | null; plan?: string | null; access?: AccessFilter | null; limit?: number; offset?: number; withCounts?: boolean } = {}) =>
     api.get<BusinessList>(`${P}/businesses`, {
       query: { q: params.q?.trim() || undefined, status: params.status, plan: params.plan, access: params.access || undefined, limit: params.limit, offset: params.offset,

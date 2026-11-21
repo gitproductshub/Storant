@@ -12,6 +12,7 @@ import { Text } from './Text';
 import { Button, IconButton } from './Button';
 import { Input } from './Input';
 import { toast, useToasts, type ToastTone } from './toastStore';
+import { t as tr } from '@/i18n';
 
 export { toast };
 
@@ -27,7 +28,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer, wid
   return (
     <Modal visible={visible} transparent animationType={isPhone ? 'slide' : 'fade'} onRequestClose={dismissable ? onClose : undefined} statusBarTranslucent>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.backdrop, { backgroundColor: colors.overlay, justifyContent: isPhone ? 'flex-end' : 'center' }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={dismissable ? onClose : undefined} accessibilityLabel="Close" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={dismissable ? onClose : undefined} accessibilityLabel={tr('common.close')} />
         <View
           accessibilityViewIsModal
           style={[
@@ -51,7 +52,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer, wid
                 <Text variant="h2">{title}</Text>
                 {subtitle ? <Text variant="small" tone="muted">{subtitle}</Text> : null}
               </View>
-              {dismissable ? <IconButton icon="close" accessibilityLabel="Close" onPress={onClose} /> : null}
+              {dismissable ? <IconButton icon="close" accessibilityLabel={tr('common.close')} onPress={onClose} /> : null}
             </View>
           ) : null}
           <Body style={scroll ? undefined : { flexShrink: 1 }} contentContainerStyle={scroll ? styles.body : undefined} keyboardShouldPersistTaps="handled">
@@ -106,18 +107,18 @@ interface DialogState {
   prompt?: { placeholder?: string; label?: string; minLength?: number; secure?: boolean };
   resolve?: (value: string | boolean | null) => void;
 }
-const useDialog = create<DialogState>(() => ({ open: false, title: '', confirmLabel: 'Confirm', danger: false }));
+const useDialog = create<DialogState>(() => ({ open: false, title: '', confirmLabel: tr('common.confirm'), danger: false }));
 
 export function confirm(opts: { title: string; message?: string; confirmLabel?: string; danger?: boolean }): Promise<boolean> {
   return new Promise((resolve) => {
-    useDialog.setState({ open: true, title: opts.title, message: opts.message, confirmLabel: opts.confirmLabel ?? 'Confirm', danger: !!opts.danger, prompt: undefined,
+    useDialog.setState({ open: true, title: opts.title, message: opts.message, confirmLabel: opts.confirmLabel ?? tr('common.confirm'), danger: !!opts.danger, prompt: undefined,
       resolve: (v) => resolve(v === true) });
   });
 }
 
 export function prompt(opts: { title: string; message?: string; confirmLabel?: string; danger?: boolean; label?: string; placeholder?: string; minLength?: number; secure?: boolean }): Promise<string | null> {
   return new Promise((resolve) => {
-    useDialog.setState({ open: true, title: opts.title, message: opts.message, confirmLabel: opts.confirmLabel ?? 'Save', danger: !!opts.danger,
+    useDialog.setState({ open: true, title: opts.title, message: opts.message, confirmLabel: opts.confirmLabel ?? tr('common.save'), danger: !!opts.danger,
       prompt: { label: opts.label, placeholder: opts.placeholder, minLength: opts.minLength ?? 1, secure: opts.secure },
       resolve: (v) => resolve(typeof v === 'string' ? v : null) });
   });
@@ -136,7 +137,7 @@ export function DialogHost() {
     <Sheet visible={state.open} onClose={() => close(null)} title={state.title} width={440}
       footer={
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-          <Button title="Cancel" variant="secondary" onPress={() => close(null)} />
+          <Button title={tr('common.cancel')} variant="secondary" onPress={() => close(null)} />
           <Button title={state.confirmLabel} variant={state.danger ? 'danger' : 'primary'} disabled={!valid}
             onPress={() => close(state.prompt ? value.trim() : true)} />
         </View>
