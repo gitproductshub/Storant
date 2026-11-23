@@ -9,6 +9,7 @@ import { useAccess } from '@/store/access';
 import { startSync } from '@/lib/sync';
 import { AppNav } from '@/components/nav/AppNav';
 import { SubscriptionBanner } from '@/components/SubscriptionBanner';
+import { FloorAnnouncer } from '@/features/ops/FloorAnnouncer';
 import { useSubscription } from '@/store/subscription';
 import { t } from '@/i18n';
 
@@ -48,29 +49,33 @@ export default function AppLayout() {
   if (locked) return <Redirect href={'/subscription' as Href} />;
 
   return (
-    <Tabs
-      tabBar={(props) => (isWide ? <AppNav state={props.state} /> : <View><SubscriptionBanner placement="bottom" /><AppNav state={props.state} /></View>)}
-      screenLayout={({ children }) => (isWide ? <View style={{ flex: 1 }}><SubscriptionBanner placement="top" />{children}</View> : children)}
-      screenOptions={{
-        headerShown: false,
-        tabBarPosition: isWide ? 'left' : 'bottom',
-        sceneStyle: { backgroundColor: colors.background },
-        lazy: true,
-      }}
-    >
-      <Tabs.Screen name="pos" options={{ title: t('routes.layout.billing') }} />
-      <Tabs.Screen name="orders" options={{ title: t('common.orders') }} />
-      <Tabs.Screen name="tables" options={{ title: t('common.tables') }} />
-      <Tabs.Screen name="online" options={{ title: t('common.online_orders') }} />
-      <Tabs.Screen name="kitchen" options={{ title: t('common.kitchen') }} />
-      <Tabs.Screen name="menu" options={{ title: t('common.menu_items') }} />
-      <Tabs.Screen name="inventory" options={{ title: t('common.inventory') }} />
-      <Tabs.Screen name="customers" options={{ title: t('common.customers') }} />
-      <Tabs.Screen name="offers" options={{ title: t('common.offers_rewards') }} />
-      <Tabs.Screen name="reports" options={{ title: t('common.reports') }} />
-      <Tabs.Screen name="watch" options={{ title: t('common.owner_s_watch') }} />
-      <Tabs.Screen name="settings" options={{ title: t('common.settings') }} />
-      <Tabs.Screen name="more" options={{ title: t('common.more'), href: null }} />
-    </Tabs>
+    // Floor voice alerts ("टेबल 5 का ऑर्डर तैयार है") sit over every screen of the app
+    <View style={{ flex: 1 }}>
+      <Tabs
+        tabBar={(props) => (isWide ? <AppNav state={props.state} /> : <View><SubscriptionBanner placement="bottom" /><AppNav state={props.state} /></View>)}
+        screenLayout={({ children }) => (isWide ? <View style={{ flex: 1 }}><SubscriptionBanner placement="top" />{children}</View> : children)}
+        screenOptions={{
+          headerShown: false,
+          tabBarPosition: isWide ? 'left' : 'bottom',
+          sceneStyle: { backgroundColor: colors.background },
+          lazy: true,
+        }}
+      >
+        <Tabs.Screen name="pos" options={{ title: t('routes.layout.billing') }} />
+        <Tabs.Screen name="orders" options={{ title: t('common.orders') }} />
+        <Tabs.Screen name="tables" options={{ title: t('common.tables') }} />
+        <Tabs.Screen name="online" options={{ title: t('common.online_orders') }} />
+        <Tabs.Screen name="kitchen" options={{ title: t('common.kitchen') }} />
+        <Tabs.Screen name="menu" options={{ title: t('common.menu_items') }} />
+        <Tabs.Screen name="inventory" options={{ title: t('common.inventory') }} />
+        <Tabs.Screen name="customers" options={{ title: t('common.customers') }} />
+        <Tabs.Screen name="offers" options={{ title: t('common.offers_rewards') }} />
+        <Tabs.Screen name="reports" options={{ title: t('common.reports') }} />
+        <Tabs.Screen name="watch" options={{ title: t('common.owner_s_watch') }} />
+        <Tabs.Screen name="settings" options={{ title: t('common.settings') }} />
+        <Tabs.Screen name="more" options={{ title: t('common.more'), href: null }} />
+      </Tabs>
+      <FloorAnnouncer />
+    </View>
   );
 }

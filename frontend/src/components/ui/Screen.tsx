@@ -10,25 +10,34 @@ import { LanguageMenu } from '@/i18n/LanguageSwitcher';
 /**
  * Standard page frame: title row with actions, optional toolbar, scrollable or fixed body.
  * Content is width-capped on big screens so forms don't stretch across a desktop monitor.
+ *
+ * Phones: the title is never squeezed — when the actions don't fit beside it they wrap onto their own line. A screen with
+ * many header buttons can pass `phoneActions`: then row 1 is the title with the language and theme pills, and row 2 is
+ * `phoneActions` (full width), instead of `actions`.
  */
-export function Screen({ title, subtitle, actions, toolbar, children, scroll = true, refreshing, onRefresh, maxWidth = 1280, contentStyle, padded = true }: {
+export function Screen({ title, subtitle, actions, phoneActions, toolbar, children, scroll = true, refreshing, onRefresh, maxWidth = 1280, contentStyle, padded = true }: {
   title?: string; subtitle?: string; actions?: React.ReactNode; toolbar?: React.ReactNode; children: React.ReactNode;
+  /** Phones only: header buttons on their own full-width row under the title (replaces `actions` there). */
+  phoneActions?: React.ReactNode;
   scroll?: boolean; refreshing?: boolean; onRefresh?: () => void; maxWidth?: number; contentStyle?: StyleProp<ViewStyle>; padded?: boolean;
 }) {
   const { colors } = useTheme();
   const { isPhone } = useLayout();
   const insets = useSafeAreaInsets();
   const pad = isPhone ? 16 : 24;
+  const ownRow = isPhone && phoneActions != null;
+  const pills = isPhone ? <><LanguageMenu compact /><ThemeToggle compact /></> : null;
 
   const header = title ? (
     <View style={[styles.header, { paddingHorizontal: pad, paddingTop: (isPhone ? insets.top : 0) + (isPhone ? 12 : 20) }]}>
       <View style={[styles.headerInner, { maxWidth }]}>
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={isPhone && !ownRow ? styles.titlePhone : { flex: 1, minWidth: 0 }}>
           <Text variant={isPhone ? 'h1' : 'display'} numberOfLines={1}>{title}</Text>
           {subtitle ? <Text tone="muted" numberOfLines={2}>{subtitle}</Text> : null}
         </View>
-        <View style={styles.actions}>{actions}{isPhone ? <><LanguageMenu compact /><ThemeToggle compact /></> : null}</View>
+        <View style={styles.actions}>{ownRow ? null : actions}{pills}</View>
       </View>
+      {ownRow ? <View style={[styles.phoneActions, { maxWidth }]}>{phoneActions}</View> : null}
       {toolbar ? <View style={[styles.toolbar, { maxWidth }]}>{toolbar}</View> : null}
     </View>
   ) : null;
@@ -63,5 +72,8 @@ const styles = StyleSheet.create({
   header: { gap: 12, alignItems: 'center' },
   headerInner: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%', flexWrap: 'wrap' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  // Takes its natural width (never shrinks below it), grows into spare room; the actions wrap below when there is none
+  titlePhone: { flexGrow: 1, flexShrink: 0, flexBasis: 'auto', maxWidth: '100%' },
+  phoneActions: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8 },
   toolbar: { width: '100%' },
 });

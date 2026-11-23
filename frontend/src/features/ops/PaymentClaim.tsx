@@ -24,8 +24,10 @@ export function useCanConfirmPayments(): boolean {
   return info ? allowed : can(role, 'bill');
 }
 
-export function PaymentClaimBanner({ order, currency = '₹', onChanged, compact }: {
+export function PaymentClaimBanner({ order, currency = '₹', onChanged, compact, confirmWith = confirm }: {
   order: WithClaim<Order> | Order; currency?: string; onChanged: (order: WithClaim<Order>) => void; compact?: boolean;
+  /** How to ask "Not received?" (the POS phone sheet closes itself first, then asks). */
+  confirmWith?: typeof confirm;
 }) {
   const { colors, radius } = useTheme();
   const claim = paymentClaimOf(order);
@@ -37,7 +39,7 @@ export function PaymentClaimBanner({ order, currency = '₹', onChanged, compact
   const waiting = order.status === 'placed';
 
   const run = async (kind: 'confirm' | 'reject') => {
-    if (kind === 'reject' && !(await confirm({
+    if (kind === 'reject' && !(await confirmWith({
       title: t('ops.PaymentClaim.payment_not_received'),
       message: t('ops.PaymentClaim.the_customer_will_be_asked_to_pay_money', { money: money(claim.amount, currency) }),
       confirmLabel: t('ops.PaymentClaim.not_received'), danger: true,

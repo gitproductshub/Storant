@@ -29,7 +29,7 @@ Billing is the lifeblood of any business. We researched Shopto and competitors a
 
 ### API endpoints
 *   `POST /api/v1/orders` — create a bill (counter sale with payments, or an open table bill).
-*   `POST /orders/{id}/pay` — payments (split, cash change), optional discount, points, offer.
+*   `POST /orders/{id}/pay` — payments (split, cash change), optional discount, points, offer. The first payment follows the owner's **pay rules** (dine-in after the food is served by default; 409 `PAY_BLOCKED_ITEMS` until then; owners / managers may send `override_reason` to pay anyway). Paid, cancelled or merged bills answer 409 `BILL_CLOSED`. See [017](./017_Running_Bills_And_Floor.md).
 *   `GET /orders`, `GET /orders/{id}` — history, reprint; `POST /orders/{id}/cancel` with a reason.
 *   `POST /sync/push` — the same create request, replayed from the offline outbox ([07](../07_Offline_Sync_Strategy.md)).
 

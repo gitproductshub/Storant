@@ -19,6 +19,14 @@ Errors always use one envelope:
 
 Validation errors use `code: "VALIDATION_ERROR"`, a readable `message` (`"field: reason"`) and `details` with the full Pydantic error list. Messages are written for shopkeepers, not developers.
 
+Some conflicts carry their own `code` and `details`, so the app can explain them in the person's language (`frontend/src/lib/serverErrors.ts`). A route raises them as `HTTPException(detail={"code", "message", "details"})`:
+
+| Code | Status | When | `details` |
+|---|---|---|---|
+| `PAY_BLOCKED_ITEMS` | 409 | First payment on a bill whose kitchen food isn't served / ready yet (pay rules) | `level`, `order_type`, `unsent`, `cooking`, `ready`, `blocking` (quantities) |
+| `BILL_CLOSED` | 409 | Paying or changing a bill that is paid, cancelled or merged ("This bill is paid. Start a new order.") | `status` |
+| `BILL_PART_PAID` | 409 | Adding items to a bill that already has a payment | — |
+
 | Status | Meaning for the app |
 |---|---|
 | 401 | Token expired or this device was signed out → refresh once, else sign in again |
@@ -39,8 +47,8 @@ Breaking changes go to a new path version (`/api/v2/…`); existing `/api/v1` sh
 | `catalog` | `/catalog/categories` (CRUD; delete = switch off), `/catalog/products` (CRUD, search; delete = switch off), `/catalog/products/by-barcode/{code}`, `POST /catalog/products/{id}/barcode`, `POST /catalog/products/bulk` (bulk edit), `POST /catalog/bulk-import`, `GET /catalog/products/{id}/history`, `POST /catalog/products/{id}/history/{version}/restore` |
 | `orders` | `GET/POST /orders`, `GET /orders/{id}`, `POST /orders/{id}/items`, `DELETE /orders/{id}/items/{item}`, `POST /orders/{id}/pay`, `GET /orders/{id}/offers`, `POST /orders/{id}/offer`, `/accept`, `/reject`, `/cancel`, `/transfer`, `PUT /orders/{id}/customer`, `PUT /orders/{id}/details` |
 | `orders` (floor) | `POST /orders/{id}/items/status`, `/items/void`, `/items/comp`, `/items/move`, `/merge`, `/payment-claim/confirm`, `/payment-claim/reject` |
-| `tables` | `GET/POST /tables` (with `open_bills` per table), `PUT/DELETE /tables/{id}` (delete = switch off) |
-| `kitchen` | `GET /kitchen/tickets` (used by the app), `PUT /kitchen/tickets/{id}/status`; older `GET /kitchen/kds/orders`, `PUT /kitchen/kds/orders/{kot_id}/status` |
+| `tables` | `GET/POST /tables` (with `open_bills` per table), `PUT/DELETE /tables/{id}` (delete = switch off), `GET /tables/ready-to-serve` (`tables.view`: dine-in tickets whose live items are all ready and not all served, per bill, with `ready_since` and `server_time`; drives the floor voice alerts) |
+| `kitchen` | `GET /kitchen/tickets` (used by the app), `POST /kitchen/tickets/{id}/bump`, `POST /kitchen/tickets/{id}/recall`, `PUT /kitchen/tickets/{id}/status` (`served` needs `kitchen.serve`; from the kitchen role it acts as a Bump for older app builds); older `GET /kitchen/kds/orders`, `PUT /kitchen/kds/orders/{kot_id}/status` |
 | `inventory` | `GET /inventory`, `/inventory/low-stock`, `/inventory/logs`, `POST /inventory/adjust`, `/inventory/receive` |
 | `crm` | `/crm/customers` (list/search, create, update, detail with history), `/crm/customers/lookup?phone=` |
 | `reports` | `/reports/summary` (incl. `by_channel`), `/reports/items`, `/reports/staff`, `/reports/me`, `/reports/wastage` (`date_from`/`date_to` ISO with offset) |

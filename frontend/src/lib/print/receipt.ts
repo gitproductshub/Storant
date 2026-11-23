@@ -386,7 +386,7 @@ function receiptDoc(data: ReceiptData, width: PaperWidth): { doc: Doc; upiUrl: s
     doc.text(`UPI: ${toAscii(b.upiId)}`, { align: 'center' });
   }
 
-  if (b.footer) doc.text(toAscii(b.footer), { align: 'center' });
+  if (b.footer && !isThankYouLine(b.footer)) doc.text(toAscii(b.footer), { align: 'center' });
   doc.text('Thank you! Visit again.', { align: 'center' });
   return { doc, upiUrl };
 }
@@ -522,6 +522,11 @@ export function buildKotEscPos(data: KotData, width: PaperWidth, opts: Pick<EscP
 // HTML (unicode kept; for system print dialog / AirPrint / USB OS printers)
 // ---------------------------------------------------------------------------
 
+/** True when a saved footer is just the built-in closing line (case/spacing/punctuation aside). */
+function isThankYouLine(footer: string | null | undefined): boolean {
+  return (footer ?? '').toLowerCase().replace(/[^a-z]+/g, ' ').trim() === 'thank you visit again';
+}
+
 export function escapeHtml(s: string | number | null | undefined): string {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -633,7 +638,8 @@ export function buildReceiptHtml(data: ReceiptData, width: PaperWidth): string {
     add(`<div class="code"><div class="b">Scan &amp; pay via UPI</div>${qrSvg(url, qrPx, { margin: 2 })}<div>UPI: ${escapeHtml(b.upiId)}</div></div>`, 2);
     extraMm += qrPx * 0.2646 + 4;
   }
-  if (b.footer) add(`<div class="c" style="margin-top:2mm">${escapeHtml(b.footer)}</div>`, Math.ceil(b.footer.length / 30) + 1);
+  // A saved footer that is already "Thank you! Visit again." must not print next to the built-in closing line.
+  if (b.footer && !isThankYouLine(b.footer)) add(`<div class="c" style="margin-top:2mm">${escapeHtml(b.footer)}</div>`, Math.ceil(b.footer.length / 30) + 1);
   add('<div class="c">Thank you! Visit again.</div>');
 
   const lineMm = (width === 58 ? 11 : 12) * 1.35 * 0.2646;

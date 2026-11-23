@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { persistStorage } from '@/lib/storage';
+import { initials } from '@/lib/initials';
 
 export interface RecentLogin { email: string; name: string | null; business: string | null; at: number }
 
@@ -14,6 +15,11 @@ interface RecentState {
   recent: RecentLogin[];
   remember: (entry: Omit<RecentLogin, 'at'>) => void;
   forget: (email: string) => void;
+}
+
+/** Avatar letters for a recent login: from the name (else the email), letters only ("Ramesh (Head chef)" → "RH"). */
+export function recentLoginInitials(r: Pick<RecentLogin, 'name' | 'email'>): string {
+  return initials(r.name || r.email);
 }
 
 export function addRecent(list: RecentLogin[], entry: Omit<RecentLogin, 'at'>, now = Date.now()): RecentLogin[] {

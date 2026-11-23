@@ -33,3 +33,25 @@ describe('response headers', () => {
     }
   });
 });
+
+describe('error messages', () => {
+  it('turns the server\'s PAY_BLOCKED_ITEMS into a message in the person\'s language', () => {
+    const { ApiError, errorMessage } = jest.requireActual('@/api/client') as typeof import('@/api/client');
+    const blocked = new ApiError('2 items not served yet (2 still cooking). Take payment once everything is served.', 409, 'PAY_BLOCKED_ITEMS',
+      { level: 'served', order_type: 'DINE_IN', unsent: 0, cooking: 2, ready: 0, blocking: 2 });
+    expect(errorMessage(blocked)).toBe('2 items not served yet (2 cooking). Take payment once everything is served.');
+    expect(errorMessage(new ApiError('Table not found', 404, 'HTTP_ERROR'))).toBe('Table not found');
+  });
+});
+
+describe('closed bills', () => {
+  it('says a paid / cancelled / merged / part-paid bill clearly, in the person\'s language', () => {
+    const { ApiError, errorMessage } = jest.requireActual('@/api/client') as typeof import('@/api/client');
+    const closed = (status: string) => new ApiError('server text', 409, 'BILL_CLOSED', { status });
+    expect(errorMessage(closed('completed'))).toBe('This bill is paid. Start a new order.');
+    expect(errorMessage(closed('cancelled'))).toBe('This bill was cancelled. Start a new order.');
+    expect(errorMessage(closed('merged'))).toBe('This bill was merged into another bill. Open that bill instead.');
+    expect(errorMessage(new ApiError('server text', 409, 'BILL_PART_PAID', {})))
+      .toBe('A payment was already taken on this bill. Collect the rest, or put the new items on a new order.');
+  });
+});

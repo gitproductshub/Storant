@@ -21,7 +21,8 @@ import { isTypingTarget } from '@/hooks/useHotkeys';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { useAuth, can } from '@/store/auth';
-import { useCan } from '@/store/access';
+import { useAccessInfo, useCan } from '@/store/access';
+import { payBlockedBreakdown, payBlockedMessage, payBlockedTitle, payGate, payGateFromError, type PayGateInfo } from '@/lib/payGate';
 import { activeCategories, activeProducts, useData } from '@/store/data';
 import { useOutbox } from '@/store/outbox';
 import { useBadges } from '@/store/badges';
@@ -38,7 +39,7 @@ import { ProductBrowser } from './ProductBrowser';
 import { PaymentSheet, type LoyaltyOption } from './PaymentSheet';
 import { LastBillCard, ReceiptSheet, type ReceiptState } from './ReceiptSheet';
 import { ScannerSheet } from './ScannerSheet';
-import { ChannelSheet, CustomerSheet, DiscountSheet, RunningOrdersSheet, TableSheet, VariantSheet, posChannels } from './sheets';
+import { ChannelSheet, CustomerSheet, DiscountSheet, PayAnywaySheet, RunningOrdersSheet, TableSheet, VariantSheet, posChannels } from './sheets';
 import { BillDetailsSheet, MergeBillsSheet, TableBillsSheet, type BillSummary } from './BillSheets';
 import { billName, itemsLocked } from './runningBill';
 import { usePosPrefs } from './posPrefs';
@@ -48,7 +49,7 @@ import { brand } from '@/config/brand';
 import { LanguageMenu } from '@/i18n/LanguageSwitcher';
 import { t as tr } from '@/i18n';
 
-type SheetName = 'pay' | 'table' | 'channel' | 'customer' | 'discount' | 'scan' | 'running' | 'offer' | 'billDetails' | 'merge';
+type SheetName = 'pay' | 'table' | 'channel' | 'customer' | 'discount' | 'scan' | 'running' | 'offer' | 'billDetails' | 'merge' | 'payAnyway';
 
 /** A busy table was picked: ask which bill the order goes on (or start a separate one). */
 interface BillChoice { tableId: string; tableLabel: string; bills: BillSummary[] }
@@ -130,6 +131,24 @@ function Pos() {
   const [query, setQuery] = useState('');
   const [sheet, setSheet] = useState<SheetName | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  /** Phone: the Current bill sheet is open (read by confirms started from inside it). */
+  const cartOpenRef = useRef(false);
+  cartOpenRef.current = cartOpen;
+  /**
+   * Phone: a confirm started from the Current bill sheet (clear bill, leave running bill, UPI not received) closes the sheet
+   * first so the popup is in front, and opens the sheet again if the person cancels. Elsewhere it is a plain confirm.
+   */
+  const confirmOverSheet = async (opts: Parameters<typeof confirm>[0]): Promise<boolean> => {
+    const fromSheet = isPhone && cartOpenRef.current;
+    if (fromSheet) {
+      setCartOpen(false);
+      // Native modals can't open while another one is closing; the web can go straight on
+      if (Platform.OS !== 'web') await new Promise((r) => setTimeout(r, 300));
+    }
+    const ok = await confirm(opts);
+    if (!ok && fromSheet) setCartOpen(true);
+    return ok;
+  };
   const [variantProduct, setVariantProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState<'kot' | 'pay' | null>(null);
   /** The bill just paid: a card in the empty new bill (never a blocking dialog); `receiptOpen` shows it in full. */
@@ -187,6 +206,41 @@ function Pos() {
     [draft, productsById, settings, adjustPct, tax, previewOffer]);
   /** The bill without any offer (what gets saved when the internet drops). */
   const pricedPlain = (): PricedDraft => priceDraft(getDraft(), productsById, settings, adjustPct, { tax });
+
+  // Pay rules (lib/payGate mirrors the server): dine-in waits until its food is served; owners / managers may pay anyway
+  const accessInfo = useAccessInfo();
+  const kitchenOn = accessInfo ? accessInfo.features.includes('kitchen') : true;
+  const canPayAnyway = useCan('orders.pay_override');
+  /** Reason given in "Pay anyway" for the payment being taken now (sent as `override_reason`). */
+  const [overrideReason, setOverrideReason] = useState<string | null>(null);
+  const gateOf = useCallback((d: ReturnType<typeof getDraft>, isOnline: boolean): PayGateInfo => payGate({
+    orderType: d.resume?.type ?? d.orderType ?? 'TAKEAWAY',
+    channel: d.resume?.channel ?? d.channel,
+    items: d.resume?.items ?? [],
+    newLines: d.lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+    rules: settings?.pay_rules, kitchenOn, online: isOnline,
+    paid: !!d.resume && itemsLocked(d.resume),
+    printsToKitchen: (id) => !!productsById.get(id)?.print_to_kitchen,
+  }), [settings?.pay_rules, kitchenOn, productsById]);
+  const gate = useMemo(() => gateOf(draft, online), [gateOf, draft, online]);
+  const payHold = gate.blocking > 0 ? { title: payBlockedTitle(gate), detail: payBlockedBreakdown(gate) } : null;
+
+  // While a running bill waits for its food, look at it again every 10 s: a waiter may serve it from another device
+  const resumeId = draft.resume?.id ?? null;
+  const waitingForFood = gate.blocking > 0 && !!resumeId && online;
+  useEffect(() => {
+    if (!waitingForFood || !resumeId) return undefined;
+    const timer = setInterval(() => {
+      if (lock.current) return;
+      ordersApi.get(resumeId).then((fresh) => {
+        const current = getDraft().resume;
+        if (current?.id === fresh.id && !lock.current) patch({ resume: { ...fresh, table_label: fresh.table_label ?? current.table_label } });
+      }).catch(() => { /* offline or gone: the next tick or the Pay tap tries again */ });
+    }, 10_000);
+    return () => clearInterval(timer);
+  }, [waitingForFood, resumeId, patch]);
+  // A different bill never inherits a "Pay anyway" reason
+  useEffect(() => { setOverrideReason(null); }, [resumeId]);
   const inCart = useMemo(() => {
     const m = new Map<string, number>();
     for (const l of draft.lines) m.set(l.productId, (m.get(l.productId) ?? 0) + l.quantity);
@@ -418,12 +472,13 @@ function Pos() {
   })();
 
   const exitResume = useCallback(async () => {
-    if (hasUnsaved() && !(await confirm({ title: tr('pos.PosScreen.leave_this_running_bill'), message: tr('pos.PosScreen.new_items_you_added_but_did_not_send_will'), confirmLabel: tr('pos.PosScreen.leave'), danger: true }))) return;
+    if (hasUnsaved() && !(await confirmOverSheet({ title: tr('pos.PosScreen.leave_this_running_bill'), message: tr('pos.PosScreen.new_items_you_added_but_did_not_send_will'), confirmLabel: tr('pos.PosScreen.leave'), danger: true }))) return;
     resetCart({ orderType: defaultType });
-  }, [resetCart, defaultType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetCart, defaultType, isPhone]);
 
   // A running bill restored from storage may be stale (paid / changed on another device): refresh it once
-  const resumeId = draft.resume?.id ?? null;
+  // (`resumeId` is declared with the pay rules above)
   const refreshedResume = useRef<string | null>(null);
   useEffect(() => {
     if (!hydrated || !resumeId || !online || refreshedResume.current === resumeId) return;
@@ -490,7 +545,7 @@ function Pos() {
 
   const onClear = async () => {
     if (!draft.lines.length) return;
-    if (!(await confirm({ title: draft.resume ? tr('pos.PosScreen.remove_the_new_items') : tr('pos.PosScreen.clear_this_bill'), message: tr('pos.PosScreen.newcount_item_s_will_be_removed', { newCount: priced.newCount }), confirmLabel: tr('common.clear'), danger: true }))) return;
+    if (!(await confirmOverSheet({ title: draft.resume ? tr('pos.PosScreen.remove_the_new_items') : tr('pos.PosScreen.clear_this_bill'), message: tr('pos.PosScreen.newcount_item_s_will_be_removed', { newCount: priced.newCount }), confirmLabel: tr('common.clear'), danger: true }))) return;
     if (draft.resume) patch({ lines: [] });
     else resetCart({ orderType: draft.orderType ?? defaultType, channel: draft.channel });
   };
@@ -623,13 +678,35 @@ function Pos() {
     });
   };
 
-  const openPay = async () => {
+  /** `anywayReason`: the owner / manager chose "Pay anyway" with this reason (skips the pay rule; the server audits it). */
+  const openPay = async (anywayReason?: string) => {
     if (!canBill) { toast.warning(tr('pos.PosScreen.only_cashiers_and_managers_can_take')); return; }
     if (lock.current) return;
-    const d = getDraft();
+    let d = getDraft();
     const err = validateDraft(d, priced, { requireLines: !d.resume });
     if (err) { toast.warning(err); return; }
     if (d.resume && !online) { toast.error(tr('pos.PosScreen.paying_a_running_bill_needs_an_internet')); return; }
+    if (d.resume && online) {
+      // Look at the bill again right before deciding: a waiter may have served (or added) items on another device
+      lock.current = true;
+      setSubmitting('pay');
+      try {
+        const fresh = await ordersApi.get(d.resume.id);
+        patch({ resume: { ...fresh, table_label: fresh.table_label ?? d.resume.table_label } });
+        d = getDraft();
+      } catch {
+        /* the server still checks the payment */
+      } finally {
+        lock.current = false;
+        setSubmitting(null);
+      }
+    }
+    const hold = gateOf(d, online);
+    if (hold.blocking > 0 && !anywayReason) {
+      toast.warning(payBlockedMessage(hold));
+      return;
+    }
+    setOverrideReason(hold.blocking > 0 ? anywayReason ?? null : null);
     if (offers.pending) {
       // Let the offer check for the latest cart finish (briefly) so the amount due is final
       lock.current = true;
@@ -651,6 +728,7 @@ function Pos() {
   /** Paid: the till is ready for the next customer at once; the bill (change, print, share) waits in the new bill. */
   const showReceipt = (order: Order, offline: boolean, change: number, type: OrderType | null) => {
     setSheet(null);
+    setOverrideReason(null);
     setLastBill({ order, offline, change });
     setReceiptOpen(false);
     afterBill(type);
@@ -675,6 +753,7 @@ function Pos() {
           void printKotSafe(order, order.items.filter((i) => !before.has(i.id)));
         }
         const body: Parameters<typeof offersApi.payWithOffer>[1] = { payments };
+        if (overrideReason) body.override_reason = overrideReason;
         if (d.discount && d.discount.value > 0) body.discount = d.discount;
         if (d.redeemPoints) body.redeem_points = d.redeemPoints;
         // Offer changed by the cashier (or a better auto offer now fits): apply it with the payment
@@ -707,7 +786,10 @@ function Pos() {
       const id = ensureId();
       const createdAt = new Date().toISOString();
       try {
-        const order = await ordersApi.create(buildCreatePayload(d, { id, createdAt, payments, sendToKitchen: true, offerId: offerForNewBill() }));
+        const order = await ordersApi.create({
+          ...buildCreatePayload(d, { id, createdAt, payments, sendToKitchen: true, offerId: offerForNewBill() }),
+          ...(overrideReason ? { override_reason: overrideReason } : {}),
+        });
         void printKotSafe({ ...order, table_label: order.table_label ?? d.tableLabel });
         const result = { ...order, table_label: order.table_label ?? (d.orderType === 'DINE_IN' ? d.tableLabel : null) };
         if (order.payment_status !== 'paid') {
@@ -747,6 +829,13 @@ function Pos() {
     } catch (e) {
       toast.error(errorMessage(e));
       if (offerError(e)) { offers.refresh(); setSheet(null); }
+      if (payGateFromError(e)) {
+        // The server says the food isn't served yet (someone added items, or this screen was behind): show the bill as it is
+        setSheet(null);
+        setOverrideReason(null);
+        const r = getDraft().resume;
+        if (r) ordersApi.get(r.id).then((fresh) => patch({ resume: { ...fresh, table_label: fresh.table_label ?? r.table_label } })).catch(() => {});
+      }
     } finally {
       lock.current = false;
       setSubmitting(null);
@@ -850,11 +939,13 @@ function Pos() {
       onOrderType={onOrderType} onPickTable={() => setSheet('table')} onPickChannel={() => setSheet('channel')}
       onPickCustomer={() => setSheet('customer')} onDiscount={() => setSheet('discount')} onClear={() => void onClear()}
       onExitResume={() => void exitResume()} onKot={() => void sendKot()} onPay={() => void openPay()}
+      payHold={payHold} onPayAnyway={canPayAnyway && canBill ? () => setSheet('payAnyway') : undefined}
       offers={cartOffers} onOffers={() => setSheet('offer')}
       online={online} bills={tableBills} onResumeChange={onResumeChange} onMoved={onMoved} onSwitchBill={switchBill}
       onSeparateBill={() => { if (draft.tableId) startSeparateBill(draft.tableId, draft.tableLabel ?? ''); }}
       onBillMenu={() => setSheet('billDetails')} billMenu={billMenu}
       lastBill={inSheet ? null : lastBillCard}
+      confirmWith={inSheet ? confirmOverSheet : undefined}
       onClaimChanged={(o) => {
         // UPI confirmed and the bill is settled: show the receipt like any paid bill
         if (o.payment_status === 'paid' || o.status === 'completed') showReceipt(o, false, 0, getDraft().orderType);
@@ -968,7 +1059,10 @@ function Pos() {
         subtotal={priced.preview.subtotal} onApply={(dsc) => { patch({ discount: dsc }); setSheet(null); }} />
       <RunningOrdersSheet visible={sheet === 'running'} onClose={() => setSheet(null)} online={online} currency={currency} onOpen={(o) => void openOrder(o.id)} />
       <ScannerSheet visible={sheet === 'scan'} onClose={() => setSheet(null)} onCode={(c) => void onCameraCode(c)} lastAdded={lastScanned} />
-      <PaymentSheet visible={sheet === 'pay'} onClose={() => { setSheet(null); focusSearch(); }} due={priced.due} currency={currency} settings={settings}
+      <PayAnywaySheet visible={sheet === 'payAnyway'} onClose={() => setSheet(null)}
+        holdTitle={payHold?.title ?? ''} holdDetail={payHold?.detail ?? ''}
+        onContinue={(reason) => { setSheet(null); void openPay(reason); }} />
+      <PaymentSheet visible={sheet === 'pay'} onClose={() => { setSheet(null); setOverrideReason(null); focusSearch(); }} due={priced.due} currency={currency} settings={settings}
         hasCustomer={!!draft.customer?.phone || !!draft.customer?.id} aggregator={isAggregator(draft.channel)} loyalty={loyalty}
         submitting={submitting === 'pay'} onConfirm={(p, c) => void confirmPay(p, c)} offerNote={offerNote}
         title={draft.resume?.table_label ? tr('pos.PosScreen.collect_payment_table_table_label', { table_label: draft.resume.table_label }) : undefined} />

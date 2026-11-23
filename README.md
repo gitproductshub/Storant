@@ -87,9 +87,9 @@ flowchart LR
 | **Support** (Tallyko) | `/admin` console | Everything above, read-only. |
 | **Owner** | The whole app | Everything, including roles and permissions, modules, GST, subscription, signed-in devices, and **Owner's watch**: every cancellation, removal, comp, discount and menu change, by staff member. |
 | **Manager** | Most of the app | Menu, stock, customers, offers, reports and staff (not owners or managers). Can't see the owner's watch list. |
-| **Cashier** | Billing, orders, customers | Take orders, collect payments, give allowed discounts, reprint, accept online orders, mark kitchen items ready or served. |
-| **Waiter / captain** | Tables, billing | Take table orders and send KOTs, serve any running table, mark items served. Cannot take payments or cancel items the kitchen already has. |
-| **Kitchen** | Kitchen display | See tickets and move items through New → Preparing → Ready, bump tickets, recall. |
+| **Cashier** | Billing, orders, customers | Take orders, collect payments (dine-in once the food is served), give allowed discounts, reprint, accept online orders, mark kitchen items ready or served. Owners and managers can also "Pay anyway" with a reason. |
+| **Waiter / captain** | Tables, billing | Take table orders and send KOTs, serve any running table, mark items served (one tap: "Mark all served"). Cannot take payments or cancel items the kitchen already has. |
+| **Kitchen** | Kitchen display | See tickets and move items through New → Preparing → Ready, bump tickets off the screen, recall. Never marks food served: on dine-in the waiter does. |
 | **Custom roles** | Owner-defined | Any mix of about 30 permissions, for example "Billing only" or "Captain". |
 | **Customers** | Phone browser | Scan the table QR, order on their own bill, pay at the counter or by UPI, track the order. |
 
@@ -102,8 +102,9 @@ What a person can do is **their role's permissions** ∩ **the modules in the bu
 | Area | Highlights |
 |---|---|
 | **Billing (POS)** | Touch, keyboard and barcode-scanner friendly. Grid or list. Split payments, cash change and quick-cash notes, UPI QR, credit (udhaar), discounts, offers. Bill barcodes. Works offline. |
-| **Restaurant floor** | Tables with live tiles showing seated time, amount, ready-to-serve and the waiter. **Several bills per table**. KOTs with per-item status. Re-order as a new KOT. Partial cancel with reason and wastage. On the house. Split, merge and transfer. |
-| **Kitchen display** | Columns New / Preparing / Ready. Tap an item to move it on, bump the ticket, recall. New-ticket sound. Cancelled items marked "DON'T MAKE". Large-text and full-screen modes. Alert times set by the business. |
+| **Restaurant floor** | Tables with live tiles showing seated time, amount, ready-to-serve and the waiter. **Hindi voice alerts** for waiters ("टेबल 5 का ऑर्डर तैयार है") with reminders until served. **Several bills per table**. KOTs with per-item status. Re-order as a new KOT. Partial cancel with reason and wastage. On the house. Split, merge and transfer. |
+| **Kitchen display** | Columns New / Preparing / Ready. Tap an item to move it on (up to Ready), bump the ticket off the screen, recall. Bump is not Served: dine-in food waits for the waiter, takeaway / delivery is served by the bump, and counter-service places can turn on "Bump marks served". New-ticket sound and a **Hindi voice** ("नया ऑर्डर आया है। टेबल 5।"). Cancelled items marked "DON'T MAKE". Large-text and full-screen modes. Alert times set by the business. |
+| **Pay rules** | The owner chooses per order type when a bill can be paid: anytime, after items are ready, or after items are served (default: dine-in after served, others anytime). Enforced on the server; the till keeps Pay off and says why ("2 items not served yet"). Owners and managers can **Pay anyway** with a reason, which goes to the owner's Watch. Paid bills take no more items. |
 | **Table QR ordering** | Customers scan, see the menu, and order on their own bill. Staff confirm, or orders go straight to the kitchen. The customer pays at the counter or by **UPI**: a deep link, then "I've paid", then staff confirm. |
 | **Online orders** | Swiggy, Zomato, ONDC and magicpin inbox (manual entry or signed webhook). Commission per channel. **Each item can have its own price per app, or be hidden there.** Own online store. Cloud-kitchen virtual brands. |
 | **Menu** | Variants (Half/Full), categories, barcodes and labels. **Menu from a photo** (free offline OCR). Bulk edits: price, tax, category, app prices, hide or show. **Version history with restore.** |
@@ -293,8 +294,8 @@ Demo businesses run on **development access**, so they never lock. Demo data nev
 | Platform | How |
 |---|---|
 | **Laptop / desktop** | Open the web app in Chrome or Edge, then *Install app* (PWA). Print over Web Bluetooth (BLE printers) or the system print dialog (USB printers). |
-| **Android (share an APK)** | `docker compose --profile android run --rm android-build` → `dist/tallyko-<version>.apk`. Set `APK_API_URL` in `.env` to your server first. |
-| **Google Play** | The same build produces `dist/tallyko-<version>.aab` to upload in Play Console. |
+| **Android (share an APK)** | `docker compose --profile android run --rm android-build` → `dist/storant-<version>.apk`. Set `APK_API_URL` in `.env` to your server first. |
+| **Google Play** | The same build produces `dist/storant-<version>.aab` to upload in Play Console. |
 | **iPhone / iPad** | Free: Safari → Share → *Add to Home Screen*. App Store and TestFlight builds need an Apple Developer account and EAS Build (`eas.json` is ready). |
 
 Store rules (target SDK, account deletion, privacy manifest, permissions) are tracked in [docs/18](./docs/18_App_Store_And_Play_Compliance.md).

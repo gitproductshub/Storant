@@ -3,7 +3,7 @@ import type { AccessInfo, Role } from '@/api/types';
 import { hasAccess } from '@/store/access';
 import { t } from '@/i18n';
 
-export type SettingsKey = 'overview' | 'business' | 'taxes' | 'printers' | 'channels' | 'qr' | 'floor' | 'brands' | 'staff' | 'emails' | 'modules' | 'billing' | 'account';
+export type SettingsKey = 'overview' | 'business' | 'taxes' | 'printers' | 'channels' | 'qr' | 'floor' | 'kitchen' | 'brands' | 'staff' | 'emails' | 'modules' | 'billing' | 'account';
 
 export interface SettingsSection {
   key: SettingsKey;
@@ -34,6 +34,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     roles: MANAGERS, permissions: ['settings.manage'] },
   { key: 'floor', href: '/settings/floor', get label() { return t('common.floor_alerts'); }, get description() { return t('settings.sections.when_tables_kitchen_tickets_and_online'); },
     icon: 'alarm-outline', roles: MANAGERS, permissions: ['settings.manage'] },
+  { key: 'kitchen', href: '/settings/kitchen', get label() { return t('settings.KitchenRulesScreen.kitchen_rules'); }, get description() { return t('settings.sections.when_bills_can_be_paid_and_what_bump_does'); },
+    icon: 'restaurant-outline', roles: ['owner'], ownerOnly: true },
   { key: 'brands', href: '/settings/brands', get label() { return t('common.brands'); }, get description() { return t('settings.sections.virtual_brands_for_cloud_kitchens'); }, icon: 'pricetags-outline', roles: MANAGERS,
     permissions: ['settings.manage'] },
   { key: 'staff', href: '/settings/staff', get label() { return t('common.staff_roles'); }, get description() { return t('settings.sections.team_logins_permissions_waiter'); }, icon: 'people-outline', roles: MANAGERS,

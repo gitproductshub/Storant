@@ -25,7 +25,8 @@ import { usePrefs } from '@/store/prefs';
 import { isCompItem, isFreeItem, isVoidItem, kotFromOrder, printErrorMessage, printKitchenTicket } from '@/lib/billing';
 import { money } from '@/lib/format';
 import {
-  KITCHEN_FLOW, KITCHEN_META, billName, describeSelection, isSent, itemsLocked, nextKitchenStatus, selectableItems, toItemQty, type Selection,
+  KITCHEN_FLOW, KITCHEN_META, billName, describeSelection, isSent, itemsLocked, nextKitchenStatus, selectableItems, toItemQty,
+  unservedKitchenItems, type Selection,
 } from './runningBill';
 import { t } from '@/i18n';
 
@@ -42,6 +43,8 @@ export function useFloorPermissions() {
   const role = useAuth((s) => s.session?.role ?? null);
   return {
     status: usePermission('kitchen.update', !!role),
+    /** Mark items served (floor staff; never the kitchen). */
+    serve: usePermission('kitchen.serve', can(role, 'order')),
     create: usePermission('orders.create', can(role, 'order')),
     voidSent: usePermission('orders.void_item', can(role, 'manage')),
     comp: usePermission('orders.discount', can(role, 'bill')),
@@ -142,6 +145,46 @@ function ItemRow({ item, currency, checked, selectable, onToggle }: {
 }
 
 // ---------------------------------------------------------------------------
+// "Mark all served": one tap for the waiter at the table (or a place without a kitchen screen), straight from any step
+// ---------------------------------------------------------------------------
+
+export function ServeAllButton({ order, online, onOrder }: {
+  order: Order; online: boolean; onOrder: (order: Order, message?: string) => void;
+}) {
+  const perms = useFloorPermissions();
+  const [busy, setBusy] = useState(false);
+  const waiting = unservedKitchenItems(order.items);
+  if (!perms.serve || !waiting.length) return null;
+  const count = waiting.reduce((s, i) => s + i.quantity, 0);
+
+  const serveAll = async () => {
+    if (busy || !online) return;
+    const ids = new Set(waiting.map((i) => i.id));
+    const before = order;
+    // Optimistic: the bill shows them served at once; the server's answer replaces it (or the change is rolled back)
+    onOrder({ ...order, items: order.items.map((i): OrderItem => (ids.has(i.id) ? { ...i, kitchen_status: 'served' } : i)) });
+    setBusy(true);
+    try {
+      const updated = await floorApi.setItemsStatus(order.id, [...ids], 'served');
+      onOrder(updated, t('pos.RunningBill.count_items_marked_served', { count }));
+    } catch (e) {
+      toast.error(errorMessage(e));
+      try { onOrder(await ordersApi.get(order.id)); } catch { onOrder(before); }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Button title={online ? t('pos.RunningBill.mark_all_served_count', { count }) : t('common.needs_internet')}
+      icon={online ? 'checkmark-done-outline' : 'cloud-offline-outline'} variant="outline" size="sm"
+      onPress={() => void serveAll()} loading={busy} disabled={!online || busy}
+      accessibilityLabel={t('pos.RunningBill.mark_all_count_items_on_this_bill_served', { count })}
+      style={{ alignSelf: 'flex-start', marginBottom: 6 }} testID="pos-serve-all" />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Selection bar (docs/20 §1.1): the shared SelectionBar right under the ticked rows. The next kitchen step, Cancel
 // and Repeat stay one tap even in the narrow cart (`minVisible`); the rest opens in its anchored "More" menu.
 // ---------------------------------------------------------------------------
@@ -156,17 +199,19 @@ export interface BarAction {
 /** Buttons the bar shows for a selection: the common ones in view (`main`), the rest in the menu (`more`). Pure, for tests. */
 export function selectionActions(input: {
   sel: Selection; locked: boolean; online: boolean; busy: boolean;
-  perms: { status: boolean; create: boolean; voidSent: boolean; comp: boolean };
+  perms: { status: boolean; serve: boolean; create: boolean; voidSent: boolean; comp: boolean };
 }): { main: BarAction[]; more: BarAction[] } {
   const { sel, locked, online, busy, perms } = input;
+  // Preparing / Ready need kitchen.update; Served needs kitchen.serve and is offered from any step (no kitchen screen needed)
+  const allowed = (st: ItemStatus) => (st === 'served' ? perms.serve : perms.status);
   const next = nextKitchenStatus(sel.kitchen);
   const offReason = !online ? 'Needs internet' : busy ? 'Saving…' : undefined;
   const lockReason = locked ? 'A payment was taken on this bill' : undefined;
   const main: BarAction[] = [];
   const more: BarAction[] = [];
-  if (perms.status && sel.kitchen.length) {
+  if (sel.kitchen.length) {
     for (const st of KITCHEN_FLOW) {
-      if (st === 'pending') continue;
+      if (st === 'pending' || !allowed(st)) continue;
       const done = sel.kitchen.every((i) => i.kitchen_status === st);
       const action: BarAction = {
         key: st, label: KITCHEN_META[st].label, icon: KITCHEN_META[st].icon as IconName,
@@ -186,7 +231,9 @@ export function selectionActions(input: {
     });
     main.push({
       key: 'repeat', label: t('pos.RunningBill.repeat'), icon: 'repeat', variant: 'outline',
-      disabled: !!offReason || !sel.repeatable.length, disabledReason: offReason ?? (!sel.repeatable.length ? t('pos.RunningBill.free_items_can_t_be_repeated_x') : undefined),
+      // A bill with a payment takes no more items (server: BILL_PART_PAID)
+      disabled: !!offReason || locked || !sel.repeatable.length,
+      disabledReason: offReason ?? lockReason ?? (!sel.repeatable.length ? t('pos.RunningBill.free_items_can_t_be_repeated_x') : undefined),
       description: t('pos.RunningBill.order_again_as_a_new_kot'),
     });
   }

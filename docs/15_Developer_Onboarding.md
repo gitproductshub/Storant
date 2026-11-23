@@ -61,7 +61,7 @@ docker compose down                                   # stop (data volumes are k
 ## 5. Phones and tablets
 
 - **Quickest:** open `http://<your-PC-LAN-IP>:8081` in the phone's browser (same Wi-Fi). Bluetooth printing isn't available in a browser on iOS.
-- **Installable Android app:** set `APK_API_URL=http://<your-PC-LAN-IP>:8000/api/v1` in `.env` (or change the server on the sign-in screen), then `docker compose --profile android run --rm android-build` → `dist/tallyko-<version>.apk`. The first build downloads Gradle dependencies (~20 min).
+- **Installable Android app:** set `APK_API_URL=http://<your-PC-LAN-IP>:8000/api/v1` in `.env` (or change the server on the sign-in screen), then `docker compose --profile android run --rm android-build` → `dist/storant-<version>.apk`. The first build downloads Gradle dependencies (~20 min).
 - **Expo Go** works for UI work but has no Bluetooth printer support (native modules) — use the APK for printing.
 
 ## 6. Logs and tracing

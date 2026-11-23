@@ -16,8 +16,8 @@ A person can use a screen only when both allow it. The server enforces this on e
   | Owner | Everything; can't be restricted |
   | Manager | Runs the shop |
   | Cashier | Billing and payments |
-  | Waiter | Table orders, no payments |
-  | Kitchen | Kitchen display only |
+  | Waiter | Table orders and serving, no payments |
+  | Kitchen | Kitchen display only (up to Ready; never marks Served) |
 
 - The owner can adjust built-in roles, or reset them to the defaults.
 - With the **custom roles** module, the owner can create roles such as "Billing only" or "Captain" from ~30 permissions grouped by area: Billing, Tables, Kitchen, Menu, Inventory, Customers, Offers, Reports, Staff, Settings.
@@ -26,6 +26,10 @@ A person can use a screen only when both allow it. The server enforces this on e
   - `customers.view_contact`: without it, phone numbers are masked.
   - `orders.void_item`: remove items already sent to the kitchen.
   - `orders.discount`: manual discounts and loyalty redemption.
+  - `kitchen.update`: move kitchen food to Preparing / Ready (and back), Bump and Recall tickets.
+  - `kitchen.serve`: mark items **served** at the table (waiter, cashier, manager, owner by default; never the kitchen role). A dine-in bill can only be paid once its food is served.
+  - `orders.pay_override`: **Pay anyway**, i.e. take payment before the food is served, with a reason written to the audit log (`order.pay_override`, on the owner's Watch). Manager and owner by default; flagged as sensitive when given to a custom role.
+  - Migration `0065` added `kitchen.serve` and `orders.pay_override` to saved role rows (built-in roles an owner edited, and custom roles that take orders or payments).
 - Managers can't create, edit or remove owners or managers. Only the owner edits roles.
 - Plan limits: `max_staff` is enforced when adding or re-activating staff. `max_products` and `max_locations` are stored on plans but not checked yet.
 

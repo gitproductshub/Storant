@@ -1,11 +1,12 @@
 import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.future import select
 from app.core.tenant import get_tenant_db
 from app.services.access import Access, get_access, require
-from app.models import TableEntity, Order, OrderItem, TenantUser
+from app.models import KOT, TableEntity, Order, OrderItem, TenantUser
 from app.services.settings_service import get_default_location
 from app.services.order_service import OPEN_STATUSES
 import logging
@@ -77,6 +78,55 @@ async def get_tables(access: Access = Depends(require("tables.view", feature="ta
         by_table.setdefault(o.table_id, []).append(o)
     return sorted((_serialize(t, (by_table.get(t.id) or [None])[0], [_bill(o, counts, names) for o in by_table.get(t.id, [])], names) for t in tables),
                   key=lambda t: (t["section"] or "", _natural(t["table_number"])))
+
+@router.get("/ready-to-serve")
+async def ready_to_serve(access: Access = Depends(require("tables.view", feature="tables")), db=Depends(get_tenant_db)):
+    """Dine-in food waiting to be served, for the floor staff's voice alerts ("टेबल 5 का ऑर्डर तैयार है") and reminders.
+
+    One entry per kitchen ticket on a running dine-in table bill (a ticket split across two bills gives one entry per bill)
+    once **every live item of it is ready** and at least one is not served yet. Served, cancelled (void) and removed items
+    don't count; takeaway / delivery / online orders never appear (nobody serves them at a table). `ready_since` is when
+    its last item became ready; `server_time` lets devices with a wrong clock time their reminders.
+    """
+    tenant_id = access.tenant_id
+    rows = (await db.execute(
+        select(OrderItem.kot_id, OrderItem.order_id, OrderItem.kitchen_status, OrderItem.quantity, OrderItem.status_at)
+        .join(Order, Order.id == OrderItem.order_id)
+        .where(Order.tenant_id == tenant_id, Order.type == "DINE_IN", Order.table_id.isnot(None), Order.status.in_(OPEN_STATUSES),
+               OrderItem.kot_id.isnot(None), OrderItem.kitchen_status.notin_(["void", "removed"]))
+    )).all()
+    groups: dict = {}
+    for kot_id, order_id, status, quantity, status_at in rows:
+        g = groups.setdefault((kot_id, order_id), {"statuses": set(), "ready": 0, "since": None})
+        g["statuses"].add(status or "pending")
+        if status == "ready":
+            g["ready"] += quantity
+            if status_at and (g["since"] is None or status_at > g["since"]):
+                g["since"] = status_at
+    waiting = {k: g for k, g in groups.items() if g["ready"] > 0 and g["statuses"] <= {"ready", "served"}}
+    result = {"server_time": datetime.utcnow().isoformat() + "Z", "items": []}
+    if not waiting:
+        return result
+    orders = {o.id: o for o in (await db.execute(select(Order).where(Order.tenant_id == tenant_id,
+                                                                     Order.id.in_(list({oid for _, oid in waiting}))))).scalars().all()}
+    tables = {t.id: t for t in (await db.execute(select(TableEntity).where(TableEntity.tenant_id == tenant_id,
+                                                                           TableEntity.id.in_(list({o.table_id for o in orders.values()}))))).scalars().all()}
+    kot_nos = dict((await db.execute(select(KOT.id, KOT.kot_no).where(KOT.tenant_id == tenant_id, KOT.id.in_(list({k for k, _ in waiting}))))).all())
+    items = []
+    for (kot_id, order_id), g in waiting.items():
+        order = orders.get(order_id)
+        table = tables.get(order.table_id) if order else None
+        if not order or not table:
+            continue
+        items.append({
+            "kot_id": str(kot_id), "kot_no": kot_nos.get(kot_id), "order_id": str(order_id), "order_code": order.code,
+            "table_id": str(table.id), "table_label": table.table_number, "bill_label": order.bill_label,
+            "assigned_staff_id": str(table.assigned_staff_id) if table.assigned_staff_id else None,
+            "waiter_id": str(order.waiter_id) if order.waiter_id else None,
+            "ready_count": g["ready"], "ready_since": g["since"].isoformat() + "Z" if g["since"] else None,
+        })
+    result["items"] = sorted(items, key=lambda i: (i["ready_since"] or "", _natural(i["table_label"])))
+    return result
 
 def _natural(label: str):
     digits = "".join(c for c in label if c.isdigit())

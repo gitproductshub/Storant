@@ -1,6 +1,6 @@
 """Running bills on the floor: kitchen status per item, re-orders, cancellations, on the house, shared tables, split / merge."""
 import pytest
-from tests.conftest import create_product, create_staff
+from tests.conftest import create_product, create_staff, serve_all
 
 async def _table(client, headers, number):
     return (await client.post("/api/v1/tables", headers=headers, json={"table_number": number})).json()
@@ -33,10 +33,14 @@ async def test_two_parties_at_one_table_get_separate_bills(client, fresh_tenant)
     assert [b["id"] for b in table["open_bills"]] == [first["id"], second["id"]]
     assert table["open_bills"][0]["kitchen"] == {"pending": 1}
 
-    await client.post(f"/api/v1/orders/{first['id']}/pay", headers=owner, json={"payments": [{"method": "CASH", "amount": 100}]})
+    await serve_all(client, owner, first["id"])  # dine-in pays after the food is served
+    resp = await client.post(f"/api/v1/orders/{first['id']}/pay", headers=owner, json={"payments": [{"method": "CASH", "amount": 100}]})
+    assert resp.status_code == 200, resp.text
     table = next(x for x in (await client.get("/api/v1/tables", headers=owner)).json() if x["id"] == t["id"])
     assert table["status"] == "occupied" and [b["id"] for b in table["open_bills"]] == [second["id"]]
-    await client.post(f"/api/v1/orders/{second['id']}/pay", headers=owner, json={"payments": [{"method": "UPI", "amount": 200}]})
+    await serve_all(client, owner, second["id"])
+    resp = await client.post(f"/api/v1/orders/{second['id']}/pay", headers=owner, json={"payments": [{"method": "UPI", "amount": 200}]})
+    assert resp.status_code == 200, resp.text
     table = next(x for x in (await client.get("/api/v1/tables", headers=owner)).json() if x["id"] == t["id"])
     assert table["status"] == "free" and table["open_bills"] == []
 
@@ -112,8 +116,10 @@ async def test_cancelling_part_of_a_line_the_kitchen_has(client, fresh_tenant):
                                json={"items": [{"item_id": lassi_line["id"]}]})).json()
     assert all(i["name"] != "Lassi" for i in order["items"]) and order["total_amount"] == 60.0
 
-    # The cancelled roti is booked as wastage; the sold ones leave stock at payment
-    await client.post(f"/api/v1/orders/{order['id']}/pay", headers=owner, json={"payments": [{"method": "CASH", "amount": 60}]})
+    # The cancelled roti is booked as wastage; the sold ones leave stock at payment (after they are served)
+    await serve_all(client, owner, order["id"])
+    resp = await client.post(f"/api/v1/orders/{order['id']}/pay", headers=owner, json={"payments": [{"method": "CASH", "amount": 60}]})
+    assert resp.status_code == 200, resp.text
     stock = {s["id"]: s["stock"] for s in (await client.get("/api/v1/inventory", headers=owner)).json()}
     assert stock[roti["id"]] == 47
     report = (await client.get("/api/v1/reports/items", headers=owner)).json()
@@ -168,7 +174,9 @@ async def test_split_a_bill_then_merge_it_back(client, fresh_tenant):
     assert [b["id"] for b in table["open_bills"]] == [source["id"]]
 
     # Items can't leave a bill that has a payment
-    await client.post(f"/api/v1/orders/{source['id']}/pay", headers=owner, json={"payments": [{"method": "CASH", "amount": 100}]})
+    await serve_all(client, owner, source["id"])
+    resp = await client.post(f"/api/v1/orders/{source['id']}/pay", headers=owner, json={"payments": [{"method": "CASH", "amount": 100}]})
+    assert resp.status_code == 200, resp.text
     resp = await client.post(f"/api/v1/orders/{source['id']}/items/move", headers=owner,
                              json={"items": [{"item_id": _line(merged, "Soda")["id"]}]})
     assert resp.status_code == 409

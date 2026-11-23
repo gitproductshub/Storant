@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { BusinessSettings, Order, OrderType } from '@/api/types';
-import { ActionMenu, Badge, Button, Chip, IconButton, Segmented, Text, prompt, type ActionMenuItem } from '@/components/ui';
+import { ActionMenu, Badge, Button, Chip, IconButton, Segmented, Text, prompt, type ActionMenuItem, type confirm } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeProvider';
 import { fonts } from '@/theme/tokens';
 import { money } from '@/lib/format';
@@ -15,7 +15,7 @@ import { CHANNEL_UI } from '@/lib/uiLabels';
 import { useCart, type Draft } from './cart';
 import { BillTabs } from './BillSheets';
 import { PaymentClaimBanner } from '../ops/PaymentClaim';
-import { ItemSelectionBar, RunningItems } from './RunningBill';
+import { ItemSelectionBar, RunningItems, ServeAllButton } from './RunningBill';
 import { billName, pruneSelection, selectableItems } from './runningBill';
 import type { AppliedOffer } from './offers';
 import { isAggregator, type PricedDraft, type PricedLine } from './totals';
@@ -61,6 +61,10 @@ export interface CartPanelProps {
   onExitResume: () => void;
   onKot: () => void;
   onPay: () => void;
+  /** Pay rules hold this bill ("2 items not served yet"): Pay is off and says why. Null = payable. */
+  payHold?: { title: string; detail: string } | null;
+  /** Owner / manager: take payment anyway, with a reason (undefined = not allowed). */
+  onPayAnyway?: () => void;
   offers?: CartOfferInfo | null;
   onOffers?: () => void;
   /** Rendered in a phone sheet (no outer border). */
@@ -82,6 +86,8 @@ export interface CartPanelProps {
   onClaimChanged?: (order: Order) => void;
   /** The bill just paid (change to return, print, share): shown while the new bill is still empty. */
   lastBill?: React.ReactNode;
+  /** How confirms started inside the panel ask (on phones the bill sheet closes first); default: a plain confirm. */
+  confirmWith?: typeof confirm;
 }
 
 export function CartPanel(p: CartPanelProps) {
@@ -136,6 +142,7 @@ export function CartPanel(p: CartPanelProps) {
 
   const payBlocked = !canBill;
   const nothingToPay = !hasNew && !resume;
+  const hold = p.payHold ?? null;
   const due = priced.paid > 0 ? priced.due : preview.total;
   const taxTotal = preview.taxBreakup.reduce((s, t) => s + t.cgst + t.sgst, 0);
   // Collapsed: one short line (items + tax); the full breakdown opens below it
@@ -171,7 +178,8 @@ export function CartPanel(p: CartPanelProps) {
             </View>
           )}
 
-          {resume ? <PaymentClaimBanner order={resume} currency={currency} compact onChanged={(o) => (p.onClaimChanged ?? p.onResumeChange)(o)} /> : null}
+          {resume ? <PaymentClaimBanner order={resume} currency={currency} compact confirmWith={p.confirmWith}
+            onChanged={(o) => (p.onClaimChanged ?? p.onResumeChange)(o)} /> : null}
 
           {showTabs ? (
             <View style={styles.tabRow}>
@@ -228,6 +236,7 @@ export function CartPanel(p: CartPanelProps) {
           keyboardShouldPersistTaps="handled" nestedScrollEnabled>
           {resume && priced.existing.length ? (
             <View style={{ marginBottom: hasNew ? 10 : 0 }}>
+              <ServeAllButton order={resume} online={p.online} onOrder={(o, message) => p.onResumeChange(o, message)} />
               <RunningItems items={priced.existing} selected={selected} onToggle={toggle} onToggleAll={toggleAll} currency={currency} selectable />
               {hasNew ? (
                 <View style={[styles.sectionHead, { marginTop: 10 }]}>
@@ -329,11 +338,24 @@ export function CartPanel(p: CartPanelProps) {
             accessibilityLabel={isRetail ? tr('pos.CartPanel.hold_bill_f9') : hasNew ? tr('pos.CartPanel.send_newcount_new_item_v_to_the_kitchen_f9', { newCount: priced.newCount, v: priced.newCount === 1 ? '' : 's' }) : tr('pos.CartPanel.nothing_new_to_send_to_the_kitchen')} testID="pos-kot" />
           {!payBlocked ? (
             <Button title={tr('pos.CartPanel.pay_money', { money: money(due, currency) })} variant="success" size="lg" icon="card" shortcut={hints ? 'F8' : undefined}
-              onPress={p.onPay} loading={submitting === 'pay'} disabled={nothingToPay || submitting !== null} disabledReason={submitting ? undefined : tr('pos.CartPanel.add_an_item_first_x')}
+              onPress={p.onPay} loading={submitting === 'pay'} disabled={nothingToPay || submitting !== null || !!hold}
+              disabledReason={submitting ? undefined : hold && !nothingToPay ? hold.title : tr('pos.CartPanel.add_an_item_first_x')}
               style={{ flex: 1 }} accessibilityLabel={tr('pos.CartPanel.pay_money_f8', { money: money(due, currency) })} testID="pos-pay" />
           ) : null}
         </View>
         {payBlocked ? <Text variant="caption" tone="subtle" align="center">{tr('pos.CartPanel.only_cashiers_and_managers_can_take')}</Text> : null}
+        {!payBlocked && hold && !nothingToPay ? (
+          <View style={styles.hold} testID="pos-pay-hold">
+            <Ionicons name="restaurant-outline" size={14} color={colors.warningText} />
+            <Text variant="caption" color={colors.warningText} style={{ flex: 1 }} numberOfLines={2}>
+              {hold.detail ? `${hold.title} · ${hold.detail}` : hold.title}
+            </Text>
+            {p.onPayAnyway ? (
+              <Button title={tr('pos.payGate.pay_anyway')} size="sm" variant="outline" onPress={p.onPayAnyway} disabled={submitting !== null}
+                testID="pos-pay-anyway" />
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -610,5 +632,6 @@ const styles = StyleSheet.create({
   addDiscount: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 2, alignSelf: 'flex-start' },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   actions: { flexDirection: 'row', gap: 8 },
+  hold: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 32 },
   num: { fontVariant: ['tabular-nums'] },
 });

@@ -16,7 +16,16 @@ import { brand } from '@/config/brand';
 import { t } from '@/i18n';
 
 /** Permissions that hand over control of the business; flagged when given to a custom role. */
-const SENSITIVE = ['staff.manage', 'settings.manage', 'channels.manage', 'audit.view', 'orders.cancel'];
+const SENSITIVE = ['staff.manage', 'settings.manage', 'channels.manage', 'audit.view', 'orders.cancel', 'orders.pay_override'];
+
+/** Translated labels for permissions; the rest use the server's (English) description. */
+const PERMISSION_TEXT: Record<string, () => string> = {
+  'kitchen.serve': () => t('settings.staff_RolesTab.perm_kitchen_serve'),
+  'orders.pay_override': () => t('settings.staff_RolesTab.perm_orders_pay_override'),
+};
+export function permissionText(p: { code: string; description: string }): string {
+  return PERMISSION_TEXT[p.code]?.() ?? p.description;
+}
 
 export function RolesTab({ ctx, refreshKey }: { ctx: StaffCtx; refreshKey: number }) {
   const { isPhone } = useLayout();
@@ -154,7 +163,10 @@ function RoleSheet({ ctx, role, roles, catalog, catalogError, onRetryCatalog, on
 
   const nameError = !name.trim() ? 'Give the role a name.' : name.trim().length < 2 ? 'Use at least 2 characters.' : name.trim().length > 40 ? 'Use 40 characters or fewer.' : undefined;
   const sensitive = !isOwnerRole && role?.key !== 'manager' ? SENSITIVE.filter((p) => perms.has(p)) : [];
-  const describe = (code: string) => catalog?.flatMap((g) => g.permissions).find((p) => p.code === code)?.description ?? code;
+  const describe = (code: string) => {
+    const p = catalog?.flatMap((g) => g.permissions).find((x) => x.code === code);
+    return p ? permissionText(p) : code;
+  };
 
   const toggle = (code: string) => setPerms((s) => { const n = new Set(s); if (n.has(code)) n.delete(code); else n.add(code); return n; });
   const setGroup = (g: PermissionGroup, on: boolean) => setPerms((s) => {
@@ -339,7 +351,7 @@ function PermissionGroupCard({ group, checked, editable, onToggle, onAll }: {
         ) : null}
       </View>
       {group.permissions.map((p) => (
-        <CheckRow key={p.code} checked={checked(p.code)} title={p.description} disabled={!editable || !p.available}
+        <CheckRow key={p.code} checked={checked(p.code)} title={permissionText(p)} disabled={!editable || !p.available}
           onToggle={() => onToggle(p.code)}
           subtitle={!p.available ? t('common.not_in_your_plan') : undefined} />
       ))}

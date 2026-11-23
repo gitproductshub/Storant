@@ -16,6 +16,7 @@ ACTION_LABELS = {
     "order.discount": "Gave a discount",
     "order.offer": "Applied an offer",
     "order.reprint": "Reprinted a bill",
+    "order.pay_override": "Took payment before items were served",
     "staff.create": "Added staff",
     "staff.update": "Changed staff",
     "role.create": "Created a role",
@@ -34,7 +35,7 @@ ACTION_LABELS = {
 # Only the owner sees these (Owner → Watch). Managers' and staff's activity log never lists them, and no one in the business
 # can edit or delete them (the database role can only insert into audit_logs).
 OWNER_ONLY_ACTIONS = frozenset({"order.cancel", "order.void_item", "order.remove_item", "order.comp", "order.discount",
-                                "order.split", "order.merge", "order.reprint", "order.archive", "menu.change"})
+                                "order.split", "order.merge", "order.reprint", "order.archive", "menu.change", "order.pay_override"})
 
 def record(db: AsyncSession, access, action: str, *, entity_type: str | None = None, entity_id=None,
            summary: str | None = None, details: dict | None = None) -> None:

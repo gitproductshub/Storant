@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.models import KOT, InventoryLog, Order, OrderItem, Product
 from app.services.order_service import (FREE_NOTE, OPEN_STATUSES, REMOVED, VOID, _claim_table, _is_free_line, _manual_discount, _price,
-                                        _release_table, is_void, load_order, order_code)
+                                        _release_table, bill_closed_error, is_void, load_order, lock_orders, order_code)
 from app.services.pricing import ZERO, money
 from app.services.settings_service import get_settings
 from app.services import counters
@@ -28,7 +28,7 @@ KITCHEN_FLOW = ("pending", "preparing", "ready", "served")
 
 def _open(order: Order) -> None:
     if order.status not in OPEN_STATUSES:
-        raise HTTPException(status_code=409, detail="This bill is already closed")
+        raise bill_closed_error(order)
 
 def _find(order: Order, item_id) -> OrderItem:
     item = next((i for i in order.items if str(i.id) == str(item_id)), None)
@@ -57,7 +57,8 @@ async def _reprice(db: AsyncSession, tenant_id: str, order: Order) -> str | None
     return warning
 
 async def sync_kot_status(db: AsyncSession, kot_ids) -> None:
-    """A ticket follows its lines: all void → cancelled; otherwise the least advanced live line."""
+    """A ticket follows its lines: all void → cancelled; otherwise the least advanced live line.
+    A bumped ticket whose food goes back to cooking returns to the kitchen screen."""
     for kot_id in {k for k in kot_ids if k}:
         kot = await db.get(KOT, kot_id)
         if kot is None:
@@ -68,6 +69,8 @@ async def sync_kot_status(db: AsyncSession, kot_ids) -> None:
             kot.status = "cancelled"
             continue
         kot.status = min((l.kitchen_status or "pending" for l in live), key=lambda s: KITCHEN_FLOW.index(s) if s in KITCHEN_FLOW else 0)
+        if kot.status in ("pending", "preparing"):
+            kot.bumped_at, kot.bumped_by = None, None
 
 async def set_items_status(db: AsyncSession, tenant_id: str, order_id, item_ids: list, status: str) -> Order:
     if status not in KITCHEN_FLOW:
@@ -90,25 +93,80 @@ async def set_items_status(db: AsyncSession, tenant_id: str, order_id, item_ids:
     await db.flush()
     return await load_order(db, tenant_id, order.id)
 
+async def _ticket_lines(db: AsyncSession, kot: KOT) -> list[OrderItem]:
+    return (await db.execute(select(OrderItem).where(OrderItem.kot_id == kot.id))).scalars().all()
+
 async def set_ticket_status(db: AsyncSession, tenant_id: str, kot: KOT, status: str) -> None:
-    """Kitchen bumps a whole ticket: its live lines move together."""
+    """A whole ticket moves (Start / Ready on the kitchen screen, or back with Undo): its live lines move together.
+    Lines the floor staff already served stay served unless the ticket itself is being served (only callers with
+    `kitchen.serve` get here with "served"). Moving a ticket back onto the screen clears its bump."""
     now = datetime.utcnow()
-    lines = (await db.execute(select(OrderItem).where(OrderItem.kot_id == kot.id))).scalars().all()
-    for line in lines:
+    for line in await _ticket_lines(db, kot):
         if is_void(line):
             continue
         if status == "cancelled":
             line.kitchen_status, line.void_reason = VOID, line.void_reason or "Ticket cancelled"
+        elif line.kitchen_status == "served" and status != "served":
+            continue
         else:
             line.kitchen_status = status
         line.status_at = now
-    kot.status = status
+    if status == "cancelled":
+        kot.status = "cancelled"
+        return
+    await db.flush()
+    await sync_kot_status(db, [kot.id])
+    if status in ("pending", "preparing", "ready"):
+        kot.bumped_at, kot.bumped_by = None, None
+
+def bump_serves(order: Order, settings) -> bool:
+    """Bump also serves the food when nobody else will: takeaway / delivery / aggregator tickets, or a counter-service
+    place that turned on "Bump marks served". Dine-in otherwise waits for the waiter to serve it."""
+    return order.type != "DINE_IN" or bool(settings.bump_marks_served)
+
+async def bump_ticket(db: AsyncSession, tenant_id: str, kot: KOT, staff_id=None) -> bool:
+    """Clear a ready ticket off the kitchen screen. Returns True when its food was also marked served (see bump_serves)."""
+    if kot.status == "cancelled":
+        raise HTTPException(status_code=409, detail="This ticket was cancelled")
+    order = await db.get(Order, kot.order_id)
+    lines = [l for l in await _ticket_lines(db, kot) if not is_void(l)]
+    if any((l.kitchen_status or "pending") not in ("ready", "served") for l in lines):
+        raise HTTPException(status_code=409, detail="Mark the food ready before bumping the ticket")
+    serve = bump_serves(order, await get_settings(db, tenant_id)) if order else False
+    now = datetime.utcnow()
+    if serve:
+        for line in lines:
+            if line.kitchen_status != "served":
+                line.kitchen_status, line.status_at = "served", now
+    await db.flush()
+    await sync_kot_status(db, [kot.id])
+    kot.bumped_at, kot.bumped_by = now, staff_id
+    return serve
+
+async def recall_ticket(db: AsyncSession, tenant_id: str, kot: KOT) -> None:
+    """Bring a bumped ticket back to the kitchen screen. Food the bump itself served goes back to ready; food a waiter
+    served stays served (on dine-in the bump never serves, unless "Bump marks served" is on)."""
+    if kot.status == "cancelled":
+        raise HTTPException(status_code=409, detail="This ticket was cancelled")
+    order = await db.get(Order, kot.order_id)
+    if order is None or order.status == "cancelled":
+        raise HTTPException(status_code=409, detail="This bill was cancelled")
+    # Tickets bumped by older app versions have no bumped_at but were marked served by the bump
+    bump_served = bump_serves(order, await get_settings(db, tenant_id)) or (kot.bumped_at is None and kot.status == "served")
+    if bump_served:
+        now = datetime.utcnow()
+        for line in await _ticket_lines(db, kot):
+            if not is_void(line) and line.kitchen_status == "served":
+                line.kitchen_status, line.status_at = "ready", now
+        await db.flush()
+        await sync_kot_status(db, [kot.id])
+    kot.bumped_at, kot.bumped_by = None, None
 
 async def void_items(db: AsyncSession, tenant_id: str, order_id, lines: list[tuple], reason: str | None, staff_id,
                      can_void_sent: bool, waste: bool = False) -> tuple[Order, str | None]:
     """lines: [(item_id, quantity | None)]. Unsent items are removed; sent ones are kept as cancelled lines
     (so the kitchen and the audit log see them) and are never charged."""
-    order = await load_order(db, tenant_id, order_id)
+    order = await load_order(db, tenant_id, order_id, for_update=True)
     _open(order)
     if order.payments:
         raise HTTPException(status_code=409, detail="Items can't change after a payment was taken. Refund or cancel the bill instead.")
@@ -158,7 +216,7 @@ async def void_items(db: AsyncSession, tenant_id: str, order_id, lines: list[tup
 
 async def comp_items(db: AsyncSession, tenant_id: str, order_id, lines: list[tuple], reason: str) -> Order:
     """On the house: the line costs nothing; its normal value is kept for reports."""
-    order = await load_order(db, tenant_id, order_id)
+    order = await load_order(db, tenant_id, order_id, for_update=True)
     _open(order)
     if order.payments:
         raise HTTPException(status_code=409, detail="Items can't change after a payment was taken")
@@ -193,6 +251,7 @@ async def _new_bill_like(db: AsyncSession, tenant_id: str, source: Order, label:
 async def move_items(db: AsyncSession, tenant_id: str, order_id, lines: list[tuple], target_order_id=None, new_bill_label: str | None = None,
                      user_id=None) -> tuple[Order, Order]:
     """Split a bill: move whole lines or part of a line to another open bill (or a new bill on the same table)."""
+    await lock_orders(db, tenant_id, [order_id, target_order_id])  # both bills, in a fixed order
     source = await load_order(db, tenant_id, order_id)
     _open(source)
     if source.payments:
@@ -246,6 +305,7 @@ async def merge_bills(db: AsyncSession, tenant_id: str, target_id, source_id) ->
     """Join two bills (tables pushed together, one person pays for everyone)."""
     if str(target_id) == str(source_id):
         raise HTTPException(status_code=400, detail="Choose a different bill")
+    await lock_orders(db, tenant_id, [target_id, source_id])  # both bills, in a fixed order
     target = await load_order(db, tenant_id, target_id)
     source = await load_order(db, tenant_id, source_id)
     _open(target)

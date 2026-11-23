@@ -104,5 +104,5 @@ Details: [07_Offline_Sync_Strategy.md](./07_Offline_Sync_Strategy.md).
 |---|---|
 | Web dev | `docker compose up --watch` → http://localhost:8081 |
 | Web production | `docker compose --profile preview up -d --build` (:8080) or the `web` service in `docker-compose.prod.yml` (Caddy) |
-| Android | `docker compose --profile android run --rm android-build` → `dist/tallyko-<version>.apk` + `.aab` (signed, 16 KB alignment checked) |
+| Android | `docker compose --profile android run --rm android-build` → `dist/storant-<version>.apk` + `.aab` (signed, 16 KB alignment checked) |
 | iOS | EAS (`eas.json`, needs an Apple account) or the home-screen web app |

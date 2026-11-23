@@ -5,7 +5,8 @@ onboarding. Until then orders are punched in manually from the aggregator tablet
 (self-hosted bridge, ONDC seller app, etc.) can POST here with an HMAC signature.
 
 POST /api/v1/integrations/{channel}/orders/{tenant_id}
-Header X-Tallyko-Signature: hex(HMAC-SHA256(channel webhook_secret, raw request body))
+Header X-Storant-Signature: hex(HMAC-SHA256(channel webhook_secret, raw request body))
+(the older X-Tallyko-Signature header is still accepted)
 """
 import hashlib
 import hmac
@@ -56,7 +57,8 @@ async def receive_order(channel: str, tenant_id: uuid.UUID, request: Request):
 
     async for db in open_tenant_session(str(tenant_id)):
         sales_channel = await get_channel(db, str(tenant_id), code)
-        signature = request.headers.get("X-Tallyko-Signature", "")
+        # X-Tallyko-Signature is the pre-rename header; connectors already using it keep working.
+        signature = request.headers.get("X-Storant-Signature") or request.headers.get("X-Tallyko-Signature", "")
         expected = hmac.new((sales_channel.webhook_secret or "").encode(), body, hashlib.sha256).hexdigest() if sales_channel else ""
         if not sales_channel or not sales_channel.webhook_secret or not hmac.compare_digest(signature, expected):
             logger.warning(f"[Integrations] Bad signature for {code}", extra={"tenant_id": str(tenant_id)})

@@ -78,7 +78,16 @@ export interface BusinessSettings {
   email_reply_to?: string | null;
   /** Floor alert minutes (Tables / Kitchen / Online colours). Missing keys use the defaults 45/75/10/20/3. */
   ops_thresholds?: Partial<OpsThresholds> | null;
+  /** When a bill may be paid, per order type (server fills in the defaults: dine-in after served, others anytime). */
+  pay_rules?: Partial<Record<OrderType, PayRule>> | null;
+  /** Kitchen screen Bump also marks dine-in items served (counter-service places without waiters). */
+  bump_marks_served?: boolean;
+  /** Order types this kind of business uses (settings show pay rules only for these). */
+  order_types?: OrderType[];
 }
+
+/** anytime = pay first is fine; ready = every kitchen item ready or served; served = every kitchen item served. */
+export type PayRule = 'anytime' | 'ready' | 'served';
 
 export interface OpsThresholds {
   table_amber_min: number;

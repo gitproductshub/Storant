@@ -98,6 +98,16 @@ async def create_staff(ac: AsyncClient, owner_headers: dict, role: str) -> dict:
     assert resp.status_code == 200, resp.text
     return {"id": None, "email": email, "headers": {"Authorization": f"Bearer {resp.json()['access_token']}"}}
 
+async def serve_all(ac: AsyncClient, headers: dict, order_id: str) -> dict:
+    """Mark every kitchen item on a bill served, as the waiter does before the bill is paid (dine-in pay rule)."""
+    order = (await ac.get(f"/api/v1/orders/{order_id}", headers=headers)).json()
+    ids = [i["id"] for i in order["items"] if i.get("kot_id") and not i["is_void"] and i["kitchen_status"] != "served"]
+    if ids:
+        resp = await ac.post(f"/api/v1/orders/{order_id}/items/status", headers=headers, json={"item_ids": ids, "status": "served"})
+        assert resp.status_code == 200, resp.text
+        order = resp.json()
+    return order
+
 async def create_product(ac: AsyncClient, headers: dict, name: str = "Masala Chai", price: float = 100.0, **extra) -> dict:
     resp = await ac.post("/api/v1/catalog/products", headers=headers, json={"name": name, "base_price": price, **extra})
     assert resp.status_code == 200, resp.text

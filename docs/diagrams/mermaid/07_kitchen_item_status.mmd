@@ -17,7 +17,8 @@ stateDiagram-v2
 
     pending --> preparing : kitchen display or<br/>staff with kitchen.update
     preparing --> ready
-    ready --> served
+    ready --> served : floor staff (kitchen.serve),<br/>or Bump on takeaway / delivery /<br/>"Bump marks served" tickets
+    pending --> served : floor staff serve straight away<br/>(no kitchen screen)
 
     pending --> void : cancel after sending<br/>(orders.void_item + reason,<br/>optional wastage in stock)
     preparing --> void

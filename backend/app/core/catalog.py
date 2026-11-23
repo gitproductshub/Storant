@@ -13,6 +13,7 @@ PERMISSIONS: dict[str, tuple[str, str]] = {
     "orders.create": ("Billing", "Take orders and send them to the kitchen"),
     "orders.view_all": ("Billing", "See every order (otherwise only orders they took)"),
     "orders.pay": ("Billing", "Collect payments and close bills"),
+    "orders.pay_override": ("Billing", "Take payment before every item is served (asks for a reason, written to the audit log)"),
     "orders.discount": ("Billing", "Give manual discounts and redeem loyalty points"),
     "orders.void_item": ("Billing", "Remove items already sent to the kitchen"),
     "orders.cancel": ("Billing", "Cancel or void whole bills"),
@@ -23,6 +24,7 @@ PERMISSIONS: dict[str, tuple[str, str]] = {
     "tables.transfer": ("Tables", "Move a running order to another table"),
     "kitchen.view": ("Kitchen", "See the kitchen display"),
     "kitchen.update": ("Kitchen", "Mark kitchen tickets preparing / ready / served"),
+    "kitchen.serve": ("Kitchen", "Mark items served at the table"),
     "menu.view": ("Menu", "See the menu and prices"),
     "menu.manage": ("Menu", "Add and edit items, prices, categories and barcodes"),
     "inventory.view": ("Inventory", "See stock levels"),
@@ -51,11 +53,11 @@ SYSTEM_ROLES: dict[str, dict] = {
                 "permissions": sorted(ALL_PERMISSIONS - {"settings.manage", "channels.manage", "audit.view"})},
     "cashier": {"name": "Cashier", "description": "Bills, payments, discounts and online orders.",
                 "permissions": ["orders.create", "orders.view_all", "orders.pay", "orders.discount", "orders.reprint",
-                                "orders.accept_online", "tables.view", "tables.transfer", "kitchen.view", "kitchen.update", "menu.view",
-                                "inventory.view", "customers.view", "customers.view_contact", "customers.manage",
+                                "orders.accept_online", "tables.view", "tables.transfer", "kitchen.view", "kitchen.update", "kitchen.serve",
+                                "menu.view", "inventory.view", "customers.view", "customers.view_contact", "customers.manage",
                                 "offers.apply", "reports.view_own"]},
     "waiter": {"name": "Captain / Waiter", "description": "Takes orders for their tables; can't take payments.",
-               "permissions": ["orders.create", "tables.view", "tables.transfer", "kitchen.view", "kitchen.update", "menu.view",
+               "permissions": ["orders.create", "tables.view", "tables.transfer", "kitchen.view", "kitchen.update", "kitchen.serve", "menu.view",
                                "customers.view", "offers.apply", "reports.view_own"]},
     "kitchen": {"name": "Kitchen", "description": "Kitchen display only.",
                 "permissions": ["kitchen.view", "kitchen.update", "menu.view"]},
@@ -88,7 +90,7 @@ ALL_FEATURES = frozenset(FEATURES)
 # Which module a permission belongs to: if the module is off, the permission is off too.
 PERMISSION_FEATURE: dict[str, str] = {
     "tables.view": "tables", "tables.manage": "tables", "tables.transfer": "tables",
-    "kitchen.view": "kitchen", "kitchen.update": "kitchen",
+    "kitchen.view": "kitchen", "kitchen.update": "kitchen", "kitchen.serve": "kitchen",
     "orders.accept_online": "online_orders",
     "inventory.view": "inventory", "inventory.manage": "inventory",
     "customers.view": "customers", "customers.view_contact": "customers", "customers.manage": "customers",
@@ -98,6 +100,19 @@ PERMISSION_FEATURE: dict[str, str] = {
     "email.manage": "email",
     "audit.view": "audit_log",
     "channels.manage": "online_orders",
+}
+
+# When a bill may be paid, per order type (business setting `pay_rules`; missing keys use these defaults).
+# anytime = pay-first is normal; ready = every kitchen item is ready or served; served = every kitchen item is served.
+PAY_RULE_LEVELS = ("anytime", "ready", "served")
+PAY_RULE_DEFAULTS: dict[str, str] = {"DINE_IN": "served", "TAKEAWAY": "anytime", "DELIVERY": "anytime", "RETAIL_WALKIN": "anytime"}
+
+# Order types a business type works with (the settings screen only shows these; counter walk-in is for retail shops)
+ORDER_TYPES_BY_BUSINESS: dict[str, tuple[str, ...]] = {
+    "restaurant": ("DINE_IN", "TAKEAWAY", "DELIVERY"),
+    "cafe": ("DINE_IN", "TAKEAWAY", "DELIVERY"),
+    "cloud_kitchen": ("TAKEAWAY", "DELIVERY"),
+    "retail": ("RETAIL_WALKIN", "TAKEAWAY", "DELIVERY"),
 }
 
 # Default plans (inserted by the `platform_defaults` seeder; editable by the super admin afterwards)

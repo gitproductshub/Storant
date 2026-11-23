@@ -18,6 +18,7 @@ import { SettingsFrame } from './SettingsFrame';
 import { Callout, FieldRow, FormSection } from './components';
 import { ROLE_LABEL } from './sections';
 import { validatePassword } from './validation';
+import { VoiceAlertsSection } from './VoiceAlertsSection';
 import { brand } from '@/config/brand';
 import { LanguageSegmented } from '@/i18n/LanguageSwitcher';
 import { t } from '@/i18n';
@@ -107,6 +108,8 @@ export default function AccountScreen() {
           options={[{ value: 'system', label: t('common.system'), icon: 'desktop-outline' }, { value: 'light', label: t('settings.AccountScreen.light'), icon: 'sunny-outline' }, { value: 'dark', label: t('settings.AccountScreen.dark'), icon: 'moon-outline' }]} />
         <Text variant="small" tone="subtle">{t('settings.AccountScreen.system_follows_your_device_s_light_dark')}</Text>
       </FormSection>
+
+      <VoiceAlertsSection />
 
       {Platform.OS !== 'web' || process.env.EXPO_PUBLIC_ALLOW_SERVER_CHANGE ? (
         <FormSection title={t('settings.AccountScreen.server')} description={t('settings.AccountScreen.the_brand_server_this_app_talks_to_change', { brand: brand.name })}>

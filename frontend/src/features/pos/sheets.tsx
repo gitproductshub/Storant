@@ -219,6 +219,40 @@ export function DiscountSheet({ visible, onClose, value, subtotal, currency, onA
 }
 
 // ---------------------------------------------------------------------------
+// Pay anyway (owner / manager): take payment before the food is served, with a reason for the activity log
+// ---------------------------------------------------------------------------
+
+export function PayAnywaySheet({ visible, onClose, holdTitle, holdDetail, onContinue }: {
+  visible: boolean; onClose: () => void;
+  /** "2 items not served yet" and its breakdown. */
+  holdTitle: string; holdDetail: string;
+  onContinue: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  useEffect(() => { if (visible) setReason(''); }, [visible]);
+  const ok = reason.trim().length >= 3;
+  const go = () => { if (ok) onContinue(reason.trim()); };
+  const quick = [tr('pos.payGate.reason_in_a_hurry'), tr('pos.payGate.reason_packed'), tr('pos.payGate.reason_kitchen_screen')];
+
+  return (
+    <Sheet visible={visible} onClose={onClose} title={tr('pos.payGate.pay_anyway_title')}
+      subtitle={tr('pos.payGate.pay_anyway_subtitle', { reason: holdDetail ? `${holdTitle} (${holdDetail})` : holdTitle })} width={460}
+      footer={
+        <View style={styles.footerRow}>
+          <Button title={tr('common.back')} variant="secondary" onPress={onClose} />
+          <Button title={tr('pos.payGate.continue_to_payment')} variant="success" icon="card" onPress={go} disabled={!ok} />
+        </View>
+      }>
+      <Input autoFocus label={tr('pos.payGate.reason_label')} required value={reason} onChangeText={setReason} maxLength={200}
+        hint={tr('pos.payGate.reason_hint')} onSubmitEditing={go} testID="pos-pay-anyway-reason" />
+      <View style={styles.chipRow}>
+        {quick.map((q) => <Chip key={q} label={q} selected={reason === q} onPress={() => setReason(q)} />)}
+      </View>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Customer
 // ---------------------------------------------------------------------------
 
@@ -303,8 +337,13 @@ export function CustomerSheet({ visible, onClose, value, online, onPick }: {
         </View>
       ) : null}
       {exact ? (
+        // The whole row attaches the customer; "Attach" only looks like a button (a real <button> can't sit inside the row's <button> on web)
         <ListRow title={exact.name} subtitle={tr('pos.sheets.phone_points_points', { phone: exact.phone, points: exact.points })} onPress={() => attach(exact)} left={<Avatar name={exact.name} />}
-          right={<Button title={tr('pos.sheets.attach')} size="sm" onPress={() => attach(exact)} />} />
+          right={(
+            <View style={[styles.attachTag, { backgroundColor: colors.primary }]}>
+              <Text variant="smallStrong" color={colors.primaryText}>{tr('pos.sheets.attach')}</Text>
+            </View>
+          )} />
       ) : validPhone && !looking ? (
         <View style={{ gap: 10 }}>
           <Text variant="small" tone="muted">{tr('pos.sheets.new_customer_add_a_name_to_save_them')}{online ? '' : tr('pos.sheets.they_will_be_saved_when_back_online')}.</Text>
@@ -379,4 +418,5 @@ const styles = StyleSheet.create({
   table: { width: 104, height: 84, alignItems: 'center', justifyContent: 'center', gap: 2, padding: 8 },
   footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  attachTag: { paddingHorizontal: 12, minHeight: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
 });

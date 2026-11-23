@@ -106,6 +106,10 @@ class KOT(TenantScoped, Base):
     order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False)
     kot_no = Column(Integer, nullable=True)
     status = Column(String, default="pending", nullable=False)  # pending, preparing, ready, served, cancelled
+    # Bumped off the kitchen screen (Recall clears it). Separate from status: a bumped ticket's items can still be
+    # waiting to be served by the floor staff.
+    bumped_at = Column(DateTime, nullable=True)
+    bumped_by = Column(UUID(as_uuid=True), nullable=True)  # tenant user (staff) who bumped it
     created_at = created_at_column(server_default=False)
     updated_at = updated_at_column()
 

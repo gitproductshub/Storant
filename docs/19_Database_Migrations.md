@@ -81,7 +81,8 @@ flowchart TB
 
 - `backend/app/models/<area>.py`: models grouped by area (accounts, business, catalog, sales, inventory, access, marketing, platform, tax), re-exported from `app/models/__init__.py`.
 - `backend/alembic/versions/NNNN_<what>.py`:
-  - **one migration per table** (`0002_create_global_vendors_table.py` … `0062_add_ops_thresholds_to_business_settings.py`);
+  - **one migration per table** (`0002_create_global_vendors_table.py` … `0065_grant_serve_and_pay_override_permissions_on_roles.py`);
+  - latest: `0063` adds `pay_rules` and `bump_marks_served` to `business_settings`, `0064` adds `bumped_at` and `bumped_by` to `kots`, `0065` (data only) adds `kitchen.serve` / `orders.pay_override` to saved role rows;
   - ids are sequential and assigned automatically by `alembic/env.py`.
 - `backend/app/db/rls.py`:
   - SQL for the `tallyko_app` role, GRANTs and `tenant_isolation` policies.

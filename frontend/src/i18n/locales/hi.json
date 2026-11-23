@@ -20,6 +20,7 @@
     "business_name": "व्यवसाय का नाम",
     "email": "ईमेल",
     "mobile_number": "मोबाइल नंबर",
+    "enter_valid_indian_mobile": "सही 10 अंकों का भारतीय मोबाइल नंबर डालें",
     "try_again": "फिर कोशिश करें",
     "reset": "रीसेट",
     "business": "व्यवसाय",
@@ -204,14 +205,14 @@
       "sign_in": "साइन इन करें",
       "new_to_brand": "{{brand}} पर नए हैं?",
       "create_a_free_account": "मुफ़्त अकाउंट बनाएँ",
-      "staff_accounts_are_created_by_the_shop": "स्टाफ़ अकाउंट मालिक सेटिंग्स → स्टाफ़ में बनाते हैं।"
+      "how_we_handle_your_data": "हम आपका डेटा कैसे संभालते हैं",
+      "open_the_privacy_policy": "गोपनीयता नीति खोलें"
     },
     "signup": {
       "caf_qsr": "कैफ़े / QSR",
       "retail_store": "रिटेल स्टोर",
       "enter_your_business_name": "अपने व्यवसाय का नाम दर्ज करें",
       "enter_a_valid_email_address": "मान्य ईमेल पता दर्ज करें",
-      "enter_a_valid_mobile_number": "मान्य मोबाइल नंबर दर्ज करें",
       "use_at_least_8_characters": "कम से कम 8 अक्षर रखें",
       "please_accept_the_privacy_policy_to": "आगे बढ़ने के लिए कृपया गोपनीयता नीति स्वीकार करें",
       "create_your_business": "अपना व्यवसाय बनाएँ",
@@ -650,8 +651,39 @@
       "bill_billno_v": "बिल {{billNo}}{{v}}",
       "quantity_free_v": "{{quantity}} × मुफ़्त{{v}}"
     },
+    "billErrors": {
+      "bill_paid": "इस बिल का भुगतान हो चुका है। नया ऑर्डर शुरू करें।",
+      "bill_cancelled": "यह बिल रद्द हो चुका है। नया ऑर्डर शुरू करें।",
+      "bill_merged": "यह बिल दूसरे बिल में मिला दिया गया है। वह बिल खोलें।",
+      "bill_part_paid": "इस बिल पर भुगतान पहले ही लिया जा चुका है। बाकी रकम लें, या नए आइटम नए ऑर्डर में डालें।"
+    },
+    "payGate": {
+      "one_item_not_served": "1 आइटम अभी परोसा नहीं गया",
+      "n_items_not_served": "{{n}} आइटम अभी परोसे नहीं गए",
+      "one_item_not_ready": "1 आइटम अभी तैयार नहीं",
+      "n_items_not_ready": "{{n}} आइटम अभी तैयार नहीं",
+      "n_not_sent": "{{n}} किचन नहीं भेजे गए",
+      "n_cooking": "{{n}} बन रहे हैं",
+      "n_ready_to_serve": "{{n}} परोसने के लिए तैयार",
+      "take_payment_once_served": "सब परोसे जाने के बाद भुगतान लें।",
+      "take_payment_once_ready": "सब तैयार होने के बाद भुगतान लें।",
+      "pay_anyway": "फिर भी भुगतान लें",
+      "pay_anyway_title": "खाना परोसे जाने से पहले भुगतान लें?",
+      "pay_anyway_subtitle": "{{reason}}। आपका कारण मालिक के गतिविधि लॉग में दर्ज होगा।",
+      "reason_label": "कारण",
+      "reason_hint": "कम से कम 3 अक्षर",
+      "continue_to_payment": "भुगतान पर आगे बढ़ें",
+      "reason_in_a_hurry": "ग्राहक जल्दी में है",
+      "reason_packed": "खाना पैक करके ले जा रहे हैं",
+      "reason_kitchen_screen": "किचन स्क्रीन अपडेट नहीं हुई",
+      "checking_the_bill": "बिल जाँच रहे हैं…",
+      "only_owner_or_manager": "खाना परोसे जाने से पहले भुगतान सिर्फ़ मालिक या मैनेजर ले सकते हैं"
+    },
     "RunningBill": {
       "already_on_the_bill": "पहले से बिल में",
+      "mark_all_served_count": "सब परोसा गया मार्क करें ({{count}})",
+      "mark_all_count_items_on_this_bill_served": "इस बिल के सभी {{count}} आइटम परोसे गए मार्क करें",
+      "count_items_marked_served": "{{count}} आइटम परोसे गए मार्क हुए",
       "select_all_items": "सभी आइटम चुनें",
       "select_all": "सब चुनें",
       "cancelled": ", रद्द",
@@ -754,11 +786,24 @@
     }
   },
   "ops": {
+    "FloorAnnouncer": {
+      "ready_to_serve_tables": "परोसने के लिए तैयार: {{tables}}",
+      "mute_5_min": "5 मिनट चुप",
+      "unmute": "आवाज़ वापस"
+    },
     "KitchenScreen": {
       "dine_in": "डाइन-इन",
       "swiggy": "स्विगी",
       "zomato": "ज़ोमैटो",
       "kot_v_is_back_in_ready": "KOT {{v}} वापस \"तैयार\" में है",
+      "tap_to_turn_on_voice": "आवाज़ चालू करने के लिए टैप करें",
+      "turn_on_voice": "आवाज़ में घोषणा चालू करें (हिंदी)",
+      "turn_off_voice": "आवाज़ में घोषणा बंद करें",
+      "kot_v_bumped_ready_to_serve": "KOT {{v}} बंप हुआ · खाना वेटर के परोसने का इंतज़ार कर रहा है",
+      "kot_v_bumped_and_served": "KOT {{v}} बंप हुआ और परोसा गया",
+      "kot_v_was_already_served": "KOT {{v}}: इसका सब कुछ पहले ही परोसा जा चुका है",
+      "bumped_age_ago": "{{age}} पहले बंप हुआ",
+      "bumped_just_now": "अभी बंप हुआ",
       "kot_v_marked_v2": "KOT {{v}} को {{v2}} चिह्नित किया",
       "full_screen_is_not_available_here": "यहाँ फ़ुल स्क्रीन उपलब्ध नहीं है",
       "nothing_bumped_recently": "हाल में कुछ बंप नहीं हुआ",
@@ -1923,6 +1968,31 @@
     }
   },
   "settings": {
+    "VoiceAlertsSection": {
+      "voice_alerts": "आवाज़ अलर्ट",
+      "description": "इस डिवाइस पर हिंदी में बोला जाता है। किचन को नए ऑर्डर सुनाई देते हैं; फ़्लोर स्टाफ़ को टेबल का खाना तैयार होने पर, और परोसे जाने तक याद दिलाना। आवाज़ अलर्ट चालू रहने तक स्क्रीन चालू रहती है।",
+      "not_available": "यह डिवाइस अभी बोल नहीं सकता। आवाज़ अलर्ट वेब ऐप (ब्राउज़र या ब्राउज़र से इंस्टॉल किया ऐप) में काम करते हैं।",
+      "kitchen_voice": "किचन: नए ऑर्डर बोलें",
+      "kitchen_voice_desc": "किचन स्क्रीन पर “नया ऑर्डर आया है। टेबल 5।”",
+      "kitchen_items": "किचन: आइटम भी बोलें",
+      "kitchen_items_desc": "लंबी घोषणा; व्यस्त समय के लिए डिफ़ॉल्ट बंद",
+      "ready_voice": "खाना तैयार होने पर बोलें",
+      "ready_voice_desc": "डाइन-इन टेबल के लिए “टेबल 5 का ऑर्डर तैयार है।”, हर स्क्रीन पर",
+      "reminder": "परोसे जाने तक याद दिलाना",
+      "reminder_30": "हर 30 सेकंड",
+      "reminder_60": "हर 1 मिनट",
+      "reminder_120": "हर 2 मिनट",
+      "reminder_off": "बंद",
+      "only_mine": "सिर्फ़ मेरी टेबल",
+      "only_mine_desc": "जो टेबल आपको दी गई हैं (टेबल → वेटर चुनें)। बंद: सभी टेबल।",
+      "voice": "आवाज़",
+      "voice_auto": "अपने-आप (हिंदी, हो सके तो महिला आवाज़)",
+      "using_voice": "इस्तेमाल हो रही है: {{name}}",
+      "no_hindi_voice": "इस डिवाइस पर कोई हिंदी आवाज़ नहीं मिली। एक जोड़ें (Windows: सेटिंग्स → समय और भाषा → स्पीच; Android: Google Text-to-speech → हिंदी), वरना अलर्ट चुप रह सकते हैं।",
+      "test": "आवाज़ जाँचें",
+      "muted_until": "{{time}} तक चुप",
+      "search_title": "आवाज़ अलर्ट (हिंदी)"
+    },
     "AccountScreen": {
       "left_bill_v_still_waiting_check_the": "{{left}} बिल अभी इंतज़ार में हैं। इंटरनेट कनेक्शन जाँचें।",
       "everything_is_synced": "सब कुछ सिंक हो गया",
@@ -1981,6 +2051,31 @@
       "this_can_t_be_undone": "इसे वापस नहीं किया जा सकता।",
       "read_more_in_the_privacy_policy_or_ask": "और जानकारी गोपनीयता नीति में पढ़ें, या केवल व्यवसाय छोड़ना हो तो अपने दुकान मालिक से पूछें।"
     },
+    "KitchenRulesScreen": {
+      "kitchen_rules": "किचन नियम",
+      "subtitle": "बिल का भुगतान कब हो सकता है, और किचन स्क्रीन पर बंप क्या करता है",
+      "owner_only": "किचन नियम सिर्फ़ मालिक बदल सकते हैं",
+      "ask_the_owner": "बिल का भुगतान कब हो, यह बदलने के लिए मालिक से कहें।",
+      "loading": "किचन नियम लोड हो रहे हैं…",
+      "couldn_t_load": "सेटिंग लोड नहीं हो सकीं",
+      "saved": "किचन नियम सेव हो गए",
+      "use_defaults": "डिफ़ॉल्ट इस्तेमाल करें",
+      "kitchen_module_off": "किचन मॉड्यूल बंद है, इसलिए बिल का भुगतान कभी भी हो सकता है। ये नियम इस्तेमाल करने के लिए मॉड्यूल और प्लान में इसे चालू करें।",
+      "when_a_bill_can_be_paid": "बिल का भुगतान कब हो सकता है",
+      "when_a_bill_can_be_paid_desc": "हर ऑर्डर टाइप के लिए। जब तक नियम पूरा न हो, टिल पर Pay बंद रहता है और सर्वर भुगतान मना कर देता है।",
+      "rule_anytime": "कभी भी",
+      "rule_ready": "आइटम तैयार होने के बाद",
+      "rule_served": "आइटम परोसे जाने के बाद",
+      "what_the_choices_mean": "विकल्पों का मतलब",
+      "explain_anytime": "कभी भी: पहले भुगतान लें। टेकअवे, काउंटर और डिलीवरी के लिए आम बात।",
+      "explain_ready": "आइटम तैयार होने के बाद: किचन का हर आइटम बन चुका है (तैयार या परोसा जा चुका)।",
+      "explain_served": "आइटम परोसे जाने के बाद: किचन का हर आइटम टेबल तक पहुँच चुका है। डाइन-इन के लिए सबसे अच्छा।",
+      "note_pay_anyway": "मालिक और मैनेजर हमेशा कारण देकर “फिर भी भुगतान लें” इस्तेमाल कर सकते हैं; यह मालिक के गतिविधि लॉग में दर्ज होता है। जो आइटम किचन नहीं जाते, ऑनलाइन स्टोर के ऑर्डर और Swiggy / Zomato के ऑर्डर कभी नहीं रोके जाते।",
+      "kitchen_screen": "किचन स्क्रीन",
+      "kitchen_screen_desc": "डाइन-इन टिकट पर बंप क्या करता है। टेकअवे, डिलीवरी और Swiggy / Zomato टिकट बंप होने पर हमेशा परोसे गए मार्क होते हैं।",
+      "bump_marks_served": "बंप से परोसा गया मार्क हो",
+      "bump_marks_served_desc": "अगर आपके पास वेटर नहीं हैं (काउंटर सर्विस) तो चालू करें: टिकट बंप करने से उसका खाना भी परोसा गया मार्क हो जाता है। बंद: बंप सिर्फ़ टिकट हटाता है और वेटर टेबल पर खाना परोसा गया मार्क करता है।"
+    },
     "FloorAlertsScreen": {
       "owners_and_managers_only": "केवल मालिक और मैनेजर",
       "ask_the_owner_or_a_manager_to_change_the": "फ़्लोर अलर्ट का समय बदलने के लिए मालिक या मैनेजर से कहें।",
@@ -2027,6 +2122,8 @@
       "back_to_settings": "सेटिंग्स पर वापस"
     },
     "SettingsHome": {
+      "sign_out_of_this_device": "इस डिवाइस से साइन आउट करें?",
+      "sign_out_stops_kitchen_alerts": "जब तक कोई दोबारा साइन इन न करे, यहाँ नए ऑर्डर न बोले जाएँगे न दिखेंगे।",
       "businessname_signed_in_as_v": "{{businessName}} · {{v}} के रूप में साइन इन",
       "business_profile": "व्यवसाय प्रोफ़ाइल",
       "no_address_yet": "अभी कोई पता नहीं",
@@ -2095,6 +2192,7 @@
       "not_done": "नहीं किया गया"
     },
     "search": {
+      "when_bills_can_be_paid": "बिल का भुगतान कब हो सकता है",
       "business_profile": "व्यवसाय प्रोफ़ाइल",
       "gstin_fssai_invoices": "GSTIN, FSSAI और इनवॉइस",
       "upi_payments": "UPI और भुगतान",
@@ -2113,6 +2211,7 @@
       "sign_out_delete_account": "साइन आउट और अकाउंट हटाना"
     },
     "sections": {
+      "when_bills_can_be_paid_and_what_bump_does": "बिल का भुगतान कब हो, और बंप क्या करता है",
       "setup_checklist_and_app_details": "सेटअप चेकलिस्ट और ऐप की जानकारी",
       "profile_upi_loyalty_online_ordering": "प्रोफ़ाइल, UPI, लॉयल्टी, ऑनलाइन ऑर्डरिंग",
       "tax_classes_cgst_sgst_rate_changes": "टैक्स क्लास, CGST/SGST, दर में बदलाव",
@@ -2676,6 +2775,8 @@
     },
     "staff_RolesTab": {
       "permissions": "अनुमतियाँ",
+      "perm_kitchen_serve": "टेबल पर आइटम परोसे गए (Served) मार्क करें",
+      "perm_orders_pay_override": "सभी आइटम परोसे जाने से पहले भुगतान लें (कारण पूछा जाता है, ऑडिट लॉग में दर्ज होता है)",
       "roles": "भूमिकाएँ",
       "customcount_custom": " · {{customCount}} कस्टम",
       "new_role": "नई भूमिका",

@@ -1,4 +1,5 @@
 import logging
+import re
 import secrets
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
@@ -9,6 +10,7 @@ from app.schemas.auth import VendorSignupRequest, LoginRequest, TokenResponse, R
 from app.core.security import (get_password_hash, verify_password, create_access_token, create_refresh_token, decode_token,
                                hash_password_async, verify_password_async)
 from app.core.tenant import get_shared_session_maker
+from app.core.phone import invalid_mobile_error, looks_like_phone, normalize_indian_mobile, stored_forms
 from app.services.settings_service import DEFAULT_CHANNELS, ensure_roles
 from app.services.tax import ensure_tax_classes
 from app.services.sessions import check_refreshable, start_session
@@ -67,11 +69,15 @@ async def _tenant_user_for(session, user: GlobalUser) -> TenantUser:
 async def register_vendor(signup_data: VendorSignupRequest, user_agent: str | None = None, ip: str | None = None,
                           demo_days: int | None = None) -> TokenResponse:
     email = signup_data.email.lower()
-    phone = signup_data.phone.replace(" ", "")
+    # Stored as the plain 10-digit number; older accounts may hold +91… / 91… / 0… forms, so duplicates are checked against all
+    phone = normalize_indian_mobile(signup_data.phone)
+    if phone is None:
+        raise invalid_mobile_error()
     maker = get_shared_session_maker()
     async with maker() as session:
         try:
-            existing = await session.execute(select(GlobalUser).where(or_(func.lower(GlobalUser.email) == email, GlobalUser.phone == phone)))
+            existing = await session.execute(select(GlobalUser).where(or_(func.lower(GlobalUser.email) == email,
+                                                                          GlobalUser.phone.in_(stored_forms(phone)))))
             if existing.scalars().first():
                 raise HTTPException(status_code=409, detail="An account with this email or phone number already exists")
 
@@ -110,10 +116,21 @@ async def authenticate_user(login_data: LoginRequest, user_agent: str | None = N
     identifier = login_data.email.strip().lower()
     maker = get_shared_session_maker()
     async with maker() as session:
-        result = await session.execute(
-            select(GlobalUser).where(or_(func.lower(GlobalUser.email) == identifier, GlobalUser.phone == identifier.replace(" ", "")))
-        )
-        user = result.scalars().first()
+        if looks_like_phone(identifier):
+            # A phone number: the Indian mobile rule, matched against every form older accounts may have stored.
+            # An account whose stored number doesn't fit the rule can still sign in with exactly that number (or its email).
+            mobile = normalize_indian_mobile(identifier)
+            typed = re.sub(r"[\s\-().]", "", identifier)
+            forms = stored_forms(mobile) if mobile else [typed]
+            result = await session.execute(select(GlobalUser).where(GlobalUser.phone.in_(forms)).order_by(GlobalUser.created_at))
+            user = result.scalars().first()
+            if user is None and mobile is None:
+                raise invalid_mobile_error()
+        else:
+            result = await session.execute(
+                select(GlobalUser).where(or_(func.lower(GlobalUser.email) == identifier, GlobalUser.phone == identifier.replace(" ", "")))
+            )
+            user = result.scalars().first()
         if not user or not user.is_active:
             await verify_password_async(login_data.password, _DUMMY_HASH)
             raise HTTPException(status_code=401, detail="Incorrect email/phone or password")

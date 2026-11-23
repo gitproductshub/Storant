@@ -38,7 +38,7 @@ backend/  FastAPI (Python 3.11)
   app/models/<area>.py   accounts, business, catalog, sales, inventory, access (roles, audit), marketing (offers, email), platform (plans), tax;
                          base.py = naming convention + TENANT_RLS/child_rls markers; import via `from app.models import X`
   app/services/          access.py (require(), entitlements, cache), pricing.py (GST engine), tax.py (TaxResolver, dated rates),
-                         offers.py (pure offer engine), order_service.py (order lifecycle), floor_service.py (item kitchen status,
+                         offers.py (pure offer engine), order_service.py (order lifecycle, pay rules `pay_gate`, row locks), floor_service.py (item kitchen status, bump/recall,
                          cancel/comp, split/merge, several bills per table), channel_menu.py (per-channel price & availability),
                          menu_history.py (append-only product versions), records_admin.py (super admin archive/delete),
                          subscription.py (demo/paid/development periods, lock, offers, daily 01:00 IST check), sessions.py (devices),
@@ -51,7 +51,7 @@ backend/  FastAPI (Python 3.11)
                          erd_drawio.py (regenerates docs/diagrams/Tallyko_Database_ERD.drawio from the models; rerun after schema changes)
   manage.py              migrate | rollback | status | make:migration | db:sync | db:check | refresh | fresh | seed | watch |
                          subscriptions:check | create:superadmin
-  alembic/versions/      0001…0062, one per table; env.py assigns sequential ids and adds RLS for TENANT_RLS models
+  alembic/versions/      0001…0065, one per table; env.py assigns sequential ids and adds RLS for TENANT_RLS models
   tests/                 unit (pricing, OCR parser) + integration (real Postgres/Redis): auth, catalog, orders, offers, taxes/email, access/platform,
                          kitchen, sync, public/integrations, tenant isolation, AI
 frontend/ Expo SDK 57 · RN 0.86 · React 19 · TS strict · expo-router
@@ -65,9 +65,11 @@ frontend/ Expo SDK 57 · RN 0.86 · React 19 · TS strict · expo-router
   src/theme/             tokens (Storant purple brand, light/dark/system via prefs.theme), ThemeProvider (useTheme, useLayout), ThemeToggle
   src/api/               client (timeouts, refresh-on-401, ApiError.network), typed endpoints, types
   src/store/             auth (SecureStore), access (/access/me), subscription (lock), prefs, data (offline cache incl. tax classes),
-                         outbox (offline bills, kept on 401/402), badges
+                         outbox (offline bills, kept on 401/402), badges, voicePrefs (voice alerts, per device)
   src/hooks/             useApi, usePagedList (server paging), useHotkeys, live (polling that pauses when hidden, device prefs)
-  src/lib/               billing.ts (price preview mirrors backend, receipt/KOT mapping, printBill), sync.ts, format.ts, storage.ts,
+  src/lib/               billing.ts (price preview mirrors backend, receipt/KOT mapping, printBill), payGate.ts (pay rules, mirrors backend),
+                         serverErrors.ts (error codes → localised messages), voice.ts + voiceLines.ts (Hindi voice alerts:
+                         engine, queue, wake lock; Devanagari lines), sync.ts, format.ts, storage.ts,
                          print/ (ESC/POS, receipt layouts, printers: BT Classic/BLE/Web Bluetooth/print dialog), barcode/ (Code128, EAN-13, QR)
   public/                index.html (PWA meta), manifest.json, sw.js (app-shell cache, never caches /api), icons
   app.json               store-compliance config (permissions, blockedPermissions, purpose strings, privacy manifest, targetSdk 36)
@@ -92,7 +94,7 @@ docker compose exec backend python manage.py fresh --seed --force   # dev only: 
 # Mailpit (dev email inbox): http://localhost:8025
 cd frontend && npx tsc --noEmit && npx jest
 docker compose --profile preview up -d --build                  # production web build on :8080
-docker compose --profile android run --rm android-build         # dist/tallyko-<v>.apk + .aab
+docker compose --profile android run --rm android-build         # dist/storant-<v>.apk + .aab
 docker compose -f docker-compose.prod.yml up -d --build         # production (needs .env)
 ```
 
@@ -118,7 +120,19 @@ docker compose -f docker-compose.prod.yml up -d --build         # production (ne
 - Tax: never read `products.tax_rate` directly; use `TaxResolver` and store the line snapshot. Offers: evaluate with `services/offers.py`, never trust client discounts.
 - Rate limits must assume a whole shop shares one public IP (many tills, tablets, customers on Wi-Fi): limit per account /
   per customer phone, keep per-IP ceilings high.
-- Tests: `@pytest.mark.asyncio` + fixtures `client`, `tenant_a`, `tenant_b`, `fresh_tenant`, helpers `create_staff`, `create_product`, `random_client_ip` in `tests/conftest.py`.
+- Errors the app must explain in the person's language carry a code: `HTTPException(detail={"code", "message", "details"})`
+  (main.py keeps the envelope). Current codes: `PAY_BLOCKED_ITEMS`, `BILL_CLOSED`, `BILL_PART_PAID`; map new ones in
+  `frontend/src/lib/serverErrors.ts` (en/hi/gu).
+- **Pay rules:** the first payment on a bill goes through `order_service.pay_gate` (business setting `pay_rules`; dine-in
+  after served by default). Callers at the till pass a `PayCheck` (`kitchen_on`, `orders.pay_override`, `override_reason`);
+  system callers (sync replay, confirmed UPI claim, public / aggregator orders, seeders) pass none. Only POS and QR bills
+  are checked. Keep `frontend/src/lib/payGate.ts` in step.
+- **Served is floor work:** `served` needs `kitchen.serve` (never the kitchen role). Kitchen Bump (`floor_service.bump_ticket`)
+  only sets `kots.bumped_at`; it serves food only for non-dine-in tickets or when `bump_marks_served` is on.
+- Changing or paying a bill: load it with `load_order(..., for_update=True)` (two bills: `lock_orders` first, fixed order);
+  closed bills raise `bill_closed_error(order)`, part-paid bills take no new items.
+- Tests: `@pytest.mark.asyncio` + fixtures `client`, `tenant_a`, `tenant_b`, `fresh_tenant`, helpers `create_staff`, `create_product`,
+  `serve_all` (serve a bill's kitchen items before paying a dine-in bill), `random_client_ip` in `tests/conftest.py`.
 
 **Frontend**
 - **Every screen follows `docs/20_High_Volume_UX.md`** (thousands of customers a day): one-tap frequent actions, anchored
@@ -142,7 +156,7 @@ Backend complete for: auth (business + platform logins, refresh, change password
 offers; daily 01:00 IST sign-out of lapsed businesses), signed-in devices, running bills (item kitchen status, cancel/comp, split/merge,
 several bills per table), per-channel menu prices (Swiggy/Zomato/…), owner-only watch list (cancellations, removals, comps,
 discounts, menu changes by staff), menu versions with restore and bulk menu edits, GST only with a valid GSTIN, table QR ordering
-(own bill per guest, pay at counter or UPI claim), server-paged lists with counts (orders, customers, businesses, requests), aggregator channels + webhook, brands, kitchen, inventory, CRM, reports (incl. staff performance), public menu + QR/online ordering, offline sync, menu-photo OCR. 180 backend tests pass; frontend 310 jest tests, tsc clean.
+(own bill per guest, pay at counter or UPI claim), server-paged lists with counts (orders, customers, businesses, requests), aggregator channels + webhook, brands, kitchen, inventory, CRM, reports (incl. staff performance), public menu + QR/online ordering, offline sync, menu-photo OCR. Dine-in pay rules (pay after served, Pay anyway with audited reason), Bump vs Served (`kitchen.serve`), Kitchen rules settings and row-locked bills, Hindi voice alerts (kitchen new orders; floor "ready" + reminders until served) (v2.0.0 + pay-flow work, Nov 2026). Test counts change as tests are added: run the suites (see Running things) rather than trusting a number here.
 Demo logins (dev dropdown, password `Demo@1234`): restaurant, retail, cloud kitchen (Swiggy/Zomato prices) and a locked café owner;
 managers, cashiers, waiters, kitchen; 2 super admins, 2 support. Demo businesses run on development access.
 Frontend rebuilt on Expo SDK 57 and redesigned to `docs/20_High_Volume_UX.md` (checked at 390/820/1180/1366/1920 widths).
@@ -161,6 +175,7 @@ Docs: `docs/diagrams/` holds Mermaid (`mermaid/*.mmd`, rendered SVGs) and draw.i
 9. Offers are evaluated online only; bills made offline sync without an offer. Public store ordering doesn't accept coupon codes yet.
 10. Email delivery needs an SMTP account in production (`SMTP_*` in `.env`); without it emails are logged as `skipped`.
 11. Plan limits: only `max_staff` is enforced; `max_products` / `max_locations` are stored (plans, overrides) but not checked.
+12. Voice alerts (`lib/voice.ts`) speak only on web / PWA (browser `speechSynthesis`, needs one tap, a Hindi voice on the device and the screen on); the native apps have no voice engine yet and nothing reaches a locked phone (no push notifications).
 
 ## Project skills and agents
 

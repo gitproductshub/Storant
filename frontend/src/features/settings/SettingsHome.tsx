@@ -5,11 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { adminApi } from '@/api/endpoints';
 import type { BusinessType } from '@/api/types';
-import { Badge, Card, ListRow, SectionTitle, StatusPill, Text } from '@/components/ui';
+import { Badge, Button, Card, ListRow, SectionTitle, StatusPill, Text, confirm } from '@/components/ui';
+import { visibleNavItems } from '@/components/nav/navItems';
+import { useAccessInfo } from '@/store/access';
+import { endSession } from '@/lib/signOut';
 import { useAccessLine } from '@/components/nav/shellStatus';
 import { useApi } from '@/hooks/useApi';
 import { can, useAuth } from '@/store/auth';
 import { useData } from '@/store/data';
+import { useOutbox } from '@/store/outbox';
 import { usePrefs } from '@/store/prefs';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { SettingsFrame, SettingsSearch, useSettingsSections } from './SettingsFrame';
@@ -35,10 +39,13 @@ export default function SettingsHome() {
   const liveChannels = channels.filter((c) => c.enabled && c.code !== 'POS').length;
 
   const sections = useSettingsSections();
+  const access = useAccessInfo();
+  // A role that can only open Kitchen and Settings (the kitchen role, or a custom one like it)
+  const kitchenOnly = !!role && visibleNavItems(role, settings?.business_type, access).every((i) => i.route === 'kitchen' || i.route === 'settings');
   const [query, setQuery] = useState('');
   const accessLine = useAccessLine();
   const has = (key: string) => sections.some((x) => x.key === key);
-  const extra = sections.filter((x) => ['taxes', 'qr', 'floor', 'emails', 'modules', 'billing'].includes(x.key));
+  const extra = sections.filter((x) => ['taxes', 'qr', 'floor', 'kitchen', 'emails', 'modules', 'billing'].includes(x.key));
 
   return (
     <SettingsFrame active="overview" title={tr('common.settings')} subtitle={isDesktop ? tr('settings.SettingsHome.businessname_signed_in_as_v', { businessName, v: role ? ROLE_LABEL[role] : '' }) : businessName}>
@@ -46,6 +53,8 @@ export default function SettingsHome() {
 
       {query.trim() && !isWide ? null : (
       <>
+      {/* Kitchen devices (only Kitchen and Settings): signing out is one tap here, not at the bottom of Account */}
+      {kitchenOnly ? <QuickSignOut /> : null}
       {manager ? <SetupChecklist /> : null}
 
       {!isWide ? (
@@ -100,6 +109,34 @@ export default function SettingsHome() {
       </>
       )}
     </SettingsFrame>
+  );
+}
+
+/** One-tap sign out for kitchen devices; asks first because signing out stops the kitchen's voice alerts. */
+function QuickSignOut() {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    // Same warning as Settings → Account when this device still holds bills that haven't uploaded
+    const tenantId = useAuth.getState().session?.tenantId;
+    const pending = useOutbox.getState().queue.filter((q) => q.tenantId === tenantId).length;
+    const ok = await confirm({
+      title: tr('settings.SettingsHome.sign_out_of_this_device'),
+      message: pending ? tr('app.signOut.pending', { pending }) : tr('settings.SettingsHome.sign_out_stops_kitchen_alerts'),
+      confirmLabel: tr('common.sign_out'),
+      danger: pending > 0,
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await endSession(); // the same sign-out as Settings → Account
+      router.replace('/login' as Href);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button title={tr('common.sign_out')} icon="log-out-outline" variant="secondary" size="lg" full loading={busy}
+      onPress={() => void run()} testID="settings-quick-sign-out" />
   );
 }
 
@@ -195,10 +232,13 @@ function About() {
   const version = Constants.expoConfig?.version ?? '—';
   const build = Platform.OS === 'ios' ? Constants.expoConfig?.ios?.buildNumber : Platform.OS === 'android' ? Constants.expoConfig?.android?.versionCode : null;
   const platform = Platform.OS === 'web' ? 'Web app' : Platform.OS === 'ios' ? 'iPhone / iPad app' : 'Android app';
+  const customServer = usePrefs((s) => s.serverUrl);
+  // Show the brand, not the hosting address; a server the user typed in themselves is still shown.
+  const serverText = customServer ? serverOrigin() : brand.name;
   return (
     <Group title={tr('settings.SettingsHome.about')}>
       <ListRow icon="information-circle-outline" title={`${brand.name} ${version}${build ? ` (${build})` : ''}`} subtitle={platform} />
-      <ListRow icon="server-outline" title={tr('settings.SettingsHome.server')} subtitle={serverOrigin()} />
+      <ListRow icon="server-outline" title={tr('settings.SettingsHome.server')} subtitle={serverText} />
       <ListRow icon="shield-checkmark-outline" title={tr('common.privacy_policy')} subtitle={tr('settings.SettingsHome.what_we_store_and_how_to_delete_it')} onPress={() => go('/privacy')} />
     </Group>
   );

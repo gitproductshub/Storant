@@ -189,6 +189,9 @@ erDiagram
         string upi_id
         bool qr_ordering_enabled
         string qr_payment_mode "counter, upi, both"
+        json ops_thresholds "floor alert minutes"
+        json pay_rules "per order type: anytime, ready, served"
+        bool bump_marks_served "Bump also serves dine-in"
         json disabled_modules "owner-hidden"
     }
     sales_channels {
@@ -319,6 +322,8 @@ erDiagram
         uuid order_id FK
         int kot_no
         string status "follows its lines"
+        datetime bumped_at "off the kitchen screen"
+        uuid bumped_by
     }
     payments {
         uuid id PK
@@ -394,6 +399,9 @@ erDiagram
 | `orders.bill_type` | `tax_invoice` or `bill_of_supply` (no valid GSTIN, composition, unregistered) |
 | `order_items.kitchen_status` | null (not a kitchen item), `pending` → `preparing` → `ready` → `served`; `void` (cancelled after the kitchen had it), `removed` (taken off before) |
 | `kots.status` | follows its lines; `cancelled` when every line is void |
+| `kots.bumped_at` | set when the kitchen bumps the ticket off its screen (Bump is not Served: dine-in food stays `ready` for the waiter); cleared by Recall or when a line goes back to cooking |
+| `business_settings.pay_rules` | when a bill may be paid, per order type: `anytime`, `ready`, `served`; null keys use the defaults (dine-in `served`, others `anytime`) |
+| `business_settings.bump_marks_served` | Bump also marks dine-in food served (counter service without waiters); default false |
 | `tenant_configs.status` | `active`, `suspended`, `deleted` |
 
 Lifecycles: [06_order_lifecycle](./diagrams/mermaid/06_order_lifecycle.mmd), [07_kitchen_item_status](./diagrams/mermaid/07_kitchen_item_status.mmd), [10_subscription_lifecycle](./diagrams/mermaid/10_subscription_lifecycle.mmd).

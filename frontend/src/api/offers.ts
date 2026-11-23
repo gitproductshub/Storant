@@ -122,5 +122,7 @@ export const offersApi = {
   /** Pay an order, optionally applying (offer_id) or removing (remove_offer) an offer first. */
   payWithOffer: (orderId: string, body: {
     payments: PaymentInput[]; discount?: DiscountInput | null; redeem_points?: number | null; offer_id?: string | null; remove_offer?: boolean;
+    /** Owner / manager paying before the food is served ("Pay anyway"); written to the audit log. */
+    override_reason?: string | null;
   }) => api.post<Order>(`/orders/${orderId}/pay`, body),
 };

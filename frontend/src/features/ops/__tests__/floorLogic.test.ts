@@ -127,19 +127,24 @@ describe('kitchen', () => {
       .toEqual({ all: 3, DINE_IN: 2, TAKEAWAY: 0, DELIVERY: 0, SWIGGY: 1, ZOMATO: 0 });
   });
 
-  it('moves items one step with a tap and back with a long-press', () => {
+  it('moves items one step with a tap and back with a long-press, stopping at Ready on the kitchen screen', () => {
     expect(nextItemStep('pending')).toBe('preparing');
-    expect(nextItemStep('ready')).toBe('served');
+    expect(nextItemStep('preparing')).toBe('ready');
+    expect(nextItemStep('ready')).toBeNull(); // the kitchen never serves
     expect(nextItemStep('served')).toBeNull();
+    expect(nextItemStep('ready', 'served')).toBe('served');
     expect(prevItemStep('preparing')).toBe('pending');
+    expect(prevItemStep('ready')).toBe('preparing');
     expect(prevItemStep('pending')).toBeNull();
+    expect(prevItemStep('served')).toBeNull(); // what the floor served stays served
   });
 
-  it('bumps a whole ticket through the columns', () => {
+  it('takes a whole ticket Start → Ready → Bump', () => {
     expect(bumpTarget('pending')).toBe('preparing');
     expect(bumpTarget('preparing')).toBe('ready');
-    expect(bumpTarget('ready')).toBe('served');
+    expect(bumpTarget('ready')).toBe('bump');
     expect(bumpTarget('served')).toBeNull();
+    expect(bumpTarget('cancelled')).toBeNull();
   });
 
   it('derives the ticket status from its least advanced live line', () => {

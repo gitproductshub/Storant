@@ -61,10 +61,10 @@ async def test_aggregator_webhook(client, fresh_tenant):
     body = json.dumps({"external_order_id": "ZO-77", "customer_name": "Neha", "items": [{"sku": "CB-01", "quantity": 2}]}).encode()
     url = f"/api/v1/integrations/zomato/orders/{tenant_id}"
 
-    resp = await client.post(url, content=body, headers={"X-Tallyko-Signature": "bad", "Content-Type": "application/json"})
+    resp = await client.post(url, content=body, headers={"X-Storant-Signature": "bad", "Content-Type": "application/json"})
     assert resp.status_code == 401
 
-    sig = {"X-Tallyko-Signature": _sign(channel["webhook_secret"], body), "Content-Type": "application/json"}
+    sig = {"X-Storant-Signature": _sign(channel["webhook_secret"], body), "Content-Type": "application/json"}
     resp = await client.post(url, content=body, headers=sig)
     assert resp.status_code == 200, resp.text
     created = resp.json()
@@ -77,8 +77,12 @@ async def test_aggregator_webhook(client, fresh_tenant):
     accepted = (await client.post(f"/api/v1/orders/{created['id']}/accept", headers=headers)).json()
     assert accepted["status"] == "completed" and accepted["invoice_no"]
 
+    legacy = json.dumps({"external_order_id": "ZO-79", "items": [{"sku": "CB-01", "quantity": 1}]}).encode()
+    resp = await client.post(url, content=legacy, headers={"X-Tallyko-Signature": _sign(channel["webhook_secret"], legacy)})  # old header still accepted
+    assert resp.status_code == 200, resp.text
+
     unknown = json.dumps({"external_order_id": "ZO-78", "items": [{"name": "Pizza", "quantity": 1}]}).encode()
-    resp = await client.post(url, content=unknown, headers={"X-Tallyko-Signature": _sign(channel["webhook_secret"], unknown)})
+    resp = await client.post(url, content=unknown, headers={"X-Storant-Signature": _sign(channel["webhook_secret"], unknown)})
     assert resp.status_code == 422
 
 @pytest.mark.asyncio

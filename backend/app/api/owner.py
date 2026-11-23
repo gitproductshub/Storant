@@ -162,7 +162,7 @@ async def watch_events(date_from: datetime | None = None, date_to: datetime | No
          "by_staff_id": str(e.actor_staff_id) if e.actor_staff_id else None, "summary": e.summary, "details": e.details,
          "at": e.created_at.isoformat() + "Z"} for e in events]}
 
-# --- Requests to Tallyko (archive / delete records — the business itself never can) -------------------------------------
+# --- Requests to Storant (archive / delete records — the business itself never can) -------------------------------------
 
 class OwnerRequestIn(BaseModel):
     kind: Literal["archive_bills", "delete_bills", "other"]
@@ -182,7 +182,7 @@ async def my_requests(access: Access = Depends(require_owner)):
     return [_request_row(r) for r in rows]
 
 @router.post("/requests")
-async def ask_tallyko(data: OwnerRequestIn, access: Access = Depends(require_owner), db: AsyncSession = Depends(get_tenant_db)):
+async def ask_storant(data: OwnerRequestIn, access: Access = Depends(require_owner), db: AsyncSession = Depends(get_tenant_db)):
     if data.kind != "other" and not data.order_ids:
         raise HTTPException(status_code=422, detail="Choose the bills")
     if data.order_ids:
@@ -201,3 +201,5 @@ async def ask_tallyko(data: OwnerRequestIn, access: Access = Depends(require_own
         system.add(row)
         await system.commit()
         return _request_row(row)
+
+ask_tallyko = ask_storant  # old name kept as an alias (the URL, POST /owner/requests, is unchanged)

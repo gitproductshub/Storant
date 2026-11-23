@@ -133,7 +133,7 @@ The `tallyko_app` role has **no DELETE** on orders, payments, KOTs, customers, p
 
 - **Rate limits** (Redis sliding window, fail open): a whole shop shares one public IP, so limits are per account / per customer phone with high per-IP ceilings (login 20 per 15 min per account, 60/min per IP). `X-Forwarded-For` is trusted only with `TRUST_PROXY=true` (set in production behind Caddy). Full list in [05_API_Design.md](./05_API_Design.md).
 - **Server prices everything:** clients send ids and quantities, never prices, totals or discounts the server didn't check.
-- **Webhooks:** `X-Tallyko-Signature` = HMAC-SHA256 of the raw body with the channel secret, compared in constant time; 256 KB body limit; secrets rotate via the owner.
+- **Webhooks:** `X-Storant-Signature` (the older `X-Tallyko-Signature` is still accepted) = HMAC-SHA256 of the raw body with the channel secret, compared in constant time; 256 KB body limit; secrets rotate via the owner.
 - **Errors:** one JSON envelope with a readable message and `trace_id`; no stack traces.
 - **Uploads:** menu photos ≤10 MB, ≤64 MP, image types only; processed in memory, not stored.
 - **Headers:** `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`; Caddy adds HSTS.

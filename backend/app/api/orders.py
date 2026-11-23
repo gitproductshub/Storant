@@ -148,6 +148,20 @@ async def get_order(order_id: uuid.UUID, access: Access = Depends(get_access), d
         data["customer_phone"] = _mask(data["customer_phone"])
     return data
 
+def _pay_check(access: Access, override_reason: str | None) -> order_service.PayCheck:
+    """Pay rules for a person at the till: checked only when the Kitchen module is on; owners / managers may pay anyway."""
+    return order_service.PayCheck(kitchen_on=access.has("kitchen"), can_override=access.can("orders.pay_override"),
+                                  override_reason=override_reason)
+
+def _audit_override(db, access: Access, order: Order, check: order_service.PayCheck | None) -> None:
+    if not check or not check.overridden:
+        return
+    info = check.overridden
+    audit.record(db, access, "order.pay_override", entity_type="order", entity_id=order.id,
+                 summary=f"Took payment on bill {order.invoice_no or order.code} with {info['blocking']} item(s) not "
+                         f"{info['level']} yet: {info['reason']}",
+                 details={k: info[k] for k in ("level", "order_type", "unsent", "cooking", "ready", "blocking", "reason")})
+
 @router.post("")
 async def create_order(data: OrderCreate, access: Access = Depends(require("orders.create")), db=Depends(get_tenant_db)):
     if data.payments and not access.can("orders.pay"):
@@ -158,7 +172,10 @@ async def create_order(data: OrderCreate, access: Access = Depends(require("orde
         raise HTTPException(status_code=403, detail="Your role can't apply offers")
     if not access.has("offers"):
         data.auto_offers = False
-    order, created = await order_service.create_order(db, access.tenant_id, data, user_id=access.user_id, staff_id=access.staff_id)
+    check = _pay_check(access, data.override_reason) if data.payments else None
+    order, created = await order_service.create_order(db, access.tenant_id, data, user_id=access.user_id, staff_id=access.staff_id,
+                                                      check=check)
+    _audit_override(db, access, order, check)
     if created and data.discount:
         audit.record(db, access, "order.discount", entity_type="order", entity_id=order.id,
                      summary=f"{data.discount.value}{'%' if data.discount.type == 'percent' else ' ₹'} off bill {order.code}")
@@ -196,8 +213,11 @@ async def pay_order(order_id: uuid.UUID, data: OrderPay, access: Access = Depend
         raise HTTPException(status_code=403, detail="Your role can't give discounts")
     if data.offer_id and not access.can("offers.apply"):
         raise HTTPException(status_code=403, detail="Your role can't apply offers")
+    check = _pay_check(access, data.override_reason)
     order, change = await order_service.pay(db, access.tenant_id, order_id, data.payments, data.discount, data.redeem_points,
-                                            offer_id=data.offer_id, remove_offer=data.remove_offer, staff_id=access.staff_id)
+                                            offer_id=data.offer_id, remove_offer=data.remove_offer, staff_id=access.staff_id,
+                                            check=check)
+    _audit_override(db, access, order, check)
     if data.discount:
         audit.record(db, access, "order.discount", entity_type="order", entity_id=order.id,
                      summary=f"{data.discount.value}{'%' if data.discount.type == 'percent' else ' ₹'} off bill {order.invoice_no or order.code}")
@@ -288,7 +308,7 @@ async def transfer_order(order_id: uuid.UUID, data: OrderTransfer, access: Acces
 async def set_customer(order_id: uuid.UUID, data: OrderCustomer, access: Access = Depends(require("orders.create")), db=Depends(get_tenant_db)):
     order = await _visible_order(db, access, order_id)
     if order.status not in order_service.OPEN_STATUSES:
-        raise HTTPException(status_code=409, detail="This order is already closed")
+        raise order_service.bill_closed_error(order)
     customer = await order_service._resolve_customer(db, access.tenant_id, data.customer_id, data.customer_name, data.customer_phone)
     order.customer_id = customer.id if customer else None
     order.customer_name = customer.name if customer else data.customer_name
@@ -309,8 +329,14 @@ def _lines(items) -> list[tuple]:
     return [(i.item_id, i.quantity) for i in items]
 
 @router.post("/{order_id}/items/status")
-async def set_items_status(order_id: uuid.UUID, data: ItemsStatus, access: Access = Depends(require("kitchen.update")), db=Depends(get_tenant_db)):
-    """Mark lines preparing / ready / served — from the kitchen display, or by floor staff when there's no kitchen screen."""
+async def set_items_status(order_id: uuid.UUID, data: ItemsStatus,
+                           access: Access = Depends(require("kitchen.update", "kitchen.serve", any_of=True)), db=Depends(get_tenant_db)):
+    """Mark lines preparing / ready (the kitchen, `kitchen.update`) or served (floor staff, `kitchen.serve` — straight from
+    pending / preparing / ready, so places without a kitchen screen can serve and bill)."""
+    if data.status == "served" and not access.can("kitchen.serve"):
+        raise HTTPException(status_code=403, detail="Only floor staff (waiter, cashier, manager, owner) can mark items served")
+    if data.status != "served" and not access.can("kitchen.update"):
+        raise HTTPException(status_code=403, detail="Your role can't change kitchen progress")
     order = await floor_service.set_items_status(db, access.tenant_id, order_id, data.item_ids, data.status)
     await db.commit()
     return await _respond(db, access, order)
@@ -369,7 +395,7 @@ async def merge_bills(order_id: uuid.UUID, data: BillMerge, access: Access = Dep
 async def bill_details(order_id: uuid.UUID, data: BillDetails, access: Access = Depends(require("orders.create")), db=Depends(get_tenant_db)):
     order = await _visible_order(db, access, order_id)
     if order.status not in order_service.OPEN_STATUSES:
-        raise HTTPException(status_code=409, detail="This bill is already closed")
+        raise order_service.bill_closed_error(order)
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(order, key, (value or "").strip() or None if key == "bill_label" else value)
     await db.commit()

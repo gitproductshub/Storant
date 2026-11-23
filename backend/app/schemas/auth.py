@@ -6,7 +6,9 @@ class VendorSignupRequest(BaseModel):
     vendor_name: str = Field(min_length=2, max_length=100)
     owner_name: str | None = Field(None, max_length=80)
     email: EmailStr
-    phone: str = Field(pattern=r"^\+?[0-9 ]{6,16}$")
+    # Indian mobile only (10 digits, 6-9 first; +91 / 0 forms accepted): checked by app.core.phone in register_vendor,
+    # which answers 422 INVALID_INDIAN_MOBILE so the app can say it in the person's language
+    phone: str = Field(min_length=1, max_length=24)
     password: str = Field(min_length=8, max_length=64)
     business_type: Literal["restaurant", "retail", "cloud_kitchen", "cafe"] = "restaurant"
     plan_type: Literal["free"] = "free"

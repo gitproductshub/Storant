@@ -54,6 +54,8 @@ class OrderCreate(BaseModel):
     new_bill: bool = False  # the table already has a bill: open another one on it (shared table, separate cheques)
     bill_label: str | None = Field(None, max_length=40)
     guests: int | None = Field(None, ge=1, le=500)
+    # Owner / manager paying before the food is served ("Pay anyway"); written to the audit log
+    override_reason: str | None = Field(None, min_length=3, max_length=200)
 
     @field_validator("channel")
     @classmethod
@@ -70,6 +72,8 @@ class OrderPay(BaseModel):
     redeem_points: int | None = Field(None, ge=0, le=1_000_000)
     offer_id: UUID | None = None  # apply / change the offer before paying
     remove_offer: bool = False
+    # Owner / manager paying before the food is served ("Pay anyway"); written to the audit log
+    override_reason: str | None = Field(None, min_length=3, max_length=200)
 
 class OrderOffer(BaseModel):
     offer_id: UUID | None = None  # null + remove=True removes the current offer

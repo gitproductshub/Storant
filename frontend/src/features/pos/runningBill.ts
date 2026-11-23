@@ -73,6 +73,11 @@ export function nextKitchenStatus(items: Pick<OrderItem, 'kitchen_status'>[]): I
   return least >= KITCHEN_FLOW.length - 1 ? null : KITCHEN_FLOW[least + 1]!;
 }
 
+/** Lines "Mark all served" would serve: sent to the kitchen, not cancelled, not served yet (any step: pending, preparing, ready). */
+export function unservedKitchenItems(items: OrderItem[]): OrderItem[] {
+  return items.filter((i) => !isVoidItem(i) && !!i.kot_id && !!i.kitchen_status && i.kitchen_status !== 'void' && i.kitchen_status !== 'served');
+}
+
 /** Lines per kitchen status (cancelled lines left out) — same shape as `TableBill.kitchen`. */
 export function kitchenCounts(items: Pick<OrderItem, 'kitchen_status' | 'is_void'>[]): TableBill['kitchen'] {
   const out: TableBill['kitchen'] = {};

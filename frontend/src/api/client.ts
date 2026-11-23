@@ -1,4 +1,5 @@
 import { getServerUrl } from '@/store/prefs';
+import { localisedServerMessage } from '@/lib/serverErrors';
 
 export class ApiError extends Error {
   status: number;
@@ -18,7 +19,10 @@ export class ApiError extends Error {
 }
 
 export function errorMessage(error: unknown, fallback = 'Something went wrong. Please try again.'): string {
-  if (error instanceof ApiError) return error.message;
+  if (error instanceof ApiError) {
+    // "2 items not served yet …", "This bill is paid …" in the person's language instead of the server's English
+    return localisedServerMessage(error) ?? error.message;
+  }
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 }

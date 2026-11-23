@@ -9,6 +9,7 @@ GST on the discounted value → round to the rupee. Every bill line stores its o
 """
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 from fastapi import HTTPException
@@ -22,7 +23,7 @@ from app.schemas.billing import OrderCreate, OrderItemIn, PaymentIn, DiscountIn
 from app.services import counters
 from app.services import offers as offer_engine
 from app.services.pricing import PricedLine, price_order, money, ZERO
-from app.services.settings_service import get_settings, get_channel, get_default_location, AGGREGATOR_CHANNELS
+from app.services.settings_service import get_settings, get_channel, get_default_location, pay_rules_of, AGGREGATOR_CHANNELS
 from app.services.tax import TaxResolver, component_amounts
 from app.services import channel_menu
 
@@ -33,6 +34,20 @@ FREE_NOTE = "Free — "  # prefix on lines added by a free-item offer
 VOID = "void"  # cancelled after the kitchen got it: shown struck out to staff and the kitchen
 REMOVED = "removed"  # taken off before it reached the kitchen: kept for the owner's records, hidden from staff
 GONE = (VOID, REMOVED)
+
+# When a bill may be paid (pay rules, see pay_gate below). Dine-in pays after the food is served (default); takeaway /
+# counter / delivery pay any time. Only bills taken at the counter or by table QR are checked: online-store and
+# aggregator orders are paid elsewhere (or have no waiter).
+GATED_CHANNELS = ("POS", "QR")
+
+@dataclass
+class PayCheck:
+    """What the person paying may do. `None` instead of a PayCheck = a system caller that is never stopped (offline bills
+    replayed by /sync/push, a confirmed UPI claim, public / aggregator orders, seeders)."""
+    kitchen_on: bool  # the Kitchen module is on (without it nobody can serve, so nothing is checked)
+    can_override: bool = False  # orders.pay_override (owner, manager)
+    override_reason: str | None = None
+    overridden: dict | None = None  # set when payment went ahead over the rule (for the audit log)
 
 def is_void(row: OrderItem) -> bool:
     return row.kitchen_status in GONE
@@ -45,17 +60,43 @@ def order_code(order_id: uuid.UUID) -> str:
     """Short, printable bill code derived from the order id, so offline devices can print it."""
     return order_id.hex[:10].upper()
 
-async def load_order(db: AsyncSession, tenant_id: str, order_id) -> Order:
-    result = await db.execute(
-        select(Order)
-        .options(selectinload(Order.items), selectinload(Order.payments))
-        .where(Order.id == order_id, Order.tenant_id == tenant_id)
-        .execution_options(populate_existing=True)
-    )
-    order = result.scalars().first()
+async def load_order(db: AsyncSession, tenant_id: str, order_id, for_update: bool = False) -> Order:
+    """`for_update`: lock the bill's row until the transaction ends, so two people changing the same bill (a waiter adding
+    items while the cashier takes payment) go one after the other and the second one sees the first one's result."""
+    query = (select(Order)
+             .options(selectinload(Order.items), selectinload(Order.payments))
+             .where(Order.id == order_id, Order.tenant_id == tenant_id)
+             .execution_options(populate_existing=True))
+    if for_update:
+        query = query.with_for_update(of=Order)
+    order = (await db.execute(query)).scalars().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
+
+async def lock_orders(db: AsyncSession, tenant_id: str, order_ids) -> None:
+    """Lock several bills at once, always in the same order (by id), so two people merging or splitting the same pair of
+    bills in opposite directions wait for each other instead of deadlocking."""
+    ids = sorted({uuid.UUID(str(i)) for i in order_ids if i})
+    if ids:
+        await db.execute(select(Order.id).where(Order.tenant_id == tenant_id, Order.id.in_(ids)).order_by(Order.id).with_for_update())
+
+def bill_closed_error(order: Order) -> HTTPException:
+    """409 for a change on a bill that is no longer open (code BILL_CLOSED; the app shows it in the person's language)."""
+    if order.status == "completed":
+        message = "This bill is paid. Start a new order."
+    elif order.status == "merged":
+        message = "This bill was merged into another bill. Open that bill instead."
+    else:
+        message = "This bill was cancelled. Start a new order."
+    return HTTPException(status_code=409, detail={"code": "BILL_CLOSED", "message": message, "details": {"status": order.status}})
+
+def bill_part_paid_error() -> HTTPException:
+    """409 for adding items to a bill that already has a payment (code BILL_PART_PAID)."""
+    return HTTPException(status_code=409, detail={
+        "code": "BILL_PART_PAID",
+        "message": "A payment was already taken on this bill. Collect the rest, or put the new items on a new order.",
+        "details": {}})
 
 async def _load_products(db: AsyncSession, tenant_id: str, ids) -> dict:
     ids = set(ids)
@@ -279,8 +320,9 @@ async def _release_table(db: AsyncSession, order: Order) -> None:
         table.status, table.current_order_id = "free", None
 
 async def create_order(db: AsyncSession, tenant_id: str, data: OrderCreate, user_id: str | None = None,
-                       public: bool = False, staff_id: str | None = None) -> tuple[Order, bool]:
-    """Returns (order, created). Re-sending the same `id` returns the existing order unchanged."""
+                       public: bool = False, staff_id: str | None = None, check: PayCheck | None = None) -> tuple[Order, bool]:
+    """Returns (order, created). Re-sending the same `id` returns the existing order unchanged.
+    `check`: pay rules for payments sent with a new bill at the till; None for offline replays, public and aggregator orders."""
     if data.id:
         existing = await db.execute(select(Order.id).where(Order.id == data.id, Order.tenant_id == tenant_id))
         if existing.first():
@@ -359,6 +401,7 @@ async def create_order(db: AsyncSession, tenant_id: str, data: OrderCreate, user
     await db.flush()
     order = await load_order(db, tenant_id, order.id)
     if data.payments:
+        await _check_pay_gate(db, tenant_id, order, settings, check)
         await _apply_payments(db, tenant_id, order, data.payments, settings, staff_id)
         order = await load_order(db, tenant_id, order.id)
     logger.info(f"[Billing] Order {order.code} created ({order.channel}, {order.status}) total {order.total_amount}",
@@ -366,9 +409,11 @@ async def create_order(db: AsyncSession, tenant_id: str, data: OrderCreate, user
     return order, True
 
 async def add_items(db: AsyncSession, tenant_id: str, order_id, items: list[OrderItemIn], send_to_kitchen: bool) -> Order:
-    order = await load_order(db, tenant_id, order_id)
+    order = await load_order(db, tenant_id, order_id, for_update=True)  # waits for a payment in progress on this bill
     if order.status not in OPEN_STATUSES:
-        raise HTTPException(status_code=409, detail="This order is already closed")
+        raise bill_closed_error(order)
+    if order.payments:
+        raise bill_part_paid_error()
     settings = await get_settings(db, tenant_id)
     channel = await get_channel(db, tenant_id, order.channel)
     products = await _sellable_products(db, tenant_id, items, order.channel)
@@ -392,7 +437,7 @@ async def remove_item(db: AsyncSession, tenant_id: str, order_id, item_id, can_v
     """Nothing is deleted: the line stays on the order (removed / cancelled) for the owner's records and is never charged."""
     order = await load_order(db, tenant_id, order_id)
     if order.status not in OPEN_STATUSES:
-        raise HTTPException(status_code=409, detail="This order is already closed")
+        raise bill_closed_error(order)
     item = next((i for i in order.items if i.id == item_id and not is_void(i)), None)
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found on this order")
@@ -411,7 +456,7 @@ async def remove_item(db: AsyncSession, tenant_id: str, order_id, item_id, can_v
 async def change_offer(db: AsyncSession, tenant_id: str, order_id, offer_id=None, offer_code: str | None = None, remove: bool = False) -> tuple[Order, str | None]:
     order = await load_order(db, tenant_id, order_id)
     if order.status not in OPEN_STATUSES:
-        raise HTTPException(status_code=409, detail="This order is already closed")
+        raise bill_closed_error(order)
     if order.payments:
         raise HTTPException(status_code=409, detail="Offers must be applied before the first payment")
     settings = await get_settings(db, tenant_id)
@@ -419,6 +464,61 @@ async def change_offer(db: AsyncSession, tenant_id: str, order_id, offer_id=None
                               offer_mode="none" if remove else "set", offer_id=offer_id, offer_code=offer_code, strict_offer=True)
     await db.flush()
     return await load_order(db, tenant_id, order.id), warning
+
+# --- When a bill may be paid (pay rules; GATED_CHANNELS and PayCheck are defined near the top of this file) ---------------
+
+async def pay_gate(db: AsyncSession, tenant_id: str, order: Order, settings: BusinessSettings) -> dict:
+    """How far the bill's kitchen food is, against the rule for its order type. Quantities, cancelled lines left out.
+    `blocking` > 0 means the bill can't be paid yet. Items that don't go to the kitchen never count; kitchen items that
+    were never sent do (send and serve them first); free offer items that were never sent don't."""
+    level = pay_rules_of(settings).get(order.type, "anytime")
+    info = {"level": level, "order_type": order.type, "unsent": 0, "cooking": 0, "ready": 0, "blocking": 0}
+    if level == "anytime" or order.channel not in GATED_CHANNELS:
+        return info
+    live = [i for i in order.items if not is_void(i)]
+    unsent = [i for i in live if i.kot_id is None and not _is_free_line(i)]
+    kitchen_products = set()
+    if unsent:
+        rows = await db.execute(select(Product.id).where(Product.id.in_({i.product_id for i in unsent}), Product.tenant_id == tenant_id,
+                                                         Product.print_to_kitchen == True))
+        kitchen_products = {pid for (pid,) in rows.all()}
+    for i in live:
+        if i.kot_id is None:
+            if i in unsent and i.product_id in kitchen_products:
+                info["unsent"] += i.quantity
+            continue
+        status = i.kitchen_status or "pending"
+        if status in ("pending", "preparing"):
+            info["cooking"] += i.quantity
+        elif status == "ready":
+            info["ready"] += i.quantity
+    info["blocking"] = info["unsent"] + info["cooking"] + (info["ready"] if level == "served" else 0)
+    return info
+
+def _gate_message(info: dict) -> str:
+    n = info["blocking"]
+    what = "served" if info["level"] == "served" else "ready"
+    parts = [f"{info['unsent']} not sent to the kitchen" if info["unsent"] else None,
+             f"{info['cooking']} still cooking" if info["cooking"] else None,
+             f"{info['ready']} ready to serve" if info["ready"] and info["level"] == "served" else None]
+    detail = ", ".join(p for p in parts if p)
+    return f"{n} item{'s' if n != 1 else ''} not {what} yet ({detail}). Take payment once everything is {what}."
+
+async def _check_pay_gate(db: AsyncSession, tenant_id: str, order: Order, settings: BusinessSettings, check: PayCheck | None) -> None:
+    """Stops the first payment on a bill whose food isn't ready / served yet (per the owner's pay rules), unless an owner
+    or manager pays anyway with a reason. Later payments on a part-paid bill are never stopped."""
+    if check is None or not check.kitchen_on or order.payments:
+        return
+    info = await pay_gate(db, tenant_id, order, settings)
+    if info["blocking"] <= 0:
+        return
+    reason = (check.override_reason or "").strip()
+    if reason:
+        if not check.can_override:
+            raise HTTPException(status_code=403, detail="Only the owner or a manager can take payment before the food is served")
+        check.overridden = {**info, "reason": reason[:200]}
+        return
+    raise HTTPException(status_code=409, detail={"code": "PAY_BLOCKED_ITEMS", "message": _gate_message(info), "details": info})
 
 async def _apply_payments(db: AsyncSession, tenant_id: str, order: Order, payments: list[PaymentIn], settings: BusinessSettings,
                           staff_id: str | None = None) -> Decimal:
@@ -452,12 +552,12 @@ async def _apply_payments(db: AsyncSession, tenant_id: str, order: Order, paymen
     return change
 
 async def pay(db: AsyncSession, tenant_id: str, order_id, payments: list[PaymentIn], discount: DiscountIn | None,
-              redeem_points: int | None, offer_id=None, remove_offer: bool = False, staff_id: str | None = None) -> tuple[Order, Decimal]:
-    order = await load_order(db, tenant_id, order_id)
-    if order.status == "completed":
-        raise HTTPException(status_code=409, detail="This bill is already paid")
-    if order.status == "cancelled":
-        raise HTTPException(status_code=409, detail="This order was cancelled")
+              redeem_points: int | None, offer_id=None, remove_offer: bool = False, staff_id: str | None = None,
+              check: PayCheck | None = None) -> tuple[Order, Decimal]:
+    """`check`: the pay rules for a person at the till (see PayCheck); None for system callers."""
+    order = await load_order(db, tenant_id, order_id, for_update=True)  # waits for items being added to this bill
+    if order.status in ("completed", "cancelled", "merged"):
+        raise bill_closed_error(order)
     settings = await get_settings(db, tenant_id)
     if discount is not None or redeem_points is not None or offer_id or remove_offer:
         if order.payments:
@@ -476,6 +576,10 @@ async def pay(db: AsyncSession, tenant_id: str, order_id, payments: list[Payment
                      offer_id=offer_id, strict_offer=bool(offer_id))
     if order.status == "placed":
         await accept(db, tenant_id, order.id, reload=False, order=order)
+    if check is not None:
+        await db.flush()
+        order = await load_order(db, tenant_id, order.id)  # lines as they are now (accept may have sent them to the kitchen)
+        await _check_pay_gate(db, tenant_id, order, settings, check)
     change = await _apply_payments(db, tenant_id, order, payments, settings, staff_id)
     return await load_order(db, tenant_id, order.id), change
 

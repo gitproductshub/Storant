@@ -1,6 +1,7 @@
 import secrets
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from app.core.catalog import PAY_RULE_DEFAULTS, PAY_RULE_LEVELS
 from app.models import BusinessSettings, SalesChannel, Location
 
 DEFAULT_CHANNELS = [
@@ -16,6 +17,11 @@ DEFAULT_CHANNELS = [
 ]
 CHANNEL_CODES = {c[0] for c in DEFAULT_CHANNELS}
 AGGREGATOR_CHANNELS = {"SWIGGY", "ZOMATO", "ONDC", "MAGICPIN", "OTHER"}
+
+def pay_rules_of(settings: BusinessSettings) -> dict[str, str]:
+    """When a bill may be paid, per order type: the owner's choices over the defaults (anytime | ready | served)."""
+    saved = {k: v for k, v in (settings.pay_rules or {}).items() if k in PAY_RULE_DEFAULTS and v in PAY_RULE_LEVELS}
+    return {**PAY_RULE_DEFAULTS, **saved}
 
 async def get_settings(db: AsyncSession, tenant_id: str) -> BusinessSettings:
     result = await db.execute(select(BusinessSettings).where(BusinessSettings.tenant_id == tenant_id))

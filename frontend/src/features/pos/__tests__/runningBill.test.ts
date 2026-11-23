@@ -3,7 +3,21 @@ jest.mock('@react-native-async-storage/async-storage', () => require('@react-nat
 import type { OrderItem } from '@/api/types';
 import {
   billName, describeSelection, itemsLocked, kitchenCounts, kitchenProgress, nextKitchenStatus, pruneSelection, selectableItems, toItemQty,
+  unservedKitchenItems,
 } from '../runningBill';
+
+describe('Mark all served', () => {
+  it('serves every sent, live line that is not served yet, from any step', () => {
+    const items = [
+      item('pending'), item('cooking', { kitchen_status: 'preparing' }), item('ready', { kitchen_status: 'ready' }),
+      item('served', { kitchen_status: 'served' }),
+      item('cancelled', { kitchen_status: 'void', is_void: true }),
+      item('water', { kitchen_status: null, kot_id: null, sent_to_kitchen: false }),
+    ];
+    expect(unservedKitchenItems(items).map((i) => i.id)).toEqual(['pending', 'cooking', 'ready']);
+    expect(unservedKitchenItems([item('done', { kitchen_status: 'served' })])).toEqual([]);
+  });
+});
 
 const item = (id: string, over: Partial<OrderItem> = {}): OrderItem => ({
   id, product_id: `p-${id}`, variant_id: null, name: id, variant_name: null, quantity: 1, unit_price: 100, tax_rate: 5, tax_amount: 5,

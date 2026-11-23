@@ -2,7 +2,10 @@
  * Kitchen display (KDS) for a wall TV, a tablet without keyboard, or a phone (docs/20_High_Volume_UX.md):
  * - Big tickets in New / Preparing / Ready columns (tabs on narrow screens), oldest first.
  * - Time since the KOT on every ticket, amber after 10 min, red after 20.
- * - One tap per item moves it on (long-press steps back); a big Bump button moves the whole ticket.
+ * - One tap per item moves it on up to Ready (long-press steps back); the big button moves the whole ticket: Start → Ready → Bump.
+ * - Bump only clears a ready ticket off this screen: dine-in food stays Ready until the waiter serves it (the kitchen never
+ *   marks Served). Takeaway / delivery / aggregator food, or every ticket when the owner turns on "Bump marks served",
+ *   is served by the bump. Undo and Recall bring the ticket back.
  * - New tickets glow and beep (Web Audio, mute toggle remembered per device).
  * - Cancelled lines are struck through in red: "Don't make".
  * - Recall brings back recently bumped tickets. Filters by order type and brand.
@@ -26,9 +29,12 @@ import { ORDER_TYPE_UI } from '@/lib/uiLabels';
 import { channelLabel } from './common';
 import {
   ageTone, bumpTarget, formatAge, freshIds, kindCounts, minutesBetween, nextItemStep, prevItemStep, pruneMarks, ticketKind,
-  ticketStatusFrom, type KitchenKindFilter, type TicketStatus,
+  ticketStatusFrom, type KitchenKindFilter, type TicketAction, type TicketStatus,
 } from './floorLogic';
 import { playAlert, useDevicePref, useLivePoll, useNow } from '@/hooks/live';
+import { say, sayNow, useWakeLock, voiceAvailable, voiceNeedsTap } from '@/lib/voice';
+import { VOICE_ON_LINE, newKotLine } from '@/lib/voiceLines';
+import { useVoicePrefs } from '@/store/voicePrefs';
 import { AgeChip, LiveStatus, ageColors } from './parts';
 import { useFloorAges } from './useFloorAges';
 import type { AgeThresholds } from './floorLogic';
@@ -43,6 +49,8 @@ const COLUMNS: { key: Column; label: string; bump: string; icon: keyof typeof Io
 const ACTIVE: TicketStatus[] = ['pending', 'preparing', 'ready'];
 const STATUS_WORD: Record<TicketStatus, string> = { pending: 'new', preparing: 'preparing', ready: 'ready', served: 'served', cancelled: 'cancelled' };
 const ITEM_WORD: Record<ItemStatus, string> = { pending: 'New', preparing: 'Cooking', ready: 'Ready', served: 'Served' };
+const bumpWord = (a: TicketAction | null) => (a === 'bump' ? 'bumped' : a ? STATUS_WORD[a] : 'bumped');
+const kotName = (t: FloorTicket) => String(t.kot_no ?? t.order_code);
 const OVERRIDE_TTL = 15_000;
 const POLL_MS = 5_000;
 const NEW_GLOW_MS = 45_000;
@@ -77,8 +85,15 @@ export default function KitchenScreen() {
   const [recallServer, setRecallServer] = useState<FloorTicket[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const seen = useRef<Set<string> | null>(null);
+  // Voice (Hindi): "नया ऑर्डर आया है। टेबल 5।" — per device, Settings → Account → Voice alerts
+  const kitchenVoice = useVoicePrefs((s) => s.kitchenVoice);
+  const kitchenItems = useVoicePrefs((s) => s.kitchenItems);
+  const setVoicePrefs = useVoicePrefs((s) => s.set);
+  const canSpeak = voiceAvailable();
+  const [voiceTapped, setVoiceTapped] = useState(false);
+  useWakeLock(canSpeak && kitchenVoice); // the screen stays on while it listens for orders
 
-  // New tickets: glow + one beep per refresh (never for what was already there when the screen opened)
+  // New tickets: glow + one beep and one spoken line per refresh (never for what was already there when the screen opened)
   useEffect(() => {
     if (!data) return;
     const ids = data.filter((t) => t.status === 'pending').map((t) => t.id);
@@ -87,10 +102,16 @@ export default function KitchenScreen() {
       const at = Date.now();
       setGlow((g) => ({ ...pruneMarks(g, at, NEW_GLOW_MS), ...Object.fromEntries(fresh.map((id) => [id, at])) }));
       if (sound) playAlert('kitchen');
+      if (kitchenVoice) {
+        const fresher = new Set(fresh);
+        say(newKotLine(data.filter((t) => fresher.has(t.id)).map((t) => ({
+          table_label: t.table_label, bill_label: t.bill_label, token_no: t.token_no, channel: t.channel, items: t.items,
+        })), { items: kitchenItems }));
+      }
       void useBadges.getState().refresh();
     }
     seen.current = new Set([...(seen.current ?? []), ...data.map((t) => t.id)]);
-  }, [data, sound]);
+  }, [data, sound, kitchenVoice, kitchenItems]);
 
   // Server list + local optimistic changes (kept briefly so a slow poll can't flip a bumped ticket back)
   const tickets = useMemo(() => {
@@ -124,24 +145,17 @@ export default function KitchenScreen() {
   // Keyboard numbering follows what is on screen: column by column (or the open tab)
   const ordered = useMemo(() => (tabsMode ? byColumn(tab) : COLUMNS.flatMap((c) => byColumn(c.key))), [tabsMode, tab, byColumn]);
 
-  const change = useCallback(async function change(ticket: FloorTicket, next: TicketStatus, opts: { isUndo?: boolean; recall?: boolean } = {}) {
-    const prev = ticket.status;
+  /**
+   * One ticket change: shown at once (`shown`; "served" = off the screen), then the server's answer decides.
+   * `call` returns the ticket's status afterwards (a recalled ticket whose food the waiter already served stays off).
+   */
+  const run = useCallback(async (ticket: FloorTicket, shown: TicketStatus, call: () => Promise<TicketStatus>, after: (status: TicketStatus) => void) => {
     setBusy((b) => ({ ...b, [ticket.id]: true }));
-    setOverrides((o) => ({ ...o, [ticket.id]: { ticket, status: next, at: Date.now() } }));
+    setOverrides((o) => ({ ...o, [ticket.id]: { ticket, status: shown, at: Date.now() } }));
     try {
-      await floorApi.setTicketStatus(ticket.id, next);
-      if (next === 'served') {
-        const done: FloorTicket = { ...ticket, status: 'served' };
-        setBumped((list) => [{ ticket: done, at: Date.now() }, ...list.filter((x) => x.ticket.id !== ticket.id)].slice(0, 20));
-      }
-      if (opts.recall) {
-        setBumped((list) => list.filter((x) => x.ticket.id !== ticket.id));
-        toast.success(tr('ops.KitchenScreen.kot_v_is_back_in_ready', { v: ticket.kot_no ?? ticket.order_code }));
-      } else if (!opts.isUndo) {
-        // Bump now, offer Undo (docs/20 §1.4) — 8 s, a busy cook may look up late
-        toast.undo(tr('ops.KitchenScreen.kot_v_marked_v2', { v: ticket.kot_no ?? ticket.order_code, v2: STATUS_WORD[next] }),
-          () => void change({ ...ticket, status: next }, prev, { isUndo: true }), 8_000);
-      }
+      const status = await call();
+      setOverrides((o) => ({ ...o, [ticket.id]: { ticket, status, at: Date.now() } }));
+      after(status);
       void useBadges.getState().refresh();
       void silentReload();
     } catch (e) {
@@ -156,10 +170,48 @@ export default function KitchenScreen() {
     }
   }, [silentReload]);
 
+  /** Recall (menu) or Undo right after a bump: back on the screen; food a waiter served stays served. */
+  const recall = useCallback(function recall(ticket: FloorTicket, isUndo = false) {
+    void run(ticket, 'ready', async () => (await floorApi.recallTicket(ticket.id)).status, (status) => {
+      setBumped((list) => list.filter((x) => x.ticket.id !== ticket.id));
+      if (status === 'served') toast.info(tr('ops.KitchenScreen.kot_v_was_already_served', { v: kotName(ticket) }));
+      else if (!isUndo) toast.success(tr('ops.KitchenScreen.kot_v_is_back_in_ready', { v: kotName(ticket) }));
+    });
+  }, [run]);
+
+  /** Bump: clears a ready ticket off the screen. Dine-in food waits for the waiter; takeaway / delivery is served by the bump. */
+  const bumpOff = useCallback((ticket: FloorTicket) => {
+    let served = false;
+    void run(ticket, 'served', async () => {
+      const r = await floorApi.bumpTicket(ticket.id);
+      served = r.served;
+      // Off the screen whatever its food status is now
+      return 'served';
+    }, () => {
+      setBumped((list) => [{ ticket: { ...ticket, bumped_at: new Date().toISOString() }, at: Date.now() }, ...list.filter((x) => x.ticket.id !== ticket.id)].slice(0, 20));
+      // Bump now, offer Undo (docs/20 §1.4) — 8 s, a busy cook may look up late
+      toast.undo(served ? tr('ops.KitchenScreen.kot_v_bumped_and_served', { v: kotName(ticket) }) : tr('ops.KitchenScreen.kot_v_bumped_ready_to_serve', { v: kotName(ticket) }),
+        () => recall(ticket, true), 8_000);
+    });
+  }, [run, recall]);
+
+  /** Start / Ready for the whole ticket, with Undo back to where it was. */
+  const move = useCallback(function move(ticket: FloorTicket, next: TicketStatus, isUndo = false) {
+    const prev = ticket.status;
+    void run(ticket, next, async () => (await floorApi.setTicketStatus(ticket.id, next)).status, () => {
+      if (!isUndo) {
+        toast.undo(tr('ops.KitchenScreen.kot_v_marked_v2', { v: kotName(ticket), v2: STATUS_WORD[next] }),
+          () => move({ ...ticket, status: next }, prev, true), 8_000);
+      }
+    });
+  }, [run]);
+
   const bump = useCallback((t: FloorTicket) => {
     const next = bumpTarget(t.status as TicketStatus);
-    if (next && !busy[t.id]) void change(t, next);
-  }, [busy, change]);
+    if (!next || busy[t.id]) return;
+    if (next === 'bump') bumpOff(t);
+    else move(t, next);
+  }, [busy, bumpOff, move]);
 
   /** One line on a ticket (2 ready, 2 still cooking). */
   const changeItem = useCallback(async (ticket: FloorTicket, item: FloorTicketItem, next: ItemStatus) => {
@@ -197,11 +249,11 @@ export default function KitchenScreen() {
     else void doc.documentElement.requestFullscreen?.().catch(() => toast.info(tr('ops.KitchenScreen.full_screen_is_not_available_here')));
   };
 
-  // Recall: tickets bumped on this screen, plus tickets served in the last 2 h on any screen (newest first)
+  // Recall: tickets bumped on this screen, plus tickets bumped or served in the last 2 h on any screen (newest first)
   const loadRecall = useCallback(async () => {
     try {
       const recent = await floorApi.tickets('recent');
-      setRecallServer(recent.filter((t) => t.status === 'served').slice(0, 12));
+      setRecallServer(recent.filter((t) => t.status !== 'cancelled' && !!t.bumped_at).slice(0, 12));
     } catch {
       /* offline: local list only */
     }
@@ -214,11 +266,13 @@ export default function KitchenScreen() {
     if (!list.length) return [{ key: 'none', label: tr('ops.KitchenScreen.nothing_bumped_recently'), icon: 'time-outline', disabled: true, onPress: () => {} }];
     return list.map((t) => ({
       key: t.id, icon: 'arrow-undo-outline', label: tr('ops.KitchenScreen.tickettitle_kot_v', { ticketTitle: ticketTitle(t), v: t.kot_no ?? '—' }),
-      description: [t.bumped_at ? `Served ${formatAge(minutesBetween(t.bumped_at, t0)).toLowerCase()}${minutesBetween(t.bumped_at, t0) >= 1 ? ' ago' : ''}` : null,
+      description: [t.bumped_at ? (minutesBetween(t.bumped_at, t0) >= 1
+        ? tr('ops.KitchenScreen.bumped_age_ago', { age: formatAge(minutesBetween(t.bumped_at, t0)).toLowerCase() })
+        : tr('ops.KitchenScreen.bumped_just_now')) : null,
         t.items.filter((i) => !i.is_void).map((i) => `${i.quantity}× ${i.name}`).join(', ')].filter(Boolean).join(' · ').slice(0, 70) || undefined,
-      onPress: () => void change(t, 'ready', { recall: true }),
+      onPress: () => recall(t),
     }));
-  }, [bumped, recallServer, change]);
+  }, [bumped, recallServer, recall]);
 
   // Keyboard (optional; wall screens work without it): 1–9 pick a ticket, Space bumps it, Esc clears
   const numberKeys = useMemo(() => {
@@ -311,11 +365,51 @@ export default function KitchenScreen() {
       scroll={false}
       maxWidth={isDesktop ? 2600 : 1280}
       contentStyle={{ flex: 1 }}
+      phoneActions={isPhone ? (
+        // Phones: the title gets row 1; these share row 2 as equal-size buttons (they always fit: 4 × 44 px at 320 px)
+        <View style={{ flex: 1, gap: 8 }}>
+          {canSpeak && kitchenVoice && !voiceTapped && voiceNeedsTap() ? (
+            <Button title={tr('ops.KitchenScreen.tap_to_turn_on_voice')} icon="mic-outline" variant="primary" full
+              onPress={() => { setVoiceTapped(true); sayNow(VOICE_ON_LINE); }} />
+          ) : null}
+          <View style={styles.phoneActionRow}>
+            <View style={styles.phoneAction}>
+              <ActionMenu align="start" title={tr('ops.KitchenScreen.recall_a_bumped_ticket')} items={recallItems} width={320} style={styles.phoneActionButton}
+                trigger={(open) => <IconButton icon="arrow-undo-outline" variant="outline" accessibilityLabel={tr('ops.KitchenScreen.recall_a_bumped_ticket')}
+                  style={styles.phoneActionButton} onPress={() => { void loadRecall(); open(); }} />} />
+            </View>
+            {canSpeak ? (
+              <View style={styles.phoneAction}>
+                <IconButton icon={kitchenVoice ? 'mic-outline' : 'mic-off-outline'} variant={kitchenVoice ? 'secondary' : 'tonal'} style={styles.phoneActionButton}
+                  accessibilityLabel={kitchenVoice ? tr('ops.KitchenScreen.turn_off_voice') : tr('ops.KitchenScreen.turn_on_voice')}
+                  onPress={() => { setVoicePrefs({ kitchenVoice: !kitchenVoice }); if (!kitchenVoice) { setVoiceTapped(true); sayNow(VOICE_ON_LINE); } }} />
+              </View>
+            ) : null}
+            <View style={styles.phoneAction}>
+              <IconButton icon={sound ? 'volume-high-outline' : 'volume-mute-outline'} variant={sound ? 'secondary' : 'tonal'} style={styles.phoneActionButton}
+                accessibilityLabel={sound ? tr('ops.KitchenScreen.mute_new_ticket_sound') : tr('ops.KitchenScreen.turn_on_new_ticket_sound')} onPress={() => { setSound(!sound); if (!sound) playAlert('kitchen'); }} />
+            </View>
+            <View style={styles.phoneAction}>
+              <IconButton icon={large ? 'remove-circle-outline' : 'text-outline'} variant="secondary" style={styles.phoneActionButton}
+                accessibilityLabel={large ? tr('ops.KitchenScreen.smaller_text') : tr('ops.KitchenScreen.larger_text')} onPress={() => setLarge(!large)} />
+            </View>
+          </View>
+        </View>
+      ) : undefined}
       actions={
         <>
           <ActionMenu align="end" title={tr('ops.KitchenScreen.recall_a_bumped_ticket')} items={recallItems} width={320}
             trigger={(open) => <Button title={isPhone ? undefined : tr('ops.KitchenScreen.recall')} icon="arrow-undo-outline" variant="outline" accessibilityLabel={tr('ops.KitchenScreen.recall_a_bumped_ticket')}
               onPress={() => { void loadRecall(); open(); }} />} />
+          {canSpeak && kitchenVoice && !voiceTapped && voiceNeedsTap() ? (
+            <Button title={tr('ops.KitchenScreen.tap_to_turn_on_voice')} icon="mic-outline" variant="primary"
+              onPress={() => { setVoiceTapped(true); sayNow(VOICE_ON_LINE); }} />
+          ) : null}
+          {canSpeak ? (
+            <IconButton icon={kitchenVoice ? 'mic-outline' : 'mic-off-outline'} variant={kitchenVoice ? 'secondary' : 'tonal'}
+              accessibilityLabel={kitchenVoice ? tr('ops.KitchenScreen.turn_off_voice') : tr('ops.KitchenScreen.turn_on_voice')}
+              onPress={() => { setVoicePrefs({ kitchenVoice: !kitchenVoice }); if (!kitchenVoice) { setVoiceTapped(true); sayNow(VOICE_ON_LINE); } }} />
+          ) : null}
           <IconButton icon={sound ? 'volume-high-outline' : 'volume-mute-outline'} variant={sound ? 'secondary' : 'tonal'}
             accessibilityLabel={sound ? tr('ops.KitchenScreen.mute_new_ticket_sound') : tr('ops.KitchenScreen.turn_on_new_ticket_sound')} onPress={() => { setSound(!sound); if (!sound) playAlert('kitchen'); }} />
           <IconButton icon={large ? 'remove-circle-outline' : 'text-outline'} variant="secondary" accessibilityLabel={large ? tr('ops.KitchenScreen.smaller_text') : tr('ops.KitchenScreen.larger_text')}
@@ -440,7 +534,7 @@ const TicketCard = React.memo(function TicketCard({ ticket, now, ageLimits, larg
         </View>
         <IconButton icon="print-outline" variant="secondary" accessibilityLabel={tr('ops.KitchenScreen.print_kot_v', { v: ticket.kot_no ?? '' })} onPress={onPrint} />
         <Button title={col.bump} icon={col.icon} variant={bumpVariant} size="lg" loading={busy} disabled={busy}
-          onPress={onBump} accessibilityLabel={tr('ops.KitchenScreen.bump_kot_v_to_v2', { v: ticket.kot_no ?? '', v2: STATUS_WORD[bumpTarget(ticket.status as TicketStatus) ?? 'served'] })}
+          onPress={onBump} accessibilityLabel={tr('ops.KitchenScreen.bump_kot_v_to_v2', { v: ticket.kot_no ?? '', v2: bumpWord(bumpTarget(ticket.status as TicketStatus)) })}
           style={{ minWidth: large ? 170 : 140 }} shortcut={selected ? 'Space' : undefined} />
       </View>
     </View>
@@ -453,8 +547,8 @@ function TicketItem({ item, large, qtySize, nameSize, busy, onItem }: {
 }) {
   const { colors, radius } = useTheme();
   const status = (['pending', 'preparing', 'ready', 'served'].includes(item.status) ? item.status : 'pending') as ItemStatus;
-  const next = nextItemStep(status);
-  const prev = prevItemStep(status);
+  const next = nextItemStep(status); // stops at Ready: the floor serves
+  const prev = prevItemStep(status); // a served line is left alone
   const voided = item.is_void;
   const done = status === 'served';
   const textColor = voided ? colors.danger : done ? colors.textSubtle : undefined;
@@ -504,6 +598,9 @@ function TicketItem({ item, large, qtySize, nameSize, busy, onItem }: {
 }
 
 const styles = StyleSheet.create({
+  phoneActionRow: { flexDirection: 'row', gap: 8 },
+  phoneAction: { flex: 1, minWidth: 44 },
+  phoneActionButton: { width: '100%' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' },
   hint: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   columns: { flex: 1, flexDirection: 'row', gap: 12, minHeight: 0 },

@@ -8,13 +8,13 @@ from sqlalchemy import or_, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.core.catalog import FEATURES
+from app.core.catalog import FEATURES, ORDER_TYPES_BY_BUSINESS, PAY_RULE_DEFAULTS, PAY_RULE_LEVELS
 from app.core.security import get_password_hash, hash_password_async
 from app.core.tenant import get_tenant_db, get_shared_session_maker
 from app.models import BusinessSettings, SalesChannel, Brand, GlobalUser, TenantUser, Role, TaxClass, Location
 from app.services import audit
 from app.services.access import Access, check_limit, entitlements, get_access, invalidate, require
-from app.services.settings_service import get_settings, ensure_channels, get_channel
+from app.services.settings_service import get_settings, ensure_channels, get_channel, pay_rules_of
 from app.schemas.billing import PHONE_PATTERN
 import logging
 
@@ -46,6 +46,8 @@ class SettingsUpdate(BaseModel):
     qr_ordering_enabled: bool | None = None
     qr_payment_mode: Literal["counter", "upi", "both"] | None = None
     ops_thresholds: dict[str, int] | None = None  # floor alert minutes, see OPS_DEFAULTS
+    pay_rules: dict[str, str] | None = None  # order type → "anytime" | "ready" | "served" (PAY_RULE_DEFAULTS)
+    bump_marks_served: bool | None = None
     low_stock_default: int | None = Field(None, ge=0, le=100000)
     email_enabled: bool | None = None
     email_sender_name: str | None = Field(None, max_length=80)
@@ -64,6 +66,15 @@ def _clean_thresholds(raw: dict) -> dict:
     if merged["table_red_min"] <= merged["table_amber_min"] or merged["kitchen_red_min"] <= merged["kitchen_amber_min"]:
         raise HTTPException(status_code=422, detail="The red alert must come after the amber one")
     return {k: int(v) for k, v in raw.items()}
+
+def _clean_pay_rules(raw: dict) -> dict:
+    unknown = [k for k in raw if k not in PAY_RULE_DEFAULTS]
+    if unknown:
+        raise HTTPException(status_code=422, detail=f"Unknown order types: {', '.join(unknown)}")
+    bad = [k for k, v in raw.items() if v not in PAY_RULE_LEVELS]
+    if bad:
+        raise HTTPException(status_code=422, detail="Choose anytime, after items are ready, or after items are served")
+    return dict(raw)
 
 def _charges_gst(s) -> bool:
     from app.core.gstin import charges_gst
@@ -85,6 +96,9 @@ def serialize_settings(s: BusinessSettings) -> dict:
         "ops_thresholds": {**OPS_DEFAULTS, **(s.ops_thresholds or {})}, "low_stock_default": s.low_stock_default,
         "email_enabled": s.email_enabled, "email_sender_name": s.email_sender_name, "email_reply_to": s.email_reply_to,
         "disabled_modules": s.disabled_modules or [],
+        "pay_rules": pay_rules_of(s), "bump_marks_served": bool(s.bump_marks_served),
+        # Order types this kind of business uses (the settings screen shows rules only for these)
+        "order_types": list(ORDER_TYPES_BY_BUSINESS.get(s.business_type, ORDER_TYPES_BY_BUSINESS["restaurant"])),
     }
 
 @router.get("/settings")
@@ -118,6 +132,11 @@ async def update_settings(data: SettingsUpdate, access: Access = Depends(require
         raise HTTPException(status_code=403, detail=f"{FEATURES['qr_ordering']} isn't included in your plan")
     if "ops_thresholds" in update:
         update["ops_thresholds"] = _clean_thresholds(update["ops_thresholds"] or {}) or None
+    if "pay_rules" in update:
+        # Merged over what is saved, so a screen that shows only some order types keeps the others
+        update["pay_rules"] = {**(settings.pay_rules or {}), **_clean_pay_rules(update["pay_rules"] or {})} or None
+    if update.get("bump_marks_served") is None:
+        update.pop("bump_marks_served", None)  # a non-null column: null means "leave as is"
     if update.get("qr_payment_mode") in ("upi", "both") and not (update.get("upi_id") or settings.upi_id):
         raise HTTPException(status_code=422, detail="Add your shop's UPI ID first so customers can pay by UPI")
     if update.get("store_enabled") and not access.has("online_store"):

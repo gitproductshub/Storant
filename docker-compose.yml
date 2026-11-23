@@ -61,7 +61,7 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
-      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@tallyko.local}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@storant.local}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:8081}
       # Bind-mount change events don't cross from Windows/macOS into Linux; poll so --reload sees edits
       WATCHFILES_FORCE_POLLING: "true"

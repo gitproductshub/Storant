@@ -25,7 +25,7 @@ class DemoSubscriptionsSeeder(Seeder):
                     db.add(SubscriptionOffer(**spec, ends_at=datetime.utcnow() + timedelta(days=60)))
             payment = (await get_platform_settings(db, fresh=True))["payment"]
             if not payment.get("upi_id"):
-                await save_platform_setting(db, "payment", {**payment, "upi_id": "tallyko.demo@upi", "payee_name": "Tallyko (demo)",
+                await save_platform_setting(db, "payment", {**payment, "upi_id": "storant.demo@upi", "payee_name": "Storant (demo)",
                                                             "support_phone": "+91 98000 00000", "support_email": "billing@example.com"})
             await db.commit()
 

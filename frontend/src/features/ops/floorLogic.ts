@@ -202,21 +202,29 @@ export type ItemStep = 'pending' | 'preparing' | 'ready' | 'served';
 export const ITEM_FLOW: ItemStep[] = ['pending', 'preparing', 'ready', 'served'];
 export type TicketStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled';
 
-export function nextItemStep(status: string): ItemStep | null {
+/**
+ * Next step for a tap on a kitchen-screen line. The kitchen stops at Ready: serving happens on the floor
+ * (waiter / cashier / manager / owner) or through Bump, never by tapping a line on the kitchen screen.
+ */
+export function nextItemStep(status: string, last: ItemStep = 'ready'): ItemStep | null {
   const i = ITEM_FLOW.indexOf(status as ItemStep);
-  return ITEM_FLOW[(i < 0 ? 0 : i) + 1] ?? null;
+  const at = i < 0 ? 0 : i;
+  return at >= ITEM_FLOW.indexOf(last) ? null : ITEM_FLOW[at + 1]!;
 }
 
+/** Long-press on a kitchen-screen line steps it back; a line the floor already served is left alone. */
 export function prevItemStep(status: string): ItemStep | null {
   const i = ITEM_FLOW.indexOf(status as ItemStep);
+  if (status === 'served') return null;
   return i > 0 ? ITEM_FLOW[i - 1]! : null;
 }
 
-/** Next ticket status for the big Bump button. */
-export function bumpTarget(status: TicketStatus): TicketStatus | null {
+/** What the ticket's big button does: Start, Ready, then Bump (clears it off the screen; the server decides whether that serves it). */
+export type TicketAction = 'preparing' | 'ready' | 'bump';
+export function bumpTarget(status: TicketStatus): TicketAction | null {
   if (status === 'pending') return 'preparing';
   if (status === 'preparing') return 'ready';
-  if (status === 'ready') return 'served';
+  if (status === 'ready') return 'bump';
   return null;
 }
 

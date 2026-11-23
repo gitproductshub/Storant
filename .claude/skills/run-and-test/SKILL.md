@@ -31,7 +31,7 @@ Open http://localhost:8081 in the browser pane, sign in (seed or sign up), and c
 
 ## Android build
 ```bash
-docker compose --profile android run --rm android-build                # dist/tallyko-<v>.apk + .aab
+docker compose --profile android run --rm android-build                # dist/storant-<v>.apk + .aab
 docker compose --profile android run --rm android-build backup-keystore
 ```
 First build downloads Gradle deps (~20+ min). The signing key lives in the `android_keystore` volume — back it up.

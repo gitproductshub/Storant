@@ -22,7 +22,7 @@ flowchart TB
     subgraph In["How the order gets in"]
         direction LR
         manual["Manual entry in Billing<br/>channel + aggregator order id<br/>payment AGGREGATOR"]
-        hook["Webhook<br/>POST /integrations/{channel}/orders/{tenant_id}<br/>X-Tallyko-Signature = hex HMAC-SHA256(secret, body)"]
+        hook["Webhook<br/>POST /integrations/{channel}/orders/{tenant_id}<br/>X-Storant-Signature = hex HMAC-SHA256(secret, body)"]
     end
 
     subgraph Guard["Webhook checks"]
@@ -72,7 +72,7 @@ flowchart TB
 
 - Tables: `sales_channels` (per tenant: code, enabled, commission_pct, price_adjust_pct, external_store_id, webhook_secret, auto_accept), `brands`; `orders.channel`, `orders.external_order_id`, `orders.brand_id`, `orders.commission_amount`. Defaults are created at signup (`settings_service.DEFAULT_CHANNELS`).
 - Manual entry: `POST /api/v1/orders` with `channel`, `external_order_id`, `payments: [{method: "AGGREGATOR", ...}]`. `(tenant, channel, external_order_id)` is de-duplicated in `order_service.create_order`.
-- Webhook: `POST /api/v1/integrations/{channel}/orders/{tenant_id}`, header `X-Tallyko-Signature: hex(HMAC_SHA256(webhook_secret, raw_body))`. Body:
+- Webhook: `POST /api/v1/integrations/{channel}/orders/{tenant_id}`, header `X-Storant-Signature: hex(HMAC_SHA256(webhook_secret, raw_body))`. Body:
   ```json
   {"external_order_id": "ZO-77", "order_type": "DELIVERY", "customer_name": "Neha", "customer_phone": "9876543210",
    "delivery_address": "…", "notes": "…", "prepaid": true,

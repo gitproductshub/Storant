@@ -58,6 +58,11 @@ class BusinessSettings(Base):
     # When the floor screens warn: {"table_amber_min": 45, "table_red_min": 75, "kitchen_amber_min": 10, "kitchen_red_min": 20,
     # "online_wait_min": 3}; missing keys use app.api.admin.OPS_DEFAULTS
     ops_thresholds = Column(JSON, nullable=True)
+    # When a bill may be paid, per order type: {"DINE_IN": "served", "TAKEAWAY": "anytime", …} with "anytime" | "ready" | "served";
+    # missing keys use app.core.catalog.PAY_RULE_DEFAULTS (so existing businesses get the defaults without a backfill)
+    pay_rules = Column(JSON, nullable=True)
+    # Kitchen screen: Bump also marks dine-in items served (counter-service places without waiters). Off = Bump only clears the ticket.
+    bump_marks_served = Column(Boolean, default=False, server_default="false", nullable=False)
     low_stock_default = Column(Integer, default=10, server_default="10", nullable=False)
     disabled_modules = Column(JSON, nullable=True)  # modules the owner chose to hide (subset of their plan)
     email_enabled = Column(Boolean, default=True, server_default="true", nullable=False)

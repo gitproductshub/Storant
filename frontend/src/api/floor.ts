@@ -17,6 +17,8 @@ export interface BillCreateExtras {
   new_bill?: boolean;
   bill_label?: string | null;
   guests?: number | null;
+  /** Owner / manager taking payment before the food is served ("Pay anyway"); written to the audit log. */
+  override_reason?: string | null;
 }
 export type BillCreateInput = OrderCreateInput & BillCreateExtras;
 
@@ -35,7 +37,7 @@ export interface FloorTicketItem {
 export interface FloorTicket extends Omit<KitchenTicket, 'items'> {
   bill_label: string | null;
   items: FloorTicketItem[];
-  /** `status=recent` only: when it was bumped (served) or cancelled. */
+  /** When it was bumped off the kitchen screen (or served / cancelled, for older tickets). */
   bumped_at?: string | null;
 }
 
@@ -68,11 +70,45 @@ export const floorApi = {
   confirmClaim: (orderId: string) => api.post<WithClaim<Order>>(`/orders/${orderId}/payment-claim/confirm`),
   /** Money didn't arrive: the customer is asked to pay again or at the counter. */
   rejectClaim: (orderId: string, reason?: string | null) => api.post<WithClaim<Order>>(`/orders/${orderId}/payment-claim/reject`, { reason: reason || null }),
-  /** `recent`: bumped or served in the last 2 hours, newest first (for Recall), with `bumped_at`. */
+  /** `recent`: bumped, served or cancelled in the last 2 hours, newest first (for Recall), with `bumped_at`. */
   tickets: (status: 'active' | 'ready' | 'all' | 'recent' = 'active') => api.get<FloorTicket[]>('/kitchen/tickets', { query: { status } }),
+  /** Start / Ready (or back, for Undo). Serving is for floor staff: use `setItemsStatus(…, 'served')` or `bumpTicket`. */
   setTicketStatus: (ticketId: string, status: KitchenTicket['status']) =>
-    api.put<{ id: string; status: KitchenTicket['status'] }>(`/kitchen/tickets/${ticketId}/status`, { status }),
+    api.put<TicketState>(`/kitchen/tickets/${ticketId}/status`, { status }),
+  /**
+   * Clear a ready ticket off the kitchen screen. Dine-in food stays ready for the waiter to serve (unless the owner turned on
+   * "Bump marks served"); takeaway / delivery / aggregator food is marked served. `served` says which happened.
+   */
+  bumpTicket: (ticketId: string) => api.post<TicketState & { served: boolean }>(`/kitchen/tickets/${ticketId}/bump`),
+  /** Bring a bumped ticket back (Recall, or Undo right after a bump). Food a waiter already served stays served. */
+  recallTicket: (ticketId: string) => api.post<TicketState>(`/kitchen/tickets/${ticketId}/recall`),
 };
+
+/** GET /tables/ready-to-serve: one entry per dine-in kitchen ticket (per bill) whose live items are all ready, not all served. */
+export interface ReadyToServeEntry {
+  kot_id: string;
+  kot_no: number | null;
+  order_id: string;
+  order_code: string;
+  table_id: string;
+  table_label: string;
+  bill_label: string | null;
+  /** The table's assigned waiter ("only my tables"). */
+  assigned_staff_id: string | null;
+  waiter_id: string | null;
+  /** Quantity ready and not served yet. */
+  ready_count: number;
+  /** When its last item became ready. */
+  ready_since: string | null;
+}
+export interface ReadyToServe { server_time: string; items: ReadyToServeEntry[] }
+
+export const readyToServeApi = {
+  list: () => api.get<ReadyToServe>('/tables/ready-to-serve'),
+};
+
+/** A ticket after a change: its status and when it left the kitchen screen (null = on screen). */
+export interface TicketState { id: string; status: KitchenTicket['status']; bumped_at: string | null }
 
 // ---------------------------------------------------------------- Floor operations screens (Orders / Tables / Kitchen / Online)
 

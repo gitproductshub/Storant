@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import and_, func, or_
 from sqlalchemy.future import select
 from app.core.tenant import get_tenant_db
 from app.services.access import Access, get_access, require
@@ -26,15 +27,17 @@ async def get_tickets(
 ):
     tenant_id = access.tenant_id
     query = select(KOT).where(KOT.tenant_id == tenant_id)
-    if status == "active":
-        query = query.where(KOT.status.in_(["pending", "preparing", "ready"]))
+    if status == "active":  # on the kitchen screen: not done and not bumped
+        query = query.where(KOT.status.in_(["pending", "preparing", "ready"]), KOT.bumped_at.is_(None))
     elif status == "ready":
-        query = query.where(KOT.status == "ready")
-    elif status == "recent":  # Recall: bumped / served in the last 2 hours, newest first
-        query = query.where(KOT.status.in_(["served", "cancelled"]), KOT.updated_at >= datetime.utcnow() - timedelta(hours=2))
+        query = query.where(KOT.status == "ready", KOT.bumped_at.is_(None))
+    elif status == "recent":  # Recall: bumped, served or cancelled in the last 2 hours, newest first
+        since = datetime.utcnow() - timedelta(hours=2)
+        query = query.where(or_(KOT.bumped_at >= since,
+                                and_(KOT.status.in_(["served", "cancelled"]), KOT.updated_at >= since)))
     else:
         query = query.where(KOT.created_at >= datetime.utcnow() - timedelta(hours=24))
-    order_by = KOT.updated_at.desc() if status == "recent" else KOT.created_at
+    order_by = func.coalesce(KOT.bumped_at, KOT.updated_at).desc() if status == "recent" else KOT.created_at
     kots = (await db.execute(query.order_by(order_by).limit(200 if status != "recent" else 50))).scalars().all()
     if not kots:
         return []
@@ -69,22 +72,62 @@ async def get_tickets(
             "bill_label": order.bill_label,
             "created_at": kot.created_at.isoformat() + "Z", "items": by_kot.get(kot.id, []),
             "updated_at": kot.updated_at.isoformat() + "Z" if kot.updated_at else None,
-            "bumped_at": kot.updated_at.isoformat() + "Z" if kot.updated_at and kot.status in ("served", "cancelled") else None,
+            "bumped_at": _bumped_at(kot),
         })
     return response
 
-@router.put("/tickets/{kot_id}/status")
-async def update_ticket_status(kot_id: uuid.UUID, data: KotStatusUpdate, access: Access = Depends(require("kitchen.update", feature="kitchen")), db=Depends(get_tenant_db)):
-    result = await db.execute(select(KOT).where(KOT.id == kot_id, KOT.tenant_id == access.tenant_id))
-    kot = result.scalars().first()
+def _bumped_at(kot: KOT) -> str | None:
+    """When the ticket left the kitchen screen: its bump, else when it was served / cancelled (older tickets)."""
+    if kot.bumped_at:
+        return kot.bumped_at.isoformat() + "Z"
+    if kot.updated_at and kot.status in ("served", "cancelled"):
+        return kot.updated_at.isoformat() + "Z"
+    return None
+
+async def _ticket(db, access: Access, kot_id) -> KOT:
+    kot = (await db.execute(select(KOT).where(KOT.id == kot_id, KOT.tenant_id == access.tenant_id))).scalars().first()
     if not kot:
         raise HTTPException(status_code=404, detail="KOT not found")
+    return kot
+
+def _ticket_state(kot: KOT, **extra) -> dict:
+    return {"id": str(kot.id), "status": kot.status, "bumped_at": _bumped_at(kot), **extra}
+
+@router.post("/tickets/{kot_id}/bump")
+async def bump_ticket(kot_id: uuid.UUID, access: Access = Depends(require("kitchen.update", feature="kitchen")), db=Depends(get_tenant_db)):
+    """Clear a ready ticket off the kitchen screen. Dine-in food stays ready for the waiter to serve (unless "Bump marks
+    served" is on); takeaway / delivery / aggregator food is marked served, since no one else serves it."""
+    kot = await _ticket(db, access, kot_id)
+    served = await floor_service.bump_ticket(db, access.tenant_id, kot, staff_id=access.staff_id)
+    await db.commit()
+    logger.info(f"[Kitchen] KOT {kot.kot_no} bumped{' and served' if served else ''}", extra={"tenant_id": access.tenant_id})
+    return _ticket_state(kot, served=served)
+
+@router.post("/tickets/{kot_id}/recall")
+async def recall_ticket(kot_id: uuid.UUID, access: Access = Depends(require("kitchen.update", feature="kitchen")), db=Depends(get_tenant_db)):
+    """Bring a bumped ticket back to the kitchen screen (Recall, or Undo right after a bump)."""
+    kot = await _ticket(db, access, kot_id)
+    await floor_service.recall_ticket(db, access.tenant_id, kot)
+    await db.commit()
+    logger.info(f"[Kitchen] KOT {kot.kot_no} recalled ({kot.status})", extra={"tenant_id": access.tenant_id})
+    return _ticket_state(kot)
+
+@router.put("/tickets/{kot_id}/status")
+async def update_ticket_status(kot_id: uuid.UUID, data: KotStatusUpdate, access: Access = Depends(require("kitchen.update", feature="kitchen")), db=Depends(get_tenant_db)):
+    """Move a whole ticket. "served" needs `kitchen.serve` (floor staff). Older app builds send "served" from the kitchen
+    screen's Bump button: for callers without `kitchen.serve` (the kitchen) it is treated as a Bump instead."""
+    kot = await _ticket(db, access, kot_id)
     if kot.status == "cancelled" and data.status != "cancelled":
         raise HTTPException(status_code=409, detail="This ticket was cancelled")
+    if data.status == "served" and not access.can("kitchen.serve"):
+        served = await floor_service.bump_ticket(db, access.tenant_id, kot, staff_id=access.staff_id)
+        await db.commit()
+        logger.info(f"[Kitchen] KOT {kot.kot_no} bumped by an older app{' and served' if served else ''}", extra={"tenant_id": access.tenant_id})
+        return _ticket_state(kot, served=served)
     await floor_service.set_ticket_status(db, access.tenant_id, kot, data.status)
     await db.commit()
     logger.info(f"[Kitchen] KOT {kot.kot_no} -> {kot.status}", extra={"tenant_id": access.tenant_id})
-    return {"id": str(kot.id), "status": kot.status}
+    return _ticket_state(kot)
 
 # Backwards-compatible aliases used by older app builds
 @router.get("/kds/orders")

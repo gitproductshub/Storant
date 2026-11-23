@@ -26,7 +26,7 @@ Confidence: **C** = confirmed on an official page, **P** = official docs, not re
 
 **Google Play** ($25 one-time, ID + card in your legal name)
 - New *personal* developer accounts must run a **closed test with ≥12 testers for 14 continuous days** before production access (**C**). Organization accounts (D-U-N-S) are exempt.
-- Upload the **AAB** (`dist/tallyko-<version>.aab`); Play App Signing is mandatory (**P**).
+- Upload the **AAB** (`dist/storant-<version>.aab`); Play App Signing is mandatory (**P**).
 - Data safety form (**U**, our reading): Personal info — name, email, phone (owner, staff, shop customers); Photos (menu photos, processed on your own server, not shared); Purchase history (sales records). Purposes: app functionality, account management. Encrypted in transit: yes. Users can request deletion: yes (give the `/delete-account` URL).
 - Financial features declaration: every app must answer it; Tallyko has no in-app payments (UPI QR is printed only), so "no financial features" (**U**).
 - App access: give reviewers a demo owner login.
@@ -40,7 +40,7 @@ Confidence: **C** = confirmed on an official page, **P** = official docs, not re
 
 ## Sharing with friends without the stores
 
-- **Android:** `docker compose --profile android run --rm android-build` → `dist/tallyko-<version>.apk`. Friends enable "Install unknown apps" and open it.
+- **Android:** `docker compose --profile android run --rm android-build` → `dist/storant-<version>.apk`. Friends enable "Install unknown apps" and open it.
   - Google's **developer verification** for sideloaded apps starts in Brazil/Indonesia/Singapore/Thailand from 30 Sep 2026 and reaches India **from 2027**; after that, register the package name + signing key in Play Console (or use a free Limited Distribution account, ≤20 devices) (**C**).
   - An APK signed with your own key cannot update a Play-installed copy (and vice versa). Use one channel per phone.
 - **iPhone:** there is no free way to install a native app on someone else's iPhone long-term (free Xcode signing lasts 7 days on 3 devices). Options: TestFlight (needs the $99 account; up to 10,000 testers, builds expire after 90 days) — or simply use the **web app**: open the server URL in Safari → Share → *Add to Home Screen*. iOS 26 opens home-screen sites as web apps by default. Everything except Bluetooth printing works (use AirPrint / a network printer, or print from an Android device).

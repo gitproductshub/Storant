@@ -5,7 +5,7 @@ flowchart TB
     subgraph In["How the order gets in"]
         direction LR
         manual["Manual entry in Billing<br/>channel + aggregator order id<br/>payment AGGREGATOR"]
-        hook["Webhook<br/>POST /integrations/{channel}/orders/{tenant_id}<br/>X-Tallyko-Signature = hex HMAC-SHA256(secret, body)"]
+        hook["Webhook<br/>POST /integrations/{channel}/orders/{tenant_id}<br/>X-Storant-Signature = hex HMAC-SHA256(secret, body)"]
     end
 
     subgraph Guard["Webhook checks"]

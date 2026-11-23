@@ -9,6 +9,7 @@ import { useAuth } from '@/store/auth';
 import { errorMessage } from '@/api/client';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { BusinessType } from '@/api/types';
+import { isIndianMobile, mobileError, normalizeMobileInput } from '@/lib/phone';
 import { t as tr } from '@/i18n';
 
 const TYPES: { value: BusinessType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -29,14 +30,15 @@ export default function SignupScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** The person left the mobile field: from now on "too short" shows too. */
+  const [phoneDone, setPhoneDone] = useState(false);
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (form.vendor_name.trim().length < 2) e.vendor_name = tr('routes.signup.enter_your_business_name');
     if (!EMAIL_RE.test(form.email.trim())) e.email = tr('routes.signup.enter_a_valid_email_address');
-    const digits = form.phone.replace(/\D/g, '');
-    if (digits.length < 10 || digits.length > 13) e.phone = tr('routes.signup.enter_a_valid_mobile_number');
+    if (!isIndianMobile(form.phone)) e.phone = tr('common.enter_valid_indian_mobile');
     if (form.password.length < 8) e.password = tr('routes.signup.use_at_least_8_characters');
     if (!agreed) e.agreed = tr('routes.signup.please_accept_the_privacy_policy_to');
     setErrors(e);
@@ -50,7 +52,7 @@ export default function SignupScreen() {
     try {
       await register({
         vendor_name: form.vendor_name.trim(), owner_name: form.owner_name.trim() || undefined, email: form.email.trim().toLowerCase(),
-        phone: form.phone.replace(/[^\d+]/g, ''), password: form.password, business_type: type,
+        phone: form.phone, password: form.password, business_type: type, // 10 digits (the server checks the same rule)
       });
       router.replace('/');
     } catch (e) {
@@ -88,7 +90,11 @@ export default function SignupScreen() {
       <Input label={tr('common.business_name')} required value={form.vendor_name} onChangeText={set('vendor_name')} error={errors.vendor_name} placeholder={tr('routes.signup.e_g_sharma_dhaba')} icon="business-outline" />
       <Input label={tr('routes.signup.your_name')} value={form.owner_name} onChangeText={set('owner_name')} placeholder={tr('routes.signup.owner_name')} icon="person-outline" autoComplete="name" />
       <Input label={tr('common.email')} required value={form.email} onChangeText={set('email')} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" icon="mail-outline" />
-      <Input label={tr('common.mobile_number')} required value={form.phone} onChangeText={set('phone')} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" prefix="+91" placeholder="98765 43210" />
+      {/* Indian mobile only: +91 fixed, digits only, stops at 10; pasted +91 / 0 forms are cleaned up (lib/phone.ts) */}
+      <Input label={tr('common.mobile_number')} required value={form.phone}
+        onChangeText={(v) => { setForm((f) => ({ ...f, phone: normalizeMobileInput(v) })); setErrors(({ phone: _drop, ...rest }) => rest); }}
+        onBlur={() => setPhoneDone(true)} error={errors.phone ?? mobileError(form.phone, { final: phoneDone })}
+        keyboardType="number-pad" inputMode="numeric" autoComplete="tel" prefix="+91" placeholder="9876543210" testID="signup-mobile" />
       <Input label={tr('common.password')} required value={form.password} onChangeText={set('password')} error={errors.password} secureTextEntry autoComplete="new-password" hint={tr('routes.signup.at_least_8_characters')} icon="lock-closed-outline" />
 
       <Pressable onPress={() => setAgreed((a) => !a)} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
@@ -104,7 +110,8 @@ export default function SignupScreen() {
         </View>
       ) : null}
 
-      <Button title={tr('routes.signup.create_account')} size="lg" onPress={submit} loading={busy} full />
+      <Button title={tr('routes.signup.create_account')} size="lg" onPress={submit} loading={busy} full disabled={!isIndianMobile(form.phone)}
+        disabledReason={tr('common.enter_valid_indian_mobile')} />
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
         <Text tone="muted">{tr('routes.signup.already_have_an_account')}</Text>
         <Link href="/login"><Text tone="primary" variant="bodyStrong">{tr('routes.signup.sign_in')}</Text></Link>

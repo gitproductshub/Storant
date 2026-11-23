@@ -105,15 +105,20 @@ app = FastAPI(
     redoc_url=None,
 )
 
-def _error(status_code: int, code: str, message, request: Request) -> JSONResponse:
-    return JSONResponse(
-        status_code=status_code,
-        content={"success": False, "error": {"code": code, "message": message, "trace_id": getattr(request.state, "trace_id", None)}},
-    )
+def _error(status_code: int, code: str, message, request: Request, details=None) -> JSONResponse:
+    error = {"code": code, "message": message, "trace_id": getattr(request.state, "trace_id", None)}
+    if details is not None:
+        error["details"] = details
+    return JSONResponse(status_code=status_code, content={"success": False, "error": error})
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    response = _error(exc.status_code, "HTTP_ERROR", exc.detail, request)
+    detail = exc.detail
+    if isinstance(detail, dict) and "message" in detail:
+        # Structured errors the app acts on: {"code": "PAY_BLOCKED_ITEMS", "message": "…", "details": {…}}
+        response = _error(exc.status_code, str(detail.get("code") or "HTTP_ERROR"), detail["message"], request, detail.get("details"))
+    else:
+        response = _error(exc.status_code, "HTTP_ERROR", detail, request)
     if getattr(exc, "headers", None):
         response.headers.update(exc.headers)
     return response
@@ -135,7 +140,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials="*" not in settings.cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Trace-ID", "X-Tallyko-Signature"],
+    allow_headers=["Authorization", "Content-Type", "X-Trace-ID", "X-Storant-Signature", "X-Tallyko-Signature"],
     expose_headers=["X-Trace-ID", "X-Total-Count", "X-Counts"],
 )
 app.add_middleware(TracingMiddleware)

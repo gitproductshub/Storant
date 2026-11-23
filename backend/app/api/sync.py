@@ -95,7 +95,13 @@ async def sync_push(data: SyncPushRequest, access: Access = Depends(require("ord
             order_in.auto_offers = False  # an offline bill was paid at its offline total; never discount it afterwards
         try:
             async with db.begin_nested():  # one bad order must not undo the others
+                # No pay rules here (check=None): the money was already collected offline, so the bill must sync
                 order, created = await order_service.create_order(db, tenant_id, order_in, user_id=access.user_id, staff_id=access.staff_id)
+                if created and order_in.payments and order.channel in order_service.GATED_CHANNELS:
+                    gate = await order_service.pay_gate(db, tenant_id, order, await get_settings(db, tenant_id))
+                    if gate["blocking"]:
+                        logger.info(f"[Sync] Offline bill {order.code} was paid before {gate['blocking']} item(s) were {gate['level']}",
+                                    extra={"tenant_id": tenant_id})
             results.append({"id": str(order.id), "status": "ok", "created": created, "order": order_service.serialize_order(order)})
         except HTTPException as exc:
             results.append({"id": str(order_in.id), "status": "error", "error": exc.detail, "code": exc.status_code})

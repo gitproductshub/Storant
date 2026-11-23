@@ -9,7 +9,7 @@ const item = (id: string, over: Partial<OrderItem> = {}): OrderItem => ({
   line_total: 100, notes: null, sent_to_kitchen: true, kot_id: 'k1', kitchen_status: 'pending', ...over,
 });
 
-const all = { status: true, create: true, voidSent: true, comp: true };
+const all = { status: true, serve: true, create: true, voidSent: true, comp: true };
 const items = [
   item('roti', { quantity: 4, kitchen_status: 'ready' }),
   item('dal', { kitchen_status: 'preparing' }),
@@ -44,15 +44,33 @@ describe('selection bar actions', () => {
     expect(offline.main.every((a) => a.disabled && a.disabledReason === 'Needs internet')).toBe(true);
     const locked = selectionActions({ sel, locked: true, online: true, busy: false, perms: all });
     expect(locked.main.find((a) => a.key === 'void')!.disabledReason).toMatch(/payment/);
-    expect(locked.main.find((a) => a.key === 'repeat')!.disabled).toBe(false);
+    // A bill with a payment takes no more items (the server answers BILL_PART_PAID)
+    expect(locked.main.find((a) => a.key === 'repeat')!.disabledReason).toMatch(/payment/);
     const waiter = selectionActions({ sel, locked: false, online: true, busy: false, perms: { ...all, voidSent: false } });
     expect(waiter.main.find((a) => a.key === 'void')!.disabledReason).toMatch(/manager/);
   });
 
   it('only offers what the role allows', () => {
     const sel = describeSelection(items, new Set(['roti']));
-    const { main, more } = selectionActions({ sel, locked: false, online: true, busy: false, perms: { status: true, create: false, voidSent: false, comp: false } });
+    const { main, more } = selectionActions({ sel, locked: false, online: true, busy: false, perms: { status: true, serve: true, create: false, voidSent: false, comp: false } });
     expect(main.map((a) => a.key)).toEqual(['served']);
     expect(more.map((a) => a.key)).toEqual(['preparing', 'ready']);
+  });
+
+  it('never offers Served to the kitchen role', () => {
+    const sel = describeSelection(items, new Set(['roti']));
+    const kitchen = selectionActions({ sel, locked: false, online: true, busy: false, perms: { status: true, serve: false, create: false, voidSent: false, comp: false } });
+    expect([...kitchen.main, ...kitchen.more].map((a) => a.key)).toEqual(['preparing', 'ready']);
+  });
+
+  it('lets floor staff serve straight from pending (no kitchen screen needed)', () => {
+    const pending = [item('idli', { kitchen_status: 'pending' })];
+    const sel = describeSelection(pending, new Set(['idli']));
+    const waiter = selectionActions({ sel, locked: false, online: true, busy: false, perms: all });
+    const served = [...waiter.main, ...waiter.more].find((a) => a.key === 'served')!;
+    expect(served.disabled).toBe(false);
+    // Someone who may serve but not change kitchen progress sees only Served
+    const serveOnly = selectionActions({ sel, locked: false, online: true, busy: false, perms: { ...all, status: false } });
+    expect([...serveOnly.main, ...serveOnly.more].filter((a) => ['preparing', 'ready', 'served'].includes(a.key)).map((a) => a.key)).toEqual(['served']);
   });
 });

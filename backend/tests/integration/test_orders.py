@@ -1,6 +1,6 @@
 import uuid
 import pytest
-from tests.conftest import create_product, create_staff
+from tests.conftest import create_product, create_staff, serve_all
 
 async def _order(client, headers, items, **extra):
     resp = await client.post("/api/v1/orders", headers=headers, json={"items": items, **extra})
@@ -59,7 +59,8 @@ async def test_dine_in_table_flow_with_kot_split_payment_and_discount(client, fr
     tickets = (await client.get("/api/v1/kitchen/tickets", headers=headers)).json()
     assert len(tickets) == 2 and tickets[0]["table_label"] == "T1"
 
-    # 10% discount, then split UPI + cash
+    # The food is served (dine-in pays after serving), then 10% discount and split UPI + cash
+    await serve_all(client, headers, order["id"])
     resp = await client.post(f"/api/v1/orders/{order['id']}/pay", headers=headers, json={
         "discount": {"type": "percent", "value": 10}, "payments": [{"method": "UPI", "amount": 100}]})
     assert resp.status_code == 200

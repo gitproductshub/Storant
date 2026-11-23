@@ -20,6 +20,7 @@
     "business_name": "Business name",
     "email": "Email",
     "mobile_number": "Mobile number",
+    "enter_valid_indian_mobile": "Enter a valid 10-digit Indian mobile number",
     "try_again": "Try again",
     "reset": "Reset",
     "business": "Business",
@@ -206,14 +207,14 @@
       "sign_in": "Sign in",
       "new_to_brand": "New to {{brand}}?",
       "create_a_free_account": "Create a free account",
-      "staff_accounts_are_created_by_the_shop": "Staff accounts are created by the shop owner in Settings → Staff."
+      "how_we_handle_your_data": "How we handle your data",
+      "open_the_privacy_policy": "Open the privacy policy"
     },
     "signup": {
       "caf_qsr": "Café / QSR",
       "retail_store": "Retail store",
       "enter_your_business_name": "Enter your business name",
       "enter_a_valid_email_address": "Enter a valid email address",
-      "enter_a_valid_mobile_number": "Enter a valid mobile number",
       "use_at_least_8_characters": "Use at least 8 characters",
       "please_accept_the_privacy_policy_to": "Please accept the privacy policy to continue",
       "create_your_business": "Create your business",
@@ -1976,11 +1977,24 @@
     }
   },
   "ops": {
+    "FloorAnnouncer": {
+      "ready_to_serve_tables": "Ready to serve: {{tables}}",
+      "mute_5_min": "Mute 5 min",
+      "unmute": "Unmute"
+    },
     "KitchenScreen": {
       "dine_in": "Dine-in",
       "swiggy": "Swiggy",
       "zomato": "Zomato",
       "kot_v_is_back_in_ready": "KOT {{v}} is back in Ready",
+      "tap_to_turn_on_voice": "Tap to turn on voice",
+      "turn_on_voice": "Turn on voice announcements (Hindi)",
+      "turn_off_voice": "Turn off voice announcements",
+      "kot_v_bumped_ready_to_serve": "KOT {{v}} bumped · food waits for the waiter to serve it",
+      "kot_v_bumped_and_served": "KOT {{v}} bumped and served",
+      "kot_v_was_already_served": "KOT {{v}}: everything on it was already served",
+      "bumped_age_ago": "Bumped {{age}} ago",
+      "bumped_just_now": "Bumped just now",
       "kot_v_marked_v2": "KOT {{v}} marked {{v2}}",
       "full_screen_is_not_available_here": "Full screen is not available here",
       "nothing_bumped_recently": "Nothing bumped recently",
@@ -2679,8 +2693,39 @@
       "thank_you_visit_again": "Thank you! Visit again.",
       "offline_bill_invoice_number_assigned_on": "Offline bill · invoice number assigned on sync"
     },
+    "billErrors": {
+      "bill_paid": "This bill is paid. Start a new order.",
+      "bill_cancelled": "This bill was cancelled. Start a new order.",
+      "bill_merged": "This bill was merged into another bill. Open that bill instead.",
+      "bill_part_paid": "A payment was already taken on this bill. Collect the rest, or put the new items on a new order."
+    },
+    "payGate": {
+      "one_item_not_served": "1 item not served yet",
+      "n_items_not_served": "{{n}} items not served yet",
+      "one_item_not_ready": "1 item not ready yet",
+      "n_items_not_ready": "{{n}} items not ready yet",
+      "n_not_sent": "{{n}} not sent to the kitchen",
+      "n_cooking": "{{n}} cooking",
+      "n_ready_to_serve": "{{n}} ready to serve",
+      "take_payment_once_served": "Take payment once everything is served.",
+      "take_payment_once_ready": "Take payment once everything is ready.",
+      "pay_anyway": "Pay anyway",
+      "pay_anyway_title": "Take payment before the food is served?",
+      "pay_anyway_subtitle": "{{reason}}. Your reason is written to the owner's activity log.",
+      "reason_label": "Reason",
+      "reason_hint": "At least 3 characters",
+      "continue_to_payment": "Continue to payment",
+      "reason_in_a_hurry": "Customer in a hurry",
+      "reason_packed": "Food packed to take away",
+      "reason_kitchen_screen": "Kitchen screen not updated",
+      "checking_the_bill": "Checking the bill…",
+      "only_owner_or_manager": "Only the owner or a manager can take payment before the food is served"
+    },
     "RunningBill": {
       "already_on_the_bill": "Already on the bill",
+      "mark_all_served_count": "Mark all served ({{count}})",
+      "mark_all_count_items_on_this_bill_served": "Mark all {{count}} items on this bill served",
+      "count_items_marked_served": "{{count}} item(s) marked served",
       "select_all_items": "Select all items",
       "select_all": "Select all",
       "cancelled": ", cancelled",
@@ -3190,6 +3235,31 @@
     }
   },
   "settings": {
+    "VoiceAlertsSection": {
+      "voice_alerts": "Voice alerts",
+      "description": "Spoken in Hindi on this device. The kitchen hears new orders; floor staff hear when a table's food is ready, and a reminder until it is served. The screen stays on while voice alerts are on.",
+      "not_available": "This device can't speak yet. Voice alerts work in the web app (browser or installed app from the browser).",
+      "kitchen_voice": "Kitchen: say new orders",
+      "kitchen_voice_desc": "“नया ऑर्डर आया है। टेबल 5।” on the kitchen screen",
+      "kitchen_items": "Kitchen: also say the items",
+      "kitchen_items_desc": "Longer announcements; off by default for busy hours",
+      "ready_voice": "Say when food is ready",
+      "ready_voice_desc": "“टेबल 5 का ऑर्डर तैयार है।” for dine-in tables, on every screen",
+      "reminder": "Reminder until served",
+      "reminder_30": "Every 30 s",
+      "reminder_60": "Every 1 min",
+      "reminder_120": "Every 2 min",
+      "reminder_off": "Off",
+      "only_mine": "Only my tables",
+      "only_mine_desc": "Tables assigned to you (Tables → assign waiter). Off: every table.",
+      "voice": "Voice",
+      "voice_auto": "Automatic (Hindi, female if available)",
+      "using_voice": "Using: {{name}}",
+      "no_hindi_voice": "No Hindi voice found on this device. Add one (Windows: Settings → Time & language → Speech; Android: Google Text-to-speech → Hindi), otherwise alerts may be silent.",
+      "test": "Test voice",
+      "muted_until": "Muted until {{time}}",
+      "search_title": "Voice alerts (Hindi)"
+    },
     "AccountScreen": {
       "left_bill_v_still_waiting_check_the": "{{left}} bill{{v}} still waiting. Check the internet connection.",
       "everything_is_synced": "Everything is synced",
@@ -3416,7 +3486,7 @@
       "copy_secret": "Copy secret",
       "sign_each_request_header": "Sign each request: header",
       "hex_hmac_sha256_of_the_raw_request_body": "= hex HMAC-SHA256 of the raw request body, using this secret. Keep it private.",
-      "x_tallyko_signature": "X-Tallyko-Signature",
+      "x_storant_signature": "X-Storant-Signature",
       "only_the_owner_can_create_a_new_secret": "Only the owner can create a new secret.",
       "name_is_off_so_orders_sent_to_this_url": "{{name}} is off, so orders sent to this URL are rejected. Turn it on above first."
     },
@@ -3456,6 +3526,31 @@
       "templates_will_appear_here_once_the": "Templates will appear here once the server provides them.",
       "customised": "Customised",
       "subject": "Subject:"
+    },
+    "KitchenRulesScreen": {
+      "kitchen_rules": "Kitchen rules",
+      "subtitle": "When a bill can be paid, and what Bump does on the kitchen screen",
+      "owner_only": "Only the owner can change kitchen rules",
+      "ask_the_owner": "Ask the owner to change when bills can be paid.",
+      "loading": "Loading kitchen rules…",
+      "couldn_t_load": "Couldn't load the settings",
+      "saved": "Kitchen rules saved",
+      "use_defaults": "Use defaults",
+      "kitchen_module_off": "The Kitchen module is off, so bills can be paid at any time. Turn it on in Modules & plan to use these rules.",
+      "when_a_bill_can_be_paid": "When a bill can be paid",
+      "when_a_bill_can_be_paid_desc": "For each order type. Until the rule is met, Pay stays off on the till and the server refuses the payment.",
+      "rule_anytime": "Anytime",
+      "rule_ready": "After items are ready",
+      "rule_served": "After items are served",
+      "what_the_choices_mean": "What the choices mean",
+      "explain_anytime": "Anytime: take payment first. Normal for takeaway, counter and delivery.",
+      "explain_ready": "After items are ready: every kitchen item is cooked (ready or already served).",
+      "explain_served": "After items are served: every kitchen item has reached the table. Best for dine-in.",
+      "note_pay_anyway": "The owner and managers can always use “Pay anyway” with a reason; it is written to the owner's activity log. Items that don't go to the kitchen, online store orders and Swiggy / Zomato orders are never held.",
+      "kitchen_screen": "Kitchen screen",
+      "kitchen_screen_desc": "What Bump does to dine-in tickets. Takeaway, delivery and Swiggy / Zomato tickets are always marked served when bumped.",
+      "bump_marks_served": "Bump marks served",
+      "bump_marks_served_desc": "Turn on if you have no waiters (counter service): bumping a ticket also marks its food served. Off: Bump only clears the ticket and the waiter marks the food served at the table."
     },
     "FloorAlertsScreen": {
       "owners_and_managers_only": "Owners and managers only",
@@ -3646,6 +3741,8 @@
       "back_to_settings": "Back to settings"
     },
     "SettingsHome": {
+      "sign_out_of_this_device": "Sign out of this device?",
+      "sign_out_stops_kitchen_alerts": "New orders will no longer be announced or shown here until someone signs in again.",
       "businessname_signed_in_as_v": "{{businessName}} · signed in as {{v}}",
       "business_profile": "Business profile",
       "no_address_yet": "No address yet",
@@ -3835,6 +3932,7 @@
       "save_email": "Save email"
     },
     "search": {
+      "when_bills_can_be_paid": "When bills can be paid",
       "business_profile": "Business profile",
       "gstin_fssai_invoices": "GSTIN, FSSAI & invoices",
       "upi_payments": "UPI & payments",
@@ -3853,6 +3951,7 @@
       "sign_out_delete_account": "Sign out & delete account"
     },
     "sections": {
+      "when_bills_can_be_paid_and_what_bump_does": "When bills can be paid, and what Bump does",
       "setup_checklist_and_app_details": "Setup checklist and app details",
       "profile_upi_loyalty_online_ordering": "Profile, UPI, loyalty, online ordering",
       "tax_classes_cgst_sgst_rate_changes": "Tax classes, CGST/SGST, rate changes",
@@ -3912,6 +4011,8 @@
     },
     "staff_RolesTab": {
       "permissions": "Permissions",
+      "perm_kitchen_serve": "Mark items served at the table",
+      "perm_orders_pay_override": "Take payment before every item is served (asks for a reason, written to the audit log)",
       "roles": "roles",
       "customcount_custom": " · {{customCount}} custom",
       "new_role": "New role",

@@ -328,7 +328,7 @@ function Integration({ channel, isOwner, tenantId, onSaved }: { channel: SalesCh
           <Button icon="copy-outline" size="sm" variant="ghost" accessibilityLabel={t('settings.ChannelsScreen.copy_secret')} onPress={() => copyText(secret, 'Secret')} disabled={!secret} />
         </View>
         <Text variant="small" tone="subtle">
-          {t('settings.ChannelsScreen.sign_each_request_header')} <Text variant="small" style={{ fontFamily: monoFont }}>{t('settings.ChannelsScreen.x_tallyko_signature')}</Text> {t('settings.ChannelsScreen.hex_hmac_sha256_of_the_raw_request_body')}
+          {t('settings.ChannelsScreen.sign_each_request_header')} <Text variant="small" style={{ fontFamily: monoFont }}>{t('settings.ChannelsScreen.x_storant_signature')}</Text> {t('settings.ChannelsScreen.hex_hmac_sha256_of_the_raw_request_body')}
         </Text>
       </View>
       {isOwner ? (

@@ -20,6 +20,7 @@
     "business_name": "વ્યવસાયનું નામ",
     "email": "ઇમેઇલ",
     "mobile_number": "મોબાઇલ નંબર",
+    "enter_valid_indian_mobile": "સાચો 10 અંકનો ભારતીય મોબાઇલ નંબર દાખલ કરો",
     "try_again": "ફરી પ્રયાસ કરો",
     "reset": "રીસેટ",
     "business": "વ્યવસાય",
@@ -204,14 +205,14 @@
       "sign_in": "સાઇન ઇન કરો",
       "new_to_brand": "{{brand}} પર નવા છો?",
       "create_a_free_account": "મફત એકાઉન્ટ બનાવો",
-      "staff_accounts_are_created_by_the_shop": "સ્ટાફ એકાઉન્ટ માલિક સેટિંગ્સ → સ્ટાફમાં બનાવે છે."
+      "how_we_handle_your_data": "અમે તમારો ડેટા કેવી રીતે સંભાળીએ છીએ",
+      "open_the_privacy_policy": "ગોપનીયતા નીતિ ખોલો"
     },
     "signup": {
       "caf_qsr": "કૅફે / QSR",
       "retail_store": "રિટેલ સ્ટોર",
       "enter_your_business_name": "તમારા વ્યવસાયનું નામ દાખલ કરો",
       "enter_a_valid_email_address": "માન્ય ઇમેઇલ સરનામું દાખલ કરો",
-      "enter_a_valid_mobile_number": "માન્ય મોબાઇલ નંબર દાખલ કરો",
       "use_at_least_8_characters": "ઓછામાં ઓછા 8 અક્ષર રાખો",
       "please_accept_the_privacy_policy_to": "આગળ વધવા માટે કૃપા કરીને ગોપનીયતા નીતિ સ્વીકારો",
       "create_your_business": "તમારો વ્યવસાય બનાવો",
@@ -650,8 +651,39 @@
       "bill_billno_v": "બિલ {{billNo}}{{v}}",
       "quantity_free_v": "{{quantity}} × મફત{{v}}"
     },
+    "billErrors": {
+      "bill_paid": "આ બિલની ચુકવણી થઈ ગઈ છે. નવો ઓર્ડર શરૂ કરો.",
+      "bill_cancelled": "આ બિલ રદ થયું છે. નવો ઓર્ડર શરૂ કરો.",
+      "bill_merged": "આ બિલ બીજા બિલમાં ભેળવી દેવાયું છે. તે બિલ ખોલો.",
+      "bill_part_paid": "આ બિલ પર ચુકવણી પહેલેથી લેવાઈ ગઈ છે. બાકીની રકમ લો, અથવા નવી આઇટમ નવા ઓર્ડરમાં મૂકો."
+    },
+    "payGate": {
+      "one_item_not_served": "1 આઇટમ હજી પીરસાઈ નથી",
+      "n_items_not_served": "{{n}} આઇટમ હજી પીરસાઈ નથી",
+      "one_item_not_ready": "1 આઇટમ હજી તૈયાર નથી",
+      "n_items_not_ready": "{{n}} આઇટમ હજી તૈયાર નથી",
+      "n_not_sent": "{{n}} કિચનમાં મોકલી નથી",
+      "n_cooking": "{{n}} બની રહી છે",
+      "n_ready_to_serve": "{{n}} પીરસવા માટે તૈયાર",
+      "take_payment_once_served": "બધું પીરસાઈ જાય પછી ચુકવણી લો.",
+      "take_payment_once_ready": "બધું તૈયાર થાય પછી ચુકવણી લો.",
+      "pay_anyway": "છતાં ચુકવણી લો",
+      "pay_anyway_title": "ખોરાક પીરસાય તે પહેલાં ચુકવણી લેવી છે?",
+      "pay_anyway_subtitle": "{{reason}}. તમારું કારણ માલિકના પ્રવૃત્તિ લૉગમાં નોંધાશે.",
+      "reason_label": "કારણ",
+      "reason_hint": "ઓછામાં ઓછા 3 અક્ષર",
+      "continue_to_payment": "ચુકવણી તરફ આગળ વધો",
+      "reason_in_a_hurry": "ગ્રાહક ઉતાવળમાં છે",
+      "reason_packed": "ખોરાક પેક કરીને લઈ જાય છે",
+      "reason_kitchen_screen": "કિચન સ્ક્રીન અપડેટ થઈ નથી",
+      "checking_the_bill": "બિલ તપાસી રહ્યા છીએ…",
+      "only_owner_or_manager": "ખોરાક પીરસાય તે પહેલાં ચુકવણી ફક્ત માલિક કે મેનેજર લઈ શકે છે"
+    },
     "RunningBill": {
       "already_on_the_bill": "પહેલેથી બિલમાં",
+      "mark_all_served_count": "બધું પીરસાયું માર્ક કરો ({{count}})",
+      "mark_all_count_items_on_this_bill_served": "આ બિલની બધી {{count}} આઇટમ પીરસાઈ તરીકે માર્ક કરો",
+      "count_items_marked_served": "{{count}} આઇટમ પીરસાઈ તરીકે માર્ક થઈ",
       "select_all_items": "બધી આઇટમ પસંદ કરો",
       "select_all": "બધું પસંદ કરો",
       "cancelled": ", રદ",
@@ -754,11 +786,24 @@
     }
   },
   "ops": {
+    "FloorAnnouncer": {
+      "ready_to_serve_tables": "પીરસવા માટે તૈયાર: {{tables}}",
+      "mute_5_min": "5 મિનિટ શાંત",
+      "unmute": "અવાજ પાછો"
+    },
     "KitchenScreen": {
       "dine_in": "ડાઇન-ઇન",
       "swiggy": "સ્વિગી",
       "zomato": "ઝોમેટો",
       "kot_v_is_back_in_ready": "KOT {{v}} પાછું \"તૈયાર\" માં છે",
+      "tap_to_turn_on_voice": "અવાજ ચાલુ કરવા ટૅપ કરો",
+      "turn_on_voice": "અવાજમાં જાહેરાત ચાલુ કરો (હિન્દી)",
+      "turn_off_voice": "અવાજમાં જાહેરાત બંધ કરો",
+      "kot_v_bumped_ready_to_serve": "KOT {{v}} બમ્પ થયું · ખોરાક વેઇટર પીરસે તેની રાહ જુએ છે",
+      "kot_v_bumped_and_served": "KOT {{v}} બમ્પ થયું અને પીરસાયું",
+      "kot_v_was_already_served": "KOT {{v}}: તેનું બધું પહેલેથી પીરસાઈ ગયું છે",
+      "bumped_age_ago": "{{age}} પહેલાં બમ્પ થયું",
+      "bumped_just_now": "હમણાં બમ્પ થયું",
       "kot_v_marked_v2": "KOT {{v}} ને {{v2}} ચિહ્નિત કર્યું",
       "full_screen_is_not_available_here": "અહીં ફુલ સ્ક્રીન ઉપલબ્ધ નથી",
       "nothing_bumped_recently": "તાજેતરમાં કંઈ બમ્પ થયું નથી",
@@ -1923,6 +1968,31 @@
     }
   },
   "settings": {
+    "VoiceAlertsSection": {
+      "voice_alerts": "અવાજ અલર્ટ",
+      "description": "આ ડિવાઇસ પર હિન્દીમાં બોલાય છે. કિચનને નવા ઓર્ડર સંભળાય છે; ફ્લોર સ્ટાફને ટેબલનો ખોરાક તૈયાર થાય ત્યારે, અને પીરસાય ત્યાં સુધી યાદ અપાવવું. અવાજ અલર્ટ ચાલુ હોય ત્યાં સુધી સ્ક્રીન ચાલુ રહે છે.",
+      "not_available": "આ ડિવાઇસ હજી બોલી શકતું નથી. અવાજ અલર્ટ વેબ ઍપ (બ્રાઉઝર અથવા બ્રાઉઝરથી ઇન્સ્ટોલ કરેલી ઍપ) માં કામ કરે છે.",
+      "kitchen_voice": "કિચન: નવા ઓર્ડર બોલો",
+      "kitchen_voice_desc": "કિચન સ્ક્રીન પર “नया ऑर्डर आया है। टेबल 5।”",
+      "kitchen_items": "કિચન: આઇટમ પણ બોલો",
+      "kitchen_items_desc": "લાંબી જાહેરાત; વ્યસ્ત સમય માટે ડિફૉલ્ટ બંધ",
+      "ready_voice": "ખોરાક તૈયાર થાય ત્યારે બોલો",
+      "ready_voice_desc": "ડાઇન-ઇન ટેબલ માટે “टेबल 5 का ऑर्डर तैयार है।”, દરેક સ્ક્રીન પર",
+      "reminder": "પીરસાય ત્યાં સુધી યાદ અપાવવું",
+      "reminder_30": "દર 30 સેકન્ડ",
+      "reminder_60": "દર 1 મિનિટ",
+      "reminder_120": "દર 2 મિનિટ",
+      "reminder_off": "બંધ",
+      "only_mine": "ફક્ત મારાં ટેબલ",
+      "only_mine_desc": "તમને સોંપેલાં ટેબલ (ટેબલ → વેઇટર પસંદ કરો). બંધ: બધાં ટેબલ.",
+      "voice": "અવાજ",
+      "voice_auto": "આપમેળે (હિન્દી, શક્ય હોય તો સ્ત્રી અવાજ)",
+      "using_voice": "વપરાય છે: {{name}}",
+      "no_hindi_voice": "આ ડિવાઇસ પર કોઈ હિન્દી અવાજ મળ્યો નથી. એક ઉમેરો (Windows: સેટિંગ્સ → સમય અને ભાષા → સ્પીચ; Android: Google Text-to-speech → હિન્દી), નહીં તો અલર્ટ શાંત રહી શકે છે.",
+      "test": "અવાજ ચકાસો",
+      "muted_until": "{{time}} સુધી શાંત",
+      "search_title": "અવાજ અલર્ટ (હિન્દી)"
+    },
     "AccountScreen": {
       "left_bill_v_still_waiting_check_the": "{{left}} બિલ હજી રાહમાં છે. ઇન્ટરનેટ કનેક્શન તપાસો.",
       "everything_is_synced": "બધું સિંક થઈ ગયું",
@@ -1981,6 +2051,31 @@
       "this_can_t_be_undone": "આને પાછું લઈ શકાતું નથી.",
       "read_more_in_the_privacy_policy_or_ask": "વધુ માહિતી ગોપનીયતા નીતિમાં વાંચો, અથવા ફક્ત વ્યવસાય છોડવો હોય તો તમારા દુકાન માલિકને પૂછો."
     },
+    "KitchenRulesScreen": {
+      "kitchen_rules": "કિચન નિયમો",
+      "subtitle": "બિલની ચુકવણી ક્યારે થઈ શકે, અને કિચન સ્ક્રીન પર બમ્પ શું કરે છે",
+      "owner_only": "કિચન નિયમો ફક્ત માલિક બદલી શકે છે",
+      "ask_the_owner": "બિલની ચુકવણી ક્યારે થાય તે બદલવા માટે માલિકને કહો.",
+      "loading": "કિચન નિયમો લોડ થઈ રહ્યા છે…",
+      "couldn_t_load": "સેટિંગ્સ લોડ થઈ શકી નહીં",
+      "saved": "કિચન નિયમો સેવ થયા",
+      "use_defaults": "ડિફૉલ્ટ વાપરો",
+      "kitchen_module_off": "કિચન મોડ્યુલ બંધ છે, એટલે બિલની ચુકવણી ગમે ત્યારે થઈ શકે છે. આ નિયમો વાપરવા માટે મોડ્યુલ અને પ્લાનમાં તેને ચાલુ કરો.",
+      "when_a_bill_can_be_paid": "બિલની ચુકવણી ક્યારે થઈ શકે",
+      "when_a_bill_can_be_paid_desc": "દરેક ઓર્ડર પ્રકાર માટે. નિયમ પૂરો ન થાય ત્યાં સુધી ટિલ પર Pay બંધ રહે છે અને સર્વર ચુકવણી નકારે છે.",
+      "rule_anytime": "ગમે ત્યારે",
+      "rule_ready": "આઇટમ તૈયાર થયા પછી",
+      "rule_served": "આઇટમ પીરસાયા પછી",
+      "what_the_choices_mean": "વિકલ્પોનો અર્થ",
+      "explain_anytime": "ગમે ત્યારે: પહેલાં ચુકવણી લો. ટેકઅવે, કાઉન્ટર અને ડિલિવરી માટે સામાન્ય.",
+      "explain_ready": "આઇટમ તૈયાર થયા પછી: કિચનની દરેક આઇટમ બની ગઈ છે (તૈયાર અથવા પીરસાઈ ગઈ).",
+      "explain_served": "આઇટમ પીરસાયા પછી: કિચનની દરેક આઇટમ ટેબલ સુધી પહોંચી ગઈ છે. ડાઇન-ઇન માટે શ્રેષ્ઠ.",
+      "note_pay_anyway": "માલિક અને મેનેજર હંમેશા કારણ આપીને “છતાં ચુકવણી લો” વાપરી શકે છે; તે માલિકના પ્રવૃત્તિ લૉગમાં નોંધાય છે. જે આઇટમ કિચનમાં જતી નથી, ઑનલાઇન સ્ટોરના ઓર્ડર અને Swiggy / Zomato ના ઓર્ડર ક્યારેય રોકાતા નથી.",
+      "kitchen_screen": "કિચન સ્ક્રીન",
+      "kitchen_screen_desc": "ડાઇન-ઇન ટિકિટ પર બમ્પ શું કરે છે. ટેકઅવે, ડિલિવરી અને Swiggy / Zomato ટિકિટ બમ્પ થતાં હંમેશા પીરસાઈ તરીકે માર્ક થાય છે.",
+      "bump_marks_served": "બમ્પથી પીરસાયું માર્ક થાય",
+      "bump_marks_served_desc": "જો તમારી પાસે વેઇટર ન હોય (કાઉન્ટર સર્વિસ) તો ચાલુ કરો: ટિકિટ બમ્પ કરવાથી તેનો ખોરાક પણ પીરસાયો તરીકે માર્ક થાય છે. બંધ: બમ્પ ફક્ત ટિકિટ હટાવે છે અને વેઇટર ટેબલ પર ખોરાક પીરસાયો તરીકે માર્ક કરે છે."
+    },
     "FloorAlertsScreen": {
       "owners_and_managers_only": "ફક્ત માલિક અને મેનેજર",
       "ask_the_owner_or_a_manager_to_change_the": "ફ્લોર એલર્ટનો સમય બદલવા માલિક કે મેનેજરને કહો.",
@@ -2027,6 +2122,8 @@
       "back_to_settings": "સેટિંગ્સ પર પાછા"
     },
     "SettingsHome": {
+      "sign_out_of_this_device": "આ ડિવાઇસમાંથી સાઇન આઉટ કરવું છે?",
+      "sign_out_stops_kitchen_alerts": "કોઈ ફરી સાઇન ઇન ન કરે ત્યાં સુધી અહીં નવા ઓર્ડર બોલાશે નહીં કે દેખાશે નહીં.",
       "businessname_signed_in_as_v": "{{businessName}} · {{v}} તરીકે સાઇન ઇન",
       "business_profile": "વ્યવસાય પ્રોફાઇલ",
       "no_address_yet": "હજી કોઈ સરનામું નથી",
@@ -2095,6 +2192,7 @@
       "not_done": "કર્યું નથી"
     },
     "search": {
+      "when_bills_can_be_paid": "બિલની ચુકવણી ક્યારે થઈ શકે",
       "business_profile": "વ્યવસાય પ્રોફાઇલ",
       "gstin_fssai_invoices": "GSTIN, FSSAI અને ઇન્વૉઇસ",
       "upi_payments": "UPI અને ચુકવણી",
@@ -2113,6 +2211,7 @@
       "sign_out_delete_account": "સાઇન આઉટ અને એકાઉન્ટ ડિલીટ કરવું"
     },
     "sections": {
+      "when_bills_can_be_paid_and_what_bump_does": "બિલની ચુકવણી ક્યારે થાય, અને બમ્પ શું કરે છે",
       "setup_checklist_and_app_details": "સેટઅપ ચેકલિસ્ટ અને એપની માહિતી",
       "profile_upi_loyalty_online_ordering": "પ્રોફાઇલ, UPI, લૉયલ્ટી, ઓનલાઇન ઓર્ડરિંગ",
       "tax_classes_cgst_sgst_rate_changes": "ટેક્સ ક્લાસ, CGST/SGST, દરમાં ફેરફાર",
@@ -2676,6 +2775,8 @@
     },
     "staff_RolesTab": {
       "permissions": "પરવાનગીઓ",
+      "perm_kitchen_serve": "ટેબલ પર આઇટમ પીરસાઈ (Served) તરીકે માર્ક કરો",
+      "perm_orders_pay_override": "બધી આઇટમ પીરસાય તે પહેલાં ચુકવણી લો (કારણ પૂછાય છે, ઑડિટ લૉગમાં નોંધાય છે)",
       "roles": "ભૂમિકાઓ",
       "customcount_custom": " · {{customCount}} કસ્ટમ",
       "new_role": "નવી ભૂમિકા",
