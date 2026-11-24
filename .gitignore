@@ -76,3 +76,4 @@ docker-compose.override.yml
 # Database dumps (contain customer data)
 /backups/
 *.sql.gz
+backend/TraceNestLogs/app.log
