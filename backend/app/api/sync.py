@@ -14,8 +14,9 @@ from app.core.tenant import get_tenant_db
 from app.services.access import Access, get_access, require
 from app.models import Product, ProductCategory, TableEntity, Customer, Brand, TaxClass
 from app.schemas.billing import OrderCreate
-from app.services import order_service
+from app.services import audit, order_service
 from app.services.settings_service import get_settings, ensure_channels
+from app.services.stock_service import FORCE, StockCheck
 from app.api.catalog import serialize_product
 from app.api.admin import serialize_settings, serialize_channel
 from app.api.crm import serialize_customer
@@ -96,7 +97,14 @@ async def sync_push(data: SyncPushRequest, access: Access = Depends(require("ord
         try:
             async with db.begin_nested():  # one bad order must not undo the others
                 # No pay rules here (check=None): the money was already collected offline, so the bill must sync
-                order, created = await order_service.create_order(db, tenant_id, order_in, user_id=access.user_id, staff_id=access.staff_id)
+                # Offline bills always sync, even if stock goes below zero (stock: FORCE); staff get a warning
+                stock = StockCheck(policy=FORCE)
+                order, created = await order_service.create_order(db, tenant_id, order_in, user_id=access.user_id, staff_id=access.staff_id,
+                                                                  stock=stock)
+                if created and stock.short:
+                    items = ", ".join(f"{s['requested']} × {s['name']} ({s['available']} left)" for s in stock.short)
+                    audit.record(db, access, "stock.short", entity_type="order", entity_id=order.id,
+                                 summary=f"Offline bill {order.code} synced short on stock: {items}", details={"items": stock.short})
                 if created and order_in.payments and order.channel in order_service.GATED_CHANNELS:
                     gate = await order_service.pay_gate(db, tenant_id, order, await get_settings(db, tenant_id))
                     if gate["blocking"]:

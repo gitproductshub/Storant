@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Button, Chip, EmptyState, IconButton, Input, Text, VegMark, toast } from '@/components/ui';
 import { ApiError, errorMessage } from '@/api/client';
+import { stockShortFromError, stockShortMessage } from '@/lib/stock';
 import { PublicFooter, Notice } from '../PublicPage';
 import { PageTitle } from '../PageTitle';
 import { readJson, removeKey, writeJson } from '../storage';
@@ -242,6 +243,7 @@ export default function StoreScreen() {
   }, []);
 
   const onAdd = (p: MenuProduct) => {
+    if (p.sold_out) return; // the shop has none left (the server refuses it too)
     if (p.variants.length) {
       setVariantProduct(p);
       setVariantOpen(true);
@@ -302,6 +304,8 @@ export default function StoreScreen() {
         if (e.status === 429) return "You've placed several orders in a short time. Please wait a few minutes and try again.";
         if (e.network) return "Couldn't reach the shop. Check your connection and tap Place order again — it won't be duplicated.";
         if (e.status === 404) return 'This shop or table could not be found. Please ask the staff for help.';
+        const short = stockShortFromError(e);
+        if (short) { void load(); return stockShortMessage(short); } // sold out since the menu loaded: show it on the menu
         if (e.status === 409) return e.message;
         if (e.status >= 500) return "The shop's system had a problem. Please try again in a moment.";
         return e.message;

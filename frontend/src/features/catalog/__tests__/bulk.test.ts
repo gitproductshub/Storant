@@ -2,7 +2,7 @@ import type { Product } from '@/api/types';
 import {
   bulkCoversPrice, bulkPriceAction, chunk, filterMenu, menuCounts, parsePriceOp, planPrice, resultLine, runPool, sortMenu, withChannelAvailability,
 } from '../bulk';
-import { applyStockChange, clampQty, createScanBuffer, filterStock, stockCounts } from '../inventory/stockLogic';
+import { applyStockChange, atOrBelowZero, clampQty, createScanBuffer, filterStock, stockCounts, withStock } from '../inventory/stockLogic';
 import type { StockRow } from '@/api/types';
 
 const product = (over: Partial<Product> = {}): Product => ({
@@ -130,6 +130,16 @@ describe('inventory', () => {
     expect(filterStock(rows, 'out', '').map((r) => r.id)).toEqual(['a']);
     expect(filterStock(rows, 'all', '').map((r) => r.id)).toEqual(['b', 'a', 'c']);
     expect(filterStock(rows, 'all', 'atta').map((r) => r.id)).toEqual(['c']);
+  });
+
+  it('never counts an item that was never counted as out, and lists counted ones at or below zero', () => {
+    const uncounted = row({ id: 'u', name: 'Samosa', stock: 0, counted: false, is_low: false, stock_value: 0 });
+    const chai = row({ id: 'm', name: 'Masala Chai', stock: -4, is_low: true, sold_out: true });
+    expect(stockCounts([uncounted, chai])).toEqual({ all: 2, low: 1, out: 1 });
+    expect(filterStock([uncounted, chai], 'out', '').map((r) => r.id)).toEqual(['m']);
+    expect(atOrBelowZero([uncounted, chai, row()]).map((r) => r.id)).toEqual(['m']);
+    expect(withStock(uncounted, 10)).toMatchObject({ stock: 10, counted: true, sold_out: false, is_low: true, stock_value: 500 });
+    expect(applyStockChange(uncounted, 3)).toMatchObject({ is_low: false, sold_out: false, stock_value: 0 });
   });
 
   it('applies a quick change optimistically', () => {

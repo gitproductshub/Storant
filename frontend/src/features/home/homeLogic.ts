@@ -66,6 +66,9 @@ export function homeAlerts(data: Pick<Dashboard, 'widgets'> | null, opts: { owne
   if (bills?.online_waiting) alerts.push({ key: 'online', tone: 'warning', icon: 'bicycle-outline', text: t('home.alerts.online_waiting', { count: bills.online_waiting }), route: 'online' });
   const stock = widgetData(data, 'low_stock');
   if (stock?.out) alerts.push({ key: 'out_of_stock', tone: 'warning', icon: 'cube-outline', text: t('home.alerts.out_of_stock', { count: stock.out }), route: 'inventory' });
+  if (stock?.short_orders) {
+    alerts.push({ key: 'short_orders', tone: 'danger', icon: 'alert-circle-outline', text: t('home.alerts.short_orders', { count: stock.short_orders }), route: 'inventory' });
+  }
   const sub = opts.subscription;
   if (opts.owner && sub && !sub.locked) {
     if (sub.state === 'grace') alerts.push({ key: 'plan_grace', tone: 'danger', icon: 'card-outline', text: t('home.alerts.plan_grace'), route: 'subscription' });

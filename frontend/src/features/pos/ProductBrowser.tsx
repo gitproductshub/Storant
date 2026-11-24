@@ -14,6 +14,7 @@ import { fonts } from '@/theme/tokens';
 import { money } from '@/lib/format';
 import { unitPriceFor } from '@/lib/billing';
 import { matchesQuery } from './totals';
+import { stockMark, type StockMark } from '@/lib/stock';
 import { gridMetrics, listMetrics, moveHighlight, rowLayout, scrollToReveal, type Direction, type ProductView } from './posLayout';
 import { t } from '@/i18n';
 
@@ -46,12 +47,16 @@ export interface ProductBrowserProps {
   emptyMenu: React.ReactNode;
   bottomInset?: number;
   header?: React.ReactNode;
+  /** Sold-out items are refused here (Inventory on, selling at zero not allowed): their tiles grey out */
+  stockBlocking?: boolean;
+  /** Business alert level for "N left" (items without their own) */
+  lowStockDefault?: number;
 }
 
 export function ProductBrowser(props: ProductBrowserProps) {
   const {
     products, categories, query, onQueryChange, onSubmitSearch, onPick, onDecrement, inCart, currency, adjustPct, channel = 'POS', searchRef, onScan,
-    autoFocusSearch, actions, emptyMenu, bottomInset = 0, header, view, onViewChange, keyboard,
+    autoFocusSearch, actions, emptyMenu, bottomInset = 0, header, view, onViewChange, keyboard, stockBlocking = false, lowStockDefault = 10,
   } = props;
   const { colors, radius } = useTheme();
   const finePointer = useShowShortcuts();
@@ -136,17 +141,19 @@ export function ProductBrowser(props: ProductBrowserProps) {
   const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => {
     const qty = inCart.get(item.id) ?? 0;
     const isHl = showHl && index === hl;
+    const mark = stockMark(item, lowStockDefault, stockBlocking);
     if (isGrid) {
       return (
         <ProductTile product={item} index={index} width={grid.tileWidth} height={grid.tileHeight} gapBelow={grid.gap} compact={compact} qty={qty}
-          adjustPct={adjustPct} channel={channel} currency={currency} accent={accentFor(item)} highlighted={isHl} onPick={pick} />
+          adjustPct={adjustPct} channel={channel} currency={currency} accent={accentFor(item)} highlighted={isHl} onPick={pick} stock={mark} />
       );
     }
     return (
       <ProductRow product={item} index={index} height={list.rowHeight} qty={qty} adjustPct={adjustPct} channel={channel} currency={currency}
-        highlighted={isHl} onPick={pick} onDecrement={onDecrement} />
+        highlighted={isHl} onPick={pick} onDecrement={onDecrement} stock={mark} />
     );
-  }, [inCart, showHl, hl, isGrid, grid.tileWidth, grid.tileHeight, grid.gap, compact, adjustPct, channel, currency, accentFor, pick, list.rowHeight, onDecrement]);
+  }, [inCart, showHl, hl, isGrid, grid.tileWidth, grid.tileHeight, grid.gap, compact, adjustPct, channel, currency, accentFor, pick, list.rowHeight, onDecrement,
+    lowStockDefault, stockBlocking]);
 
   const getItemLayout = useCallback((_: unknown, index: number) => rowLayout(rowSpan, 0, index), [rowSpan]);
   const initialRows = Math.ceil(800 / rowSpan) + 1;
@@ -250,10 +257,30 @@ function tilePrice(value: number, currency: string): string {
 interface ItemProps {
   product: Product; index: number; qty: number; adjustPct: number; channel: ChannelCode; currency: string; highlighted: boolean;
   onPick: (p: Product, index: number) => void;
+  /** "Sold out" (greyed) or "N left" */
+  stock?: StockMark | null;
+}
+
+/** Spoken label part and the small text shown on the tile / row. */
+function stockText(stock: StockMark | null | undefined): string | null {
+  if (!stock) return null;
+  return stock.kind === 'out' ? t('stock.sold_out') : t('stock.n_left', { count: stock.left });
+}
+
+/** "Sold out" / "N left" pill (not pressable: it sits inside the tile's button). */
+function StockPill({ stock }: { stock: StockMark }) {
+  const { colors, radius } = useTheme();
+  const out = stock.kind === 'out';
+  return (
+    <View style={{ alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.sm,
+      backgroundColor: out ? colors.dangerSoft : colors.warningSoft }}>
+      <Text variant="caption" color={out ? colors.dangerText : colors.warningText} numberOfLines={1}>{stockText(stock)}</Text>
+    </View>
+  );
 }
 
 /** Grid tile: fixed size, name on two lines, price, quantity already on the bill. */
-const ProductTile = memo(function ProductTile({ product, index, width, height, gapBelow, compact, qty, adjustPct, channel, currency, accent, highlighted, onPick }: ItemProps & {
+const ProductTile = memo(function ProductTile({ product, index, width, height, gapBelow, compact, qty, adjustPct, channel, currency, accent, highlighted, onPick, stock }: ItemProps & {
   width: number; height: number; gapBelow: number; compact: boolean; accent: string;
 }) {
   const { colors, radius } = useTheme();
@@ -265,9 +292,10 @@ const ProductTile = memo(function ProductTile({ product, index, width, height, g
     <Pressable
       onPress={() => onPick(product, index)}
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${money(showFrom ? fromPrice! : price, currency)}${hasVariants ? t('pos.ProductBrowser.has_options') : ''}${qty ? t('pos.ProductBrowser.qty_in_bill', { qty }) : ''}`}
+      accessibilityLabel={`${product.name}, ${money(showFrom ? fromPrice! : price, currency)}${hasVariants ? t('pos.ProductBrowser.has_options') : ''}${qty ? t('pos.ProductBrowser.qty_in_bill', { qty }) : ''}${stock ? `, ${stockText(stock)}` : ''}`}
       style={({ pressed, hovered }: any) => [
         styles.tile,
+        stock?.kind === 'out' && { opacity: 0.55 },
         {
           width, height, marginBottom: gapBelow,
           padding: compact ? 8 : 10,
@@ -290,6 +318,7 @@ const ProductTile = memo(function ProductTile({ product, index, width, height, g
           </View>
         ) : null}
       </View>
+      {stock ? <StockPill stock={stock} /> : null}
       <View style={styles.tileBottom}>
         <VegMark veg={product.is_veg} size={11} />
         <Text variant="money" style={[{ fontSize: compact ? 14 : 15, flexShrink: 1 }, styles.num]} numberOfLines={1}>
@@ -306,7 +335,7 @@ const ProductTile = memo(function ProductTile({ product, index, width, height, g
 });
 
 /** List row: name, price and a +/- stepper with the quantity already on the bill. */
-const ProductRow = memo(function ProductRow({ product, index, height, qty, adjustPct, channel, currency, highlighted, onPick, onDecrement }: ItemProps & {
+const ProductRow = memo(function ProductRow({ product, index, height, qty, adjustPct, channel, currency, highlighted, onPick, onDecrement, stock }: ItemProps & {
   height: number; onDecrement: (p: Product) => void;
 }) {
   const { colors, radius } = useTheme();
@@ -318,14 +347,15 @@ const ProductRow = memo(function ProductRow({ product, index, height, qty, adjus
   return (
     <View style={[styles.row, { height, borderBottomColor: colors.divider }, highlighted && { backgroundColor: colors.selectedRow, borderRadius: radius.sm }]}>
       <Pressable onPress={() => onPick(product, index)} accessibilityRole="button"
-        accessibilityLabel={t('pos.ProductBrowser.name_money_v_add_one', { name: product.name, money: money(showFrom ? fromPrice! : price, currency), v: hasVariants ? t('pos.ProductBrowser.has_options') : '' })}
+        accessibilityLabel={`${t('pos.ProductBrowser.name_money_v_add_one', { name: product.name, money: money(showFrom ? fromPrice! : price, currency), v: hasVariants ? t('pos.ProductBrowser.has_options') : '' })}${stock ? `, ${stockText(stock)}` : ''}`}
         style={({ hovered }: any) => [styles.rowMain, { borderRadius: radius.sm }, hovered && { backgroundColor: colors.surfaceAlt },
           highlighted && Platform.OS === 'web' && ({ boxShadow: `inset 0 0 0 2px ${colors.focus}` } as any),
           Platform.OS === 'web' && ({ cursor: 'pointer', userSelect: 'none' } as any)]}>
         <VegMark veg={product.is_veg} size={12} />
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={{ flex: 1, minWidth: 0, opacity: stock?.kind === 'out' ? 0.55 : 1 }}>
           <Text variant="bodyStrong" numberOfLines={1}>{product.name}</Text>
-          {hasVariants && height >= 52 ? <Text variant="caption" tone="subtle" numberOfLines={1}>{product.variants.map((v) => v.name).join(' / ')}</Text> : null}
+          {stock ? <StockPill stock={stock} /> : null}
+          {hasVariants && height >= 52 && !stock ? <Text variant="caption" tone="subtle" numberOfLines={1}>{product.variants.map((v) => v.name).join(' / ')}</Text> : null}
         </View>
         <Text variant="money" style={[styles.rowPrice, styles.num]} numberOfLines={1}>
           {tilePrice(showFrom ? fromPrice! : price, currency)}{showFrom ? '+' : ''}

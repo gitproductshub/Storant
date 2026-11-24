@@ -25,6 +25,8 @@ PROTECTED_ROUTES = [
     ("post", "/api/v1/sync/push"),
     ("post", "/api/v1/catalog/bulk-import"),
     ("get", "/api/v1/dashboard"),
+    ("get", "/api/v1/catalog/stock"),
+    ("post", "/api/v1/inventory/count"),
 ]
 
 @pytest.mark.asyncio

@@ -56,6 +56,8 @@ class OrderCreate(BaseModel):
     guests: int | None = Field(None, ge=1, le=500)
     # Owner / manager paying before the food is served ("Pay anyway"); written to the audit log
     override_reason: str | None = Field(None, min_length=3, max_length=200)
+    # Owner / manager selling items that are sold out or short ("Sell anyway", needs inventory.manage); audited
+    stock_override_reason: str | None = Field(None, min_length=3, max_length=200)
 
     @field_validator("channel")
     @classmethod
@@ -65,6 +67,7 @@ class OrderCreate(BaseModel):
 class OrderAddItems(BaseModel):
     items: List[OrderItemIn] = Field(min_length=1, max_length=200)
     send_to_kitchen: bool = True
+    stock_override_reason: str | None = Field(None, min_length=3, max_length=200)  # "Sell anyway" (inventory.manage)
 
 class OrderPay(BaseModel):
     payments: List[PaymentIn] = Field(min_length=1, max_length=10)

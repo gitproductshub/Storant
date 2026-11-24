@@ -64,6 +64,8 @@ class BusinessSettings(Base):
     # Kitchen screen: Bump also marks dine-in items served (counter-service places without waiters). Off = Bump only clears the ticket.
     bump_marks_served = Column(Boolean, default=False, server_default="false", nullable=False)
     low_stock_default = Column(Integer, default=10, server_default="10", nullable=False)
+    # Sell tracked items even when the stock counter is at or below zero (off = sold-out items are blocked)
+    allow_sell_at_zero = Column(Boolean, default=False, server_default="false", nullable=False)
     disabled_modules = Column(JSON, nullable=True)  # modules the owner chose to hide (subset of their plan)
     email_enabled = Column(Boolean, default=True, server_default="true", nullable=False)
     email_sender_name = Column(String, nullable=True)

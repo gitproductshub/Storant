@@ -6,9 +6,11 @@
  * - BILL_CLOSED: the bill is paid, cancelled or merged; `details.status` says which.
  * - BILL_PART_PAID: items can't be added to a bill that already has a payment.
  * - INVALID_INDIAN_MOBILE: sign-up / sign-in mobile number isn't 10 digits starting 6-9 (lib/phone.ts).
+ * - STOCK_SHORT: an item is sold out or short (lib/stock.ts); `details.items` names them.
  */
 import { t } from '@/i18n';
 import { payBlockedMessage, payGateFromError } from './payGate';
+import { stockShortFromError, stockShortMessage } from './stock';
 
 export function billClosedStatus(error: unknown): string | null {
   const e = error as { code?: unknown; details?: unknown } | null;
@@ -30,5 +32,7 @@ export function localisedServerMessage(error: unknown): string | null {
   const e = error as { code?: unknown } | null;
   if (e?.code === 'BILL_PART_PAID') return t('pos.billErrors.bill_part_paid');
   if (e?.code === 'INVALID_INDIAN_MOBILE') return t('common.enter_valid_indian_mobile');
+  const short = stockShortFromError(error);
+  if (short) return stockShortMessage(short);
   return null;
 }

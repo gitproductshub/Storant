@@ -43,6 +43,8 @@ backend/  FastAPI (Python 3.11)
                          menu_history.py (append-only product versions), records_admin.py (super admin archive/delete),
                          subscription.py (demo/paid/development periods, lock, offers, daily 01:00 IST check), sessions.py (devices),
                          email/ (templates, queue + SMTP worker),
+                         stock_service.py (the only code that changes stock: ledger + products.stock_on_hand counter, lines take
+                         stock when saved, give-backs, sold-out rules and row locks, StockCheck policies),
                          dashboard.py (Home widget catalog: permissions × plan keys × business type, money removed per person),
                          dashboard_cache.py (Redis, local fallback when Redis is down/slow), sales_window.py ("today", "sold",
                          payments/hourly/top items/staff numbers shared by Reports and Home),
@@ -55,7 +57,7 @@ backend/  FastAPI (Python 3.11)
                          erd_drawio.py (regenerates docs/diagrams/Tallyko_Database_ERD.drawio from the models; rerun after schema changes)
   manage.py              migrate | rollback | status | make:migration | db:sync | db:check | refresh | fresh | seed | watch |
                          subscriptions:check | create:superadmin
-  alembic/versions/      0001…0066, one per table; env.py assigns sequential ids and adds RLS for TENANT_RLS models
+  alembic/versions/      0001…0067, one per table (0067: stock counter, one file by agreement); env.py assigns sequential ids and adds RLS for TENANT_RLS models
   tests/                 unit (pricing, OCR parser) + integration (real Postgres/Redis): auth, catalog, orders, offers, taxes/email, access/platform,
                          kitchen, sync, public/integrations, tenant isolation, AI
 frontend/ Expo SDK 57 · RN 0.86 · React 19 · TS strict · expo-router
@@ -137,6 +139,11 @@ docker compose -f docker-compose.prod.yml up -d --build         # production (ne
   only sets `kots.bumped_at`; it serves food only for non-dine-in tickets or when `bump_marks_served` is on.
 - Changing or paying a bill: load it with `load_order(..., for_update=True)` (two bills: `lock_orders` first, fixed order);
   closed bills raise `bill_closed_error(order)`, part-paid bills take no new items.
+- **Stock only through `app/services/stock_service.py`** (never insert `InventoryLog` or touch `products.stock_on_hand`
+  yourself): a line takes stock when it is saved on a bill (`order_items.stock_held`), every cancel / void / reject path gives
+  it back, payment cuts only unheld lines. Lock the bill first, then products (stock_service does it, in id order). Sales
+  channels pass a `StockCheck`: strict at the till / QR / online store (409 `STOCK_SHORT`, "Sell anyway" with
+  `inventory.manage` + reason), FORCE for delivery webhooks, offline sync and seeders. `manage.py stock:check` finds drift.
 - Tests: `@pytest.mark.asyncio` + fixtures `client`, `tenant_a`, `tenant_b`, `fresh_tenant`, helpers `create_staff`, `create_product`,
   `serve_all` (serve a bill's kitchen items before paying a dine-in bill), `random_client_ip` in `tests/conftest.py`.
 
@@ -165,7 +172,9 @@ discounts, menu changes by staff), menu versions with restore and bulk menu edit
 (own bill per guest, pay at counter or UPI claim), server-paged lists with counts (orders, customers, businesses, requests), aggregator channels + webhook, brands, kitchen, inventory, CRM, reports (incl. staff performance), public menu + QR/online ordering, offline sync, menu-photo OCR. Dine-in pay rules (pay after served, Pay anyway with audited reason), Bump vs Served (`kitchen.serve`), Kitchen rules settings and row-locked bills, Hindi voice alerts (kitchen new orders; floor "ready" + reminders until served) (v2.0.0 + pay-flow work, Nov 2026).
 Home dashboard for every role (Nov 2026, `docs/features/020_Role_Dashboards.md`): every business login lands on `/home`; widgets
 come from permissions, plan keys `dashboard_insights` / `dashboard_live` (migration 0066) and business type; numbers shared with
-Reports; kitchen voice works on Home too; Home has no Sign out of its own (Settings → Account, More, sidebar). Test counts change as tests are added: run the suites (see Running things) rather than trusting a number here.
+Reports; kitchen voice works on Home too; Home has no Sign out of its own (Settings → Account, More, sidebar).
+Stock counter and sold out (Nov 2026, `docs/features/007_Inventory_Management.md` §5): stock taken when a line is saved, under
+a row lock; "N left" / Sold out on POS, QR and online store; delivery apps and offline bills accepted short with a warning. Test counts change as tests are added: run the suites (see Running things) rather than trusting a number here.
 Demo logins (dev dropdown, password `Demo@1234`): restaurant, retail, cloud kitchen (Swiggy/Zomato prices) and a locked café owner;
 managers, cashiers, waiters, kitchen; 2 super admins, 2 support. Demo businesses run on development access.
 Frontend rebuilt on Expo SDK 57 and redesigned to `docs/20_High_Volume_UX.md` (checked at 390/820/1180/1366/1920 widths).
@@ -187,6 +196,8 @@ Docs: `docs/diagrams/` holds Mermaid (`mermaid/*.mmd`, rendered SVGs) and draw.i
 12. Voice alerts (`lib/voice.ts`) speak only on web / PWA (browser `speechSynthesis`, needs one tap, a Hindi voice on the device and the screen on); the native apps have no voice engine yet and nothing reaches a locked phone (no push notifications).
 13. Home dashboard: no indexes added for open bills / active tickets (measure with EXPLAIN on large data first); no average
     prep time (needs `kots.ready_at`); "today" ends at midnight (no business-day cutoff); see `docs/features/020_Role_Dashboards.md`.
+14. Stock: whole numbers only (no kg / litre), variants share the item's stock, no recipes, one location; Swiggy / Zomato
+    aren't told when an item sells out (incoming webhook only); Repeat in the running bill can't "Sell anyway".
 
 ## Project skills and agents
 

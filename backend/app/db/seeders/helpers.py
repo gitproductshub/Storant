@@ -10,6 +10,7 @@ from app.models import GlobalUser, TenantUser
 from app.schemas.auth import VendorSignupRequest
 from app.schemas.billing import OrderCreate, OrderItemIn, PaymentIn
 from app.services import auth_service, order_service
+from app.services.stock_service import FORCE, StockCheck
 
 async def find_account(session: AsyncSession, email: str) -> GlobalUser | None:
     return (await session.execute(select(GlobalUser).where(func.lower(GlobalUser.email) == email.lower()))).scalars().first()
@@ -76,7 +77,7 @@ async def generate_sales_history(db: AsyncSession, tenant_id: str, products: lis
             )
             if customers and rng.random() < 0.3:
                 body.customer_name, body.customer_phone = rng.choice(customers)
-            order, _ = await order_service.create_order(db, tenant_id, body)
+            order, _ = await order_service.create_order(db, tenant_id, body, stock=StockCheck(policy=FORCE))  # history: never refused
             await order_service.pay(db, tenant_id, order.id,
                                     [PaymentIn(method=rng.choice(["CASH", "UPI", "UPI", "CARD"]), amount=float(order.total_amount))], None, None)
             await db.commit()

@@ -1,7 +1,8 @@
 import uuid
 from sqlalchemy.future import select
 from app.core.tenant import open_tenant_session
-from app.models import BusinessSettings, InventoryLog, Product, ProductCategory, TaxClass
+from app.models import BusinessSettings, Product, ProductCategory, TaxClass
+from app.services import stock_service
 from app.services.settings_service import get_default_location
 from app.db.seeders.base import Seeder
 from app.db.seeders import demo_data as data
@@ -37,8 +38,8 @@ class DemoRetailSeeder(Seeder):
                                       cost_price=round(mrp * 0.82, 2))
                     db.add(product)
                     await db.flush()
-                    db.add(InventoryLog(tenant_id=tenant_id, product_id=product.id, location_id=location.id,
-                                        quantity_change=stock, reason="restock", note="Opening stock"))
+                    await stock_service.record_entry(db, tenant_id, product, stock, "restock", location_id=location.id,
+                                                     note="Opening stock")
                     products.append(product)
             await db.commit()
 

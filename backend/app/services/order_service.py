@@ -17,10 +17,11 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from app.models import (Order, OrderItem, Payment, Product, KOT, TableEntity, Customer, InventoryLog, Brand, BusinessSettings,
+from app.models import (Order, OrderItem, Payment, Product, KOT, TableEntity, Customer, Brand, BusinessSettings,
                         Offer, OfferRedemption, TenantUser)
 from app.schemas.billing import OrderCreate, OrderItemIn, PaymentIn, DiscountIn
-from app.services import counters
+from app.services import counters, stock_service
+from app.services.stock_service import StockCheck
 from app.services import offers as offer_engine
 from app.services.pricing import PricedLine, price_order, money, ZERO
 from app.services.settings_service import get_settings, get_channel, get_default_location, pay_rules_of, AGGREGATOR_CHANNELS
@@ -320,9 +321,11 @@ async def _release_table(db: AsyncSession, order: Order) -> None:
         table.status, table.current_order_id = "free", None
 
 async def create_order(db: AsyncSession, tenant_id: str, data: OrderCreate, user_id: str | None = None,
-                       public: bool = False, staff_id: str | None = None, check: PayCheck | None = None) -> tuple[Order, bool]:
+                       public: bool = False, staff_id: str | None = None, check: PayCheck | None = None,
+                       stock: StockCheck | None = None) -> tuple[Order, bool]:
     """Returns (order, created). Re-sending the same `id` returns the existing order unchanged.
-    `check`: pay rules for payments sent with a new bill at the till; None for offline replays, public and aggregator orders."""
+    `check`: pay rules for payments sent with a new bill at the till; None for offline replays, public and aggregator orders.
+    `stock`: how sold-out items are treated (None = strict: refuse with STOCK_SHORT); see app.services.stock_service."""
     if data.id:
         existing = await db.execute(select(Order.id).where(Order.id == data.id, Order.tenant_id == tenant_id))
         if existing.first():
@@ -382,6 +385,7 @@ async def create_order(db: AsyncSession, tenant_id: str, data: OrderCreate, user
 
     rows = _build_item_rows(order, data.items, products, taxes, Decimal(channel.price_adjust_pct or 0))
     db.add_all(rows)
+    await stock_service.take_for_lines(db, tenant_id, order, rows, stock, staff_id=staff_id)  # the new bill is the only lock it needs
     flat, percent = _discount_parts(data.discount)
     flat += await _redeem_value(db, order, settings, data.redeem_points)
     order.loyalty_points_redeemed = data.redeem_points
@@ -408,7 +412,9 @@ async def create_order(db: AsyncSession, tenant_id: str, data: OrderCreate, user
                 extra={"tenant_id": tenant_id})
     return order, True
 
-async def add_items(db: AsyncSession, tenant_id: str, order_id, items: list[OrderItemIn], send_to_kitchen: bool) -> Order:
+async def add_items(db: AsyncSession, tenant_id: str, order_id, items: list[OrderItemIn], send_to_kitchen: bool,
+                    stock: StockCheck | None = None, staff_id=None) -> Order:
+    """More items on a running bill (also Repeat and a guest adding to their QR bill). Stock: None = strict."""
     order = await load_order(db, tenant_id, order_id, for_update=True)  # waits for a payment in progress on this bill
     if order.status not in OPEN_STATUSES:
         raise bill_closed_error(order)
@@ -420,6 +426,7 @@ async def add_items(db: AsyncSession, tenant_id: str, order_id, items: list[Orde
     taxes = await TaxResolver.load(db, tenant_id, settings, inter_state=order.supply_type == "inter")
     rows = _build_item_rows(order, items, products, taxes, Decimal(channel.price_adjust_pct or 0) if channel else ZERO)
     db.add_all(rows)
+    await stock_service.take_for_lines(db, tenant_id, order, rows, stock, staff_id=staff_id)  # bill locked above, products next
     await _price(db, tenant_id, order, list(order.items) + rows, settings, flat=_manual_discount(order), percent=ZERO)
     if send_to_kitchen and order.status == "open":
         await _create_kot(db, tenant_id, order, rows, products)
@@ -447,6 +454,7 @@ async def remove_item(db: AsyncSession, tenant_id: str, order_id, item_id, can_v
     item.void_reason = item.void_reason or ("Cancelled" if item.kot_id else "Removed before sending to the kitchen")
     item.voided_by, item.status_at = staff_id, datetime.utcnow()
     item.subtotal, item.tax_amount = ZERO, ZERO
+    await stock_service.give_back_lines(db, tenant_id, order, [item], reason="void", staff_id=staff_id)
     remaining = [i for i in order.items if i.id != item_id]
     settings = await get_settings(db, tenant_id)
     await _price(db, tenant_id, order, remaining, settings, flat=_manual_discount(order), percent=ZERO)
@@ -603,7 +611,9 @@ async def _finalize(db: AsyncSession, tenant_id: str, order: Order, settings: Bu
         order.invoice_no = await counters.next_invoice_no(db, tenant_id, settings.invoice_prefix or "INV")
     await _release_table(db, order)
     if not order.stock_deducted:
-        await _move_stock(db, tenant_id, order, direction=-1, reason="sale")
+        # Lines saved on the bill already hold their stock; only lines that don't (saved before stock was taken on save,
+        # free offer items) cut it now, so nothing is ever deducted twice
+        await stock_service.take_unheld_at_payment(db, tenant_id, order)
         order.stock_deducted = True
     if order.offer_id:
         existing = await db.execute(select(OfferRedemption.id).where(OfferRedemption.order_id == order.id))
@@ -656,30 +666,18 @@ async def _queue_customer_emails(db: AsyncSession, tenant_id: str, order: Order,
                               {**base, "visits": visits, "offer_name": reward.name, "offer_details": offer_engine.describe(reward),
                                "offer_code": reward.code or ""}, customer_id=customer.id, order_id=order.id, offer_id=reward.id)
 
-async def _move_stock(db: AsyncSession, tenant_id: str, order: Order, direction: int, reason: str) -> None:
-    ids = {i.product_id for i in order.items}
-    if not ids:
-        return
-    result = await db.execute(select(Product).where(Product.id.in_(ids), Product.tenant_id == tenant_id, Product.track_stock == True))
-    tracked = {p.id for p in result.scalars().all()}
-    for item in billable(order.items):
-        if item.product_id in tracked:
-            db.add(InventoryLog(id=uuid.uuid4(), tenant_id=tenant_id, product_id=item.product_id, location_id=order.location_id,
-                                quantity_change=direction * item.quantity, reason=reason, order_id=order.id,
-                                note=f"Bill {order.invoice_no or order.code}", created_at=datetime.utcnow()))
-
 async def cancel(db: AsyncSession, tenant_id: str, order_id, reason: str) -> Order:
-    order = await load_order(db, tenant_id, order_id)
+    order = await load_order(db, tenant_id, order_id, for_update=True)  # no items can be added while it is being cancelled
     if order.status == "cancelled":
         return order
     was_completed = order.status == "completed"
     order.status = "cancelled"
     order.cancel_reason = reason
     await _release_table(db, order)
-    if order.stock_deducted:
-        await _move_stock(db, tenant_id, order, direction=1, reason="return")
-        order.stock_deducted = False
-    redemption = (await db.execute(select(OfferRedemption).where(OfferRedemption.order_id == order.id))).scalars().first()
+    # Every way a bill ends without a sale comes here (cancel, online order rejected, archived or deleted by Storant):
+    # whatever it holds, or what its payment cut, goes back on the shelf
+    await stock_service.give_back_order(db, tenant_id, order)
+    redemption =(await db.execute(select(OfferRedemption).where(OfferRedemption.order_id == order.id))).scalars().first()
     if redemption:
         offer = await db.get(Offer, redemption.offer_id)
         if offer:

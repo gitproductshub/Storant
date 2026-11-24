@@ -68,6 +68,8 @@ export interface BusinessSettings {
   store_enabled: boolean;
   qr_ordering_enabled: boolean;
   low_stock_default: number;
+  /** Sell tracked items at or below zero (off = sold-out items are blocked) */
+  allow_sell_at_zero?: boolean;
   /** regular = tax invoice with GST; composition / unregistered = bill of supply without GST */
   gst_registration?: 'regular' | 'composition' | 'unregistered';
   /** Tax class used for items without their own class */
@@ -120,6 +122,10 @@ export interface Product {
   track_stock: boolean;
   low_stock_threshold: number | null;
   sort_order: number;
+  /** Stock counter (null: untracked or tracked but never counted) — see lib/stock.ts */
+  stock?: number | null;
+  /** Counted and at or below zero */
+  sold_out?: boolean;
   variants: Variant[];
   /** GST class (Settings › GST & taxes); null = business default (or the legacy tax_rate when set) */
   tax_class_id?: string | null;
@@ -298,6 +304,15 @@ export interface OrderCreateInput {
   offer_code?: string | null;
   /** Let the server add the best auto-apply offer when none is chosen (server default: true) */
   auto_offers?: boolean;
+  /** Owner / manager selling sold-out or short items anyway (inventory.manage); audited */
+  stock_override_reason?: string;
+}
+
+/** GET /catalog/stock: live stock of tracked items (changed since `since`, or all) */
+export interface StockLevels {
+  server_time: string;
+  blocking: boolean;
+  items: { id: string; stock: number | null; sold_out: boolean }[];
 }
 
 export interface KitchenTicket {
@@ -323,9 +338,13 @@ export interface StockRow {
   category_id: string | null;
   barcode: string | null;
   unit: string;
+  /** The stock counter (0 when never counted) */
   stock: number;
+  /** false: tracked but never counted — never low or sold out; "Set count" starts it */
+  counted?: boolean;
   low_stock_threshold: number;
   is_low: boolean;
+  sold_out?: boolean;
   cost_price: number | null;
   stock_value: number;
 }
@@ -389,5 +408,6 @@ export interface PublicMenu {
   business: { name: string; address: string | null; phone: string | null; currency_symbol: string; prices_include_tax: boolean; fssai: string | null };
   ordering: { store: boolean; qr: boolean };
   categories: { id: string; name: string }[];
-  products: { id: string; name: string; description: string | null; price: number; category_id: string | null; is_veg: boolean | null; variants: Variant[] }[];
+  /** `sold_out`: the shop's stock is gone (guests never see how many are left) */
+  products: { id: string; name: string; description: string | null; price: number; category_id: string | null; is_veg: boolean | null; variants: Variant[]; sold_out?: boolean }[];
 }

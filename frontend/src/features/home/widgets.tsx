@@ -190,7 +190,8 @@ function WidgetBody({ widget, symbol, now, large }: { widget: DashboardWidget; s
         <>
           <Big value={String(d.count)} label={t('home.widgets.items_low')} tone={d.count ? 'warning' : 'default'} />
           {d.out ? <Line tone="warning">{t('home.widgets.out_of_stock', { count: d.out })}</Line> : null}
-          {!d.count ? <Line>{t('home.widgets.all_clear')}</Line> : null}
+          {d.short_orders ? <Line tone="danger">{t('home.widgets.short_orders', { count: d.short_orders })}</Line> : null}
+          {!d.count && !d.short_orders ? <Line>{t('home.widgets.all_clear')}</Line> : null}
         </>
       );
     }

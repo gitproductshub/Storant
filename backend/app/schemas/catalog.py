@@ -79,6 +79,8 @@ class ProductResponse(BaseModel):
     track_stock: bool = False
     low_stock_threshold: Optional[int] = None
     sort_order: int = 0
+    stock: Optional[int] = None  # stock counter; null = not tracked or never counted
+    sold_out: bool = False  # counted and at or below zero
     variants: List[VariantResponse] = []
 
 class BulkImportItem(BaseModel):

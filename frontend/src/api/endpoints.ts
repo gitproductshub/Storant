@@ -1,7 +1,7 @@
 import { api, headerJson, headerNumber, request } from './client';
 import type {
   AuthResponse, BusinessSettings, Brand, Category, Customer, KitchenTicket, MenuScanResult, Order, OrderCreateInput,
-  OrderItemInput, PaymentInput, DiscountInput, Product, PublicMenu, SalesChannel, SalesSummary, StaffMember, StockRow,
+  OrderItemInput, PaymentInput, DiscountInput, Product, PublicMenu, SalesChannel, SalesSummary, StaffMember, StockLevels, StockRow,
   SyncPullResponse, TableInfo, BusinessType, Role, AccessInfo,
 } from './types';
 
@@ -34,6 +34,8 @@ export const catalogApi = {
   products: (query?: { q?: string; category_id?: string; include_inactive?: boolean }) => api.get<Product[]>('/catalog/products', { query }),
   product: (id: string) => api.get<Product>(`/catalog/products/${id}`),
   byBarcode: (code: string) => api.get<Product>(`/catalog/products/by-barcode/${encodeURIComponent(code)}`),
+  /** Live stock for the POS (tracked items changed since `since`) */
+  stock: (since?: string | null) => api.get<StockLevels>('/catalog/stock', since ? { query: { since } } : undefined),
   createProduct: (body: Record<string, unknown>) => api.post<Product>('/catalog/products', body),
   updateProduct: (id: string, body: Record<string, unknown>) => api.put<Product>(`/catalog/products/${id}`, body),
   deleteProduct: (id: string) => api.delete(`/catalog/products/${id}`),
@@ -54,7 +56,8 @@ export const ordersApi = {
     api.get<{ items: Order[]; total: number }>('/orders', { query }),
   get: (id: string) => api.get<Order>(`/orders/${id}`),
   create: (body: OrderCreateInput) => api.post<Order>('/orders', body),
-  addItems: (id: string, items: OrderItemInput[], send_to_kitchen = true) => api.post<Order>(`/orders/${id}/items`, { items, send_to_kitchen }),
+  addItems: (id: string, items: OrderItemInput[], send_to_kitchen = true, stockOverrideReason?: string | null) =>
+    api.post<Order>(`/orders/${id}/items`, { items, send_to_kitchen, ...(stockOverrideReason ? { stock_override_reason: stockOverrideReason } : {}) }),
   removeItem: (id: string, itemId: string) => api.delete<Order>(`/orders/${id}/items/${itemId}`),
   pay: (id: string, payments: PaymentInput[], discount?: DiscountInput | null, redeem_points?: number | null) =>
     api.post<Order>(`/orders/${id}/pay`, { payments, ...(discount ? { discount } : {}), ...(redeem_points ? { redeem_points } : {}) }),
@@ -83,7 +86,9 @@ export const inventoryApi = {
   lowStock: () => api.get<StockRow[]>('/inventory/low-stock'),
   logs: (product_id?: string) => api.get('/inventory/logs', { query: { product_id } }),
   adjust: (body: { product_id: string; quantity: number; reason: 'restock' | 'wastage' | 'adjustment' | 'return'; note?: string; unit_cost?: number }) =>
-    api.post('/inventory/adjust', body),
+    api.post<{ success: boolean; stock: number | null }>('/inventory/adjust', body),
+  /** Set count: the shelf has `quantity` now (starts counting a tracked item that was never counted) */
+  count: (body: { product_id: string; quantity: number; note?: string }) => api.post<{ success: boolean; stock: number }>('/inventory/count', body),
 };
 
 export type CustomerServerSort = 'recent' | 'name' | 'points' | 'spent' | 'visits';

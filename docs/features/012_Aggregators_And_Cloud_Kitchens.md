@@ -12,6 +12,8 @@
 
 **Different prices and menus per app:** each menu item can have its own price on Swiggy, Zomato, ONDC, the online store or QR, and can be left off any of them (e.g. a "Swiggy Saver Combo" only on Swiggy, a family pack only on Zomato). Items without their own app price use that channel's mark-up %. Settings → Sales channels → *View menu* shows exactly what each app sells, with export for the partner portal. Billing refuses an item that isn't on the chosen channel's menu.
 
+**Stock:** a delivery-app order is never refused because an item ran out: it is accepted, the item's stock may go below zero, and the owner / manager sees "Orders accepted short on stock" on Home. Telling Swiggy / Zomato that an item is sold out isn't possible with the incoming webhook (it needs partner API approval or a connector); switch the item off in the partner app meanwhile. See [007 §5](./007_Inventory_Management.md).
+
 **Cloud kitchens:** create brands (Settings → Brands), e.g. "Biryani Box" and "Wrap Republic" from the same kitchen. Tag menu items and orders with a brand; the kitchen display shows which brand each ticket belongs to.
 
 ## For the developer

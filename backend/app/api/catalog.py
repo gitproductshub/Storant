@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
@@ -9,12 +10,12 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from app.core.tenant import get_tenant_db
 from app.services.access import Access, get_access, require
-from app.models import Product, ProductCategory, ProductVariant, Brand, InventoryLog, TaxClass
+from app.models import Product, ProductCategory, ProductVariant, Brand, TaxClass
 from app.schemas.catalog import (ProductCreate, ProductUpdate, ProductResponse, CategoryCreate, CategoryUpdate,
                                  CategoryResponse, BulkImportRequest, VariantIn)
 from app.services import counters
 from app.services.settings_service import CHANNEL_CODES, get_default_location
-from app.services import channel_menu, menu_history
+from app.services import channel_menu, menu_history, stock_service
 
 logger = logging.getLogger("tallyko")
 router = APIRouter(prefix="/catalog", tags=["Catalog"])
@@ -28,6 +29,8 @@ def serialize_product(p: Product) -> dict:
         "category_id": p.category_id, "brand_id": p.brand_id, "barcode": p.barcode, "sku": p.sku, "unit": p.unit or "pcs",
         "is_veg": p.is_veg, "is_active": p.is_active, "print_to_kitchen": p.print_to_kitchen, "track_stock": p.track_stock,
         "low_stock_threshold": p.low_stock_threshold, "sort_order": p.sort_order or 0,
+        # Stock counter (null: not tracked, or tracked but never counted) and whether it is at or below zero
+        "stock": int(p.stock_on_hand) if p.track_stock and p.stock_on_hand is not None else None, "sold_out": stock_service.sold_out(p),
         "variants": [{"id": v.id, "name": v.variant_name, "price": float(base + Decimal(v.price_modifier))}
                      for v in p.variants if v.is_active],
     }
@@ -153,6 +156,21 @@ async def get_products(response: Response, q: str | None = Query(None, max_lengt
     result = await db.execute(query.order_by(Product.sort_order, Product.name))
     return [serialize_product(p) for p in result.scalars().all()]
 
+@router.get("/stock")
+async def stock_levels(since: datetime | None = None, access: Access = Depends(require("menu.view")), db=Depends(get_tenant_db)):
+    """Live stock for the POS (polled every ~20 s while billing): tracked items whose stock changed since `since`
+    (every tracked item without it). Sign-in needed; the tenant session's RLS keeps it to this business."""
+    query = select(Product.id, Product.stock_on_hand, Product.track_stock).where(Product.tenant_id == access.tenant_id,
+                                                                                Product.track_stock == True)  # noqa: E712
+    if since is not None:
+        since_utc = (since - since.utcoffset()).replace(tzinfo=None) if since.tzinfo else since
+        query = query.where(Product.updated_at > since_utc - timedelta(seconds=5))  # overlap: clocks of app servers differ
+    server_time = datetime.utcnow()
+    rows = (await db.execute(query)).all()
+    return {"server_time": server_time.isoformat() + "Z", "blocking": await stock_service.blocking(db, access.tenant_id),
+            "items": [{"id": str(pid), "stock": int(stock) if stock is not None else None,
+                       "sold_out": stock is not None and int(stock) <= 0} for pid, stock, _ in rows]}
+
 @router.get("/products/by-barcode/{code}", response_model=ProductResponse)
 async def get_product_by_barcode(code: str, access: Access = Depends(require("menu.view")), db=Depends(get_tenant_db)):
     result = await db.execute(select(Product).options(selectinload(Product.variants))
@@ -194,8 +212,8 @@ async def create_product(data: ProductCreate, access: Access = Depends(require("
         location = await get_default_location(db, tenant_id)
         product.track_stock = True
         await db.flush()
-        db.add(InventoryLog(tenant_id=tenant_id, product_id=product.id, location_id=location.id,
-                            quantity_change=data.opening_stock, reason="restock", note="Opening stock", unit_cost=data.cost_price))
+        await stock_service.record_entry(db, tenant_id, product, data.opening_stock, "restock", location_id=location.id,
+                                         note="Opening stock", unit_cost=data.cost_price, staff_id=access.staff_id)
     await db.flush()
     await menu_history.record(db, tenant_id, product, access)
     await db.commit()

@@ -15,6 +15,7 @@
     python manage.py seed [names…] [--list]      run seeders
     python manage.py watch                       dev: apply new migration files as soon as they appear
     python manage.py subscriptions:check         run the daily subscription check now (signs out lapsed businesses)
+    python manage.py stock:check [--fix]         stock counters that differ from the stock ledger (--fix sets them right)
     python manage.py create:superadmin EMAIL     create a Tallyko platform admin (works in production)
         [--name "…"] [--role super_admin|support] [--password …]   (prompts, or prints a generated one)
 """
@@ -293,6 +294,23 @@ def subscriptions_check() -> None:
     print(f"  ✓ checked {result['businesses_checked']} businesses · locked now: {result['locked_now']} · "
           f"renewals due soon: {result['renewals_due_soon']}")
 
+def stock_check(fix: bool) -> None:
+    """Every counted product's stock counter must equal the sum of its stock ledger (app.services.stock_service)."""
+    from app.core.tenant import get_shared_session_maker
+    from app.services.stock_service import check_counters
+
+    async def run() -> list[dict]:
+        async with get_shared_session_maker()() as db:  # system session: every business
+            return await check_counters(db, fix=fix)
+
+    wrong = asyncio.run(run())
+    if not wrong:
+        print("  ✓ every stock counter matches the stock ledger")
+        return
+    for row in wrong:
+        print(f"  ✗ {row['name']} ({row['product_id']}, business {row['tenant_id']}): counter {row['counter']}, ledger {row['ledger']}")
+    print(f"  {'fixed' if fix else 'found'} {len(wrong)} counter(s){'' if fix else ' — run with --fix to set them to the ledger'}")
+
 # --- entry point ---------------------------------------------------------------------------------------
 
 def main(argv: list[str] | None = None) -> int:
@@ -323,6 +341,8 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("watch", help="dev: auto-apply new migration files")
     p.add_argument("--interval", type=float, default=2.0)
     sub.add_parser("subscriptions:check", help="run the daily subscription check now")
+    p = sub.add_parser("stock:check", help="stock counters that differ from the stock ledger")
+    p.add_argument("--fix", action="store_true", help="set them to the ledger")
     p = sub.add_parser("create:superadmin", help="create or promote a Tallyko platform admin")
     p.add_argument("email")
     p.add_argument("--name")
@@ -343,6 +363,7 @@ def main(argv: list[str] | None = None) -> int:
             case "seed": seed_command(args.names, args.list)
             case "watch": watch(args.interval)
             case "subscriptions:check": subscriptions_check()
+            case "stock:check": stock_check(args.fix)
             case "create:superadmin": create_superadmin(args.email, args.name, args.role, args.password)
     except CommandError as exc:
         print(f"Error: {exc}", file=sys.stderr)

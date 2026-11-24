@@ -11,7 +11,7 @@ from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.models import KOT, EmailLog, InventoryLog, OfferRedemption, Order, OrderItem, Payment, TableEntity
-from app.services import order_service
+from app.services import order_service, stock_service
 
 def bill_snapshot(order: Order) -> dict:
     return {"id": str(order.id), "code": order.code, "invoice_no": order.invoice_no, "status": order.status,
@@ -47,7 +47,9 @@ async def hard_delete_orders(db: AsyncSession, tenant_id, order_ids, reason: str
             await order_service.cancel(db, str(tenant_id), order.id, f"Deleted by Storant: {reason}")  # reverse stock & loyalty
         await db.execute(update(TableEntity).where(TableEntity.current_order_id == order.id).values(current_order_id=None))
         await db.execute(delete(OfferRedemption).where(OfferRedemption.order_id == order.id))
+        stocked = {i.product_id for i in order.items}
         await db.execute(delete(InventoryLog).where(InventoryLog.order_id == order.id))  # its sale and its reversal net to zero
+        await stock_service.recount(db, str(tenant_id), stocked)  # wastage on the bill doesn't net to zero: keep the counter true
         await db.execute(update(EmailLog).where(EmailLog.order_id == order.id).values(order_id=None))
         await db.execute(delete(Payment).where(Payment.order_id == order.id))
         await db.execute(delete(OrderItem).where(OrderItem.order_id == order.id))

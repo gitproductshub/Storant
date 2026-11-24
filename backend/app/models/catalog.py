@@ -35,6 +35,9 @@ class Product(TenantScoped, Base):
     print_to_kitchen = Column(Boolean, default=False, nullable=False)
     track_stock = Column(Boolean, default=False, server_default="false", nullable=False)
     low_stock_threshold = Column(Integer, nullable=True)
+    # Stock counter kept next to the ledger (inventory_logs) by app.services.stock_service only. NULL = never counted:
+    # a tracked item without a stock entry of its own never becomes sold out. Once set it always equals the ledger sum.
+    stock_on_hand = Column(Integer, nullable=True)
     sort_order = Column(Integer, default=0, server_default="0", nullable=False)
     # Per sales channel: {"SWIGGY": {"price": 260}, "ONLINE": {"available": false}} (see app/services/channel_menu.py)
     channel_prices = Column(JSON, nullable=True)

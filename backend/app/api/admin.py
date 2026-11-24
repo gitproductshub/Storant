@@ -49,6 +49,7 @@ class SettingsUpdate(BaseModel):
     pay_rules: dict[str, str] | None = None  # order type → "anytime" | "ready" | "served" (PAY_RULE_DEFAULTS)
     bump_marks_served: bool | None = None
     low_stock_default: int | None = Field(None, ge=0, le=100000)
+    allow_sell_at_zero: bool | None = None  # sell tracked items at or below zero (off = sold-out items are blocked)
     email_enabled: bool | None = None
     email_sender_name: str | None = Field(None, max_length=80)
     email_reply_to: EmailStr | None = None
@@ -93,7 +94,7 @@ def serialize_settings(s: BusinessSettings) -> dict:
         "invoice_prefix": s.invoice_prefix, "receipt_footer": s.receipt_footer, "loyalty_enabled": s.loyalty_enabled,
         "loyalty_points_per_100": s.loyalty_points_per_100, "loyalty_point_value": float(s.loyalty_point_value),
         "store_enabled": s.store_enabled, "qr_ordering_enabled": s.qr_ordering_enabled, "qr_payment_mode": s.qr_payment_mode,
-        "ops_thresholds": {**OPS_DEFAULTS, **(s.ops_thresholds or {})}, "low_stock_default": s.low_stock_default,
+        "ops_thresholds": {**OPS_DEFAULTS, **(s.ops_thresholds or {})}, "low_stock_default": s.low_stock_default, "allow_sell_at_zero": bool(s.allow_sell_at_zero),
         "email_enabled": s.email_enabled, "email_sender_name": s.email_sender_name, "email_reply_to": s.email_reply_to,
         "disabled_modules": s.disabled_modules or [],
         "pay_rules": pay_rules_of(s), "bump_marks_served": bool(s.bump_marks_served),

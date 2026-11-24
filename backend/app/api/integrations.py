@@ -21,8 +21,9 @@ from app.core.rate_limit import rate_limit
 from app.core.tenant import open_tenant_session
 from app.models import Product
 from app.schemas.billing import OrderCreate, OrderItemIn, PaymentIn, PHONE_PATTERN
-from app.services import order_service
+from app.services import audit, order_service
 from app.services.settings_service import get_channel, AGGREGATOR_CHANNELS
+from app.services.stock_service import FORCE, StockCheck
 import logging
 
 logger = logging.getLogger("tallyko")
@@ -94,7 +95,16 @@ async def receive_order(channel: str, tenant_id: uuid.UUID, request: Request):
         order_in = OrderCreate(channel=code, order_type=order_type, external_order_id=payload.external_order_id,
                                customer_name=payload.customer_name, customer_phone=payload.customer_phone,
                                delivery_address=payload.delivery_address, notes=payload.notes, items=items)
-        order, created = await order_service.create_order(db, str(tenant_id), order_in, public=True)
+        # Never refuse a paid delivery-app order for stock: accept it, take the stock (it may go below zero), warn staff
+        stock = StockCheck(policy=FORCE)
+        order, created = await order_service.create_order(db, str(tenant_id), order_in, public=True, stock=stock)
+        if created and stock.short:
+            items = ", ".join(f"{s['requested']} × {s['name']} ({s['available']} left)" for s in stock.short)
+            audit.record_system(db, str(tenant_id), "stock.short", actor_name=sales_channel.name, entity_type="order", entity_id=order.id,
+                                summary=f"{sales_channel.name} order {payload.external_order_id} accepted short on stock: {items}",
+                                details={"items": stock.short, "channel": code})
+            logger.warning(f"[Integrations] {code} order {payload.external_order_id} short on stock: {items}",
+                           extra={"tenant_id": str(tenant_id)})
         if created and payload.prepaid:
             order.payment_status = "paid"
             db.add(order_service.Payment(id=uuid.uuid4(), order_id=order.id, method="AGGREGATOR", amount=order.total_amount,

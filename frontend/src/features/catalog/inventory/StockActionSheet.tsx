@@ -32,6 +32,8 @@ export function StockActionSheet({ row, action, symbol, onClose, onDone }: {
   else if (action === 'wastage') change = n !== null && n > 0 ? -n : null;
   else if (adjustMode === 'count') change = n !== null && n >= 0 ? n - row.stock : null;
   else change = n !== null && n !== 0 ? n : null;
+  const counting = action === 'adjust' && adjustMode === 'count';
+  const uncounted = row.counted === false; // its first count starts the stock counter, even at the same number
   const after = change !== null ? row.stock + change : null;
 
   const title = { restock: 'Add stock', wastage: 'Record wastage', adjust: 'Adjust stock' }[action];
@@ -43,7 +45,7 @@ export function StockActionSheet({ row, action, symbol, onClose, onDone }: {
     if (change === null) {
       return setError(action === 'adjust' && adjustMode === 'delta' ? tr('catalog.inventory_StockActionSheet.enter_a_number_other_than_0_use_to_remove') : tr('catalog.inventory_StockActionSheet.quantity_must_be_more_than_0'));
     }
-    if (change === 0) return setError(tr('catalog.inventory_StockActionSheet.that_matches_the_current_stock_nothing_to'));
+    if (change === 0 && !(counting && uncounted)) return setError(tr('catalog.inventory_StockActionSheet.that_matches_the_current_stock_nothing_to'));
     const unitCost = action === 'restock' ? parseMoney(cost) : null;
     const parts: string[] = [];
     if (action === 'wastage') parts.push(wasteReason);
@@ -51,14 +53,17 @@ export function StockActionSheet({ row, action, symbol, onClose, onDone }: {
     if (note.trim()) parts.push(note.trim());
     setBusy(true);
     try {
-      await inventoryApi.adjust({
-        product_id: row.id,
-        quantity: change,
-        reason: action === 'restock' ? 'restock' : action === 'wastage' ? 'wastage' : 'adjustment',
-        note: parts.join(' · ').slice(0, 200) || undefined,
-        ...(unitCost !== null ? { unit_cost: unitCost } : {}),
-      });
-      toast.success(`${row.name}: ${row.stock} → ${after} ${unit}`);
+      // Set count goes to the server as the counted number (it works out the difference itself, under a lock)
+      const res = counting
+        ? await inventoryApi.count({ product_id: row.id, quantity: n, note: parts.join(' · ').slice(0, 200) || undefined })
+        : await inventoryApi.adjust({
+          product_id: row.id,
+          quantity: change,
+          reason: action === 'restock' ? 'restock' : action === 'wastage' ? 'wastage' : 'adjustment',
+          note: parts.join(' · ').slice(0, 200) || undefined,
+          ...(unitCost !== null ? { unit_cost: unitCost } : {}),
+        });
+      toast.success(`${row.name}: ${uncounted ? '—' : row.stock} → ${res.stock ?? after} ${unit}`);
       onDone();
       onClose();
     } catch (e) {
@@ -74,13 +79,14 @@ export function StockActionSheet({ row, action, symbol, onClose, onDone }: {
       footer={
         <View style={styles.footer}>
           <Button title={tr('common.cancel')} variant="secondary" onPress={onClose} disabled={busy} />
-          <Button title={title} variant={action === 'wastage' ? 'danger' : 'primary'} onPress={submit} loading={busy} disabled={busy || change === null || change === 0} />
+          <Button title={title} variant={action === 'wastage' ? 'danger' : 'primary'} onPress={submit} loading={busy}
+            disabled={busy || change === null || (change === 0 && !(counting && uncounted))} />
         </View>
       }>
       <View style={[styles.now, { backgroundColor: colors.surfaceSunken }]}>
         <View style={{ flex: 1 }}>
           <Text variant="small" tone="muted">{tr('catalog.inventory_StockActionSheet.in_stock_now')}</Text>
-          <Text variant="h2">{row.stock} {unit}</Text>
+          <Text variant="h2">{uncounted ? tr('inventory.not_counted') : `${row.stock} ${unit}`}</Text>
         </View>
         {after !== null && change !== 0 ? (
           <View style={{ alignItems: 'flex-end' }}>

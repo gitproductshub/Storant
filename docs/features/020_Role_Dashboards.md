@@ -114,7 +114,7 @@ that removes money per person after the cache. New keys are added to `FEATURES`/
 | ready_to_serve | tables.view | basic | tables · restaurant, café | 15 s / 5 s |
 | my_tables | tables.view (needs a staff record) | basic | tables · restaurant, café | 20 s / 10 s |
 | kitchen | kitchen.view | basic | kitchen · restaurant, café, cloud kitchen | 15 s / 5 s |
-| low_stock | inventory.view | basic | inventory | 300 s / 300 s |
+| low_stock | inventory.view (from the stock counter; also "orders accepted short on stock" today) | basic | inventory | 60 s / 30 s |
 | my_day | reports.view_own or reports.view (₹ only with orders.pay) | basic | reports | 60 s / 30 s |
 | my_collection | orders.pay (needs a staff record) | basic | — | 60 s / 30 s |
 | payment_split, hourly_sales, top_items | reports.view | dashboard_insights | reports | 60 s / 60 s |

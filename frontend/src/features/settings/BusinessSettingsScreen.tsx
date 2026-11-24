@@ -41,6 +41,7 @@ interface Form {
   store_enabled: boolean;
   qr_ordering_enabled: boolean;
   low_stock_default: string;
+  allow_sell_at_zero: boolean;
 }
 
 type FieldKey = keyof Form;
@@ -75,6 +76,7 @@ function toForm(s: BusinessSettings): Form {
     store_enabled: !!s.store_enabled,
     qr_ordering_enabled: !!s.qr_ordering_enabled,
     low_stock_default: String(s.low_stock_default ?? 0),
+    allow_sell_at_zero: !!s.allow_sell_at_zero,
   };
 }
 
@@ -102,6 +104,7 @@ function toPayload(f: Form): Partial<BusinessSettings> {
     store_enabled: f.store_enabled,
     qr_ordering_enabled: f.qr_ordering_enabled,
     low_stock_default: Math.round(toNum(f.low_stock_default)),
+    allow_sell_at_zero: f.allow_sell_at_zero,
   };
 }
 
@@ -505,6 +508,8 @@ function BusinessSettingsForm() {
             onBlur={touch('low_stock_default')} error={err('low_stock_default')} keyboardType="number-pad" maxLength={6} hint={tr('settings.BusinessSettingsScreen.units_left_in_stock')} />
           <View />
         </FieldRow>
+        <SettingSwitch title={tr('stock.allow_sell_at_zero')} subtitle={tr('stock.allow_sell_at_zero_hint')}
+          value={form.allow_sell_at_zero} onValueChange={(v) => set('allow_sell_at_zero', v)} />
         <Button title={tr('settings.BusinessSettingsScreen.open_inventory')} variant="ghost" size="sm" iconRight="arrow-forward" onPress={() => router.navigate('/inventory' as Href)} style={{ alignSelf: 'flex-start' }} />
       </FormSection>
     </SettingsFrame>
@@ -517,7 +522,7 @@ const SECTION_FIELDS: Record<SectionKey, FieldKey[]> = {
   payments: ['upi_id'],
   loyalty: ['loyalty_enabled', 'loyalty_points_per_100', 'loyalty_point_value'],
   online: ['store_enabled', 'qr_ordering_enabled'],
-  inventory: ['low_stock_default'],
+  inventory: ['low_stock_default', 'allow_sell_at_zero'],
 };
 
 function sectionHasError(key: SectionKey, errors: Partial<Record<FieldKey, string>>): boolean {

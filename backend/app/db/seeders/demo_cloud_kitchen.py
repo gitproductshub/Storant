@@ -9,6 +9,7 @@ from app.db.seeders.helpers import ensure_business, ensure_staff_member
 from app.models import Brand, BusinessSettings, Product, ProductCategory, SalesChannel
 from app.schemas.billing import OrderCreate, OrderItemIn, PaymentIn
 from app.services import order_service
+from app.services.stock_service import FORCE, StockCheck
 from app.services.channel_menu import available_on
 
 class DemoCloudKitchenSeeder(Seeder):
@@ -66,7 +67,7 @@ class DemoCloudKitchenSeeder(Seeder):
                         channel=code, order_type="DELIVERY", external_order_id=f"{code[:2]}-{rng.randint(10**7, 10**8 - 1)}",
                         items=[OrderItemIn(product_id=p.id, quantity=rng.randint(1, 2)) for p in picks], send_to_kitchen=False,
                         brand_id=picks[0].brand_id, customer_name=rng.choice(["Aditi", "Karan", "Meher", "Zoya", "Rahul", "Ishaan"]),
-                        created_at=datetime.utcnow() - timedelta(days=day, hours=rng.randint(0, 10))))
+                        created_at=datetime.utcnow() - timedelta(days=day, hours=rng.randint(0, 10))), stock=StockCheck(policy=FORCE))
                     await order_service.pay(db, tenant_id, order.id, [PaymentIn(method="AGGREGATOR", amount=float(order.total_amount))], None, None)
                     await db.commit()
                     bills += 1
@@ -76,6 +77,6 @@ class DemoCloudKitchenSeeder(Seeder):
                 await order_service.create_order(db, tenant_id, OrderCreate(
                     channel=code, order_type="DELIVERY", external_order_id=f"{code[:2]}-NEW-{rng.randint(1000, 9999)}",
                     items=[OrderItemIn(product_id=by_name[n].id, quantity=1) for n in picks], customer_name="Neha (new order)",
-                    delivery_address="Tower B, DLF Phase 3, Gurugram"), public=True)
+                    delivery_address="Tower B, DLF Phase 3, Gurugram"), public=True, stock=StockCheck(policy=FORCE))
                 await db.commit()
         return f"{data.CLOUD_NAME}: {len(products)} items, 2 brands, {bills} aggregator bills, 2 orders waiting to be accepted"

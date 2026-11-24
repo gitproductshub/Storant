@@ -159,9 +159,16 @@ async def _ready_to_pay(ctx: Ctx) -> dict:
 
 
 async def _low_stock(ctx: Ctx) -> dict:
-    from app.api.inventory import _stock_levels  # the same rule as Inventory → Low stock
+    """Low and sold-out items from the stock counter (the same rows as Inventory), and today's orders that were
+    accepted short on stock (delivery apps, offline bills)."""
+    from app.api.inventory import _stock_levels
+    from app.models import AuditLog
     rows = await _stock_levels(ctx.db, ctx.tenant_id)
-    return {"count": sum(1 for r in rows if r["is_low"]), "out": sum(1 for r in rows if r["stock"] <= 0)}
+    short = (await ctx.db.execute(select(func.count(AuditLog.id)).where(
+        AuditLog.tenant_id == ctx.tenant_id, AuditLog.action == "stock.short", AuditLog.created_at >= ctx.start,
+        AuditLog.created_at < ctx.end))).scalar() or 0
+    return {"count": sum(1 for r in rows if r["is_low"]), "out": sum(1 for r in rows if r["sold_out"]),
+            "uncounted": sum(1 for r in rows if not r["counted"]), "short_orders": int(short)}
 
 
 async def _ready_to_serve(ctx: Ctx) -> dict:
@@ -398,7 +405,7 @@ WIDGETS: dict[str, Widget] = {w.key: w for w in (
            shape=_shape_ready_to_serve),
     Widget("my_tables", ("tables.view",), BASIC, _my_tables, module="tables", business_types=RESTAURANTS, refresh=20, ttl=10, per_staff=True),
     Widget("kitchen", ("kitchen.view",), BASIC, _kitchen, module="kitchen", business_types=KITCHENS, refresh=15, ttl=5),
-    Widget("low_stock", ("inventory.view",), BASIC, _low_stock, module="inventory", refresh=300, ttl=300),
+    Widget("low_stock", ("inventory.view",), BASIC, _low_stock, module="inventory", refresh=60, ttl=30),
     Widget("my_day", ("reports.view_own", "reports.view"), BASIC, _my_day, module="reports", refresh=60, ttl=30, per_staff=True,
            shape=_shape_my_day),
     Widget("my_collection", ("orders.pay",), BASIC, _my_collection, refresh=60, ttl=30, per_staff=True),

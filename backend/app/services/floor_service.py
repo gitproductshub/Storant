@@ -17,12 +17,12 @@ from decimal import Decimal
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.models import KOT, InventoryLog, Order, OrderItem, Product
+from app.models import KOT, Order, OrderItem
 from app.services.order_service import (FREE_NOTE, OPEN_STATUSES, REMOVED, VOID, _claim_table, _is_free_line, _manual_discount, _price,
                                         _release_table, bill_closed_error, is_void, load_order, lock_orders, order_code)
 from app.services.pricing import ZERO, money
 from app.services.settings_service import get_settings
-from app.services import counters
+from app.services import counters, stock_service
 
 KITCHEN_FLOW = ("pending", "preparing", "ready", "served")
 
@@ -47,7 +47,8 @@ def _split(item: OrderItem, quantity: int) -> OrderItem:
                      name=item.name, variant_name=item.variant_name, quantity=quantity, unit_price=item.unit_price,
                      tax_rate=item.tax_rate, tax_amount=ZERO, tax_components=[{**c, "amount": 0.0} for c in (item.tax_components or [])],
                      hsn_sac=item.hsn_sac, subtotal=ZERO, notes=item.notes, kitchen_status=item.kitchen_status,
-                     status_at=item.status_at, comp_reason=item.comp_reason, created_at=item.created_at)
+                     status_at=item.status_at, comp_reason=item.comp_reason, created_at=item.created_at,
+                     stock_held=item.stock_held)  # both parts keep holding their own quantity of stock
 
 async def _reprice(db: AsyncSession, tenant_id: str, order: Order) -> str | None:
     settings = await get_settings(db, tenant_id)
@@ -101,11 +102,13 @@ async def set_ticket_status(db: AsyncSession, tenant_id: str, kot: KOT, status: 
     Lines the floor staff already served stay served unless the ticket itself is being served (only callers with
     `kitchen.serve` get here with "served"). Moving a ticket back onto the screen clears its bump."""
     now = datetime.utcnow()
+    cancelled = []
     for line in await _ticket_lines(db, kot):
         if is_void(line):
             continue
         if status == "cancelled":
             line.kitchen_status, line.void_reason = VOID, line.void_reason or "Ticket cancelled"
+            cancelled.append(line)
         elif line.kitchen_status == "served" and status != "served":
             continue
         else:
@@ -113,6 +116,9 @@ async def set_ticket_status(db: AsyncSession, tenant_id: str, kot: KOT, status: 
         line.status_at = now
     if status == "cancelled":
         kot.status = "cancelled"
+        order = await db.get(Order, kot.order_id)
+        if order is not None and cancelled:
+            await stock_service.give_back_lines(db, tenant_id, order, cancelled, reason="void")
         return
     await db.flush()
     await sync_kot_status(db, [kot.id])
@@ -171,7 +177,7 @@ async def void_items(db: AsyncSession, tenant_id: str, order_id, lines: list[tup
     if order.payments:
         raise HTTPException(status_code=409, detail="Items can't change after a payment was taken. Refund or cancel the bill instead.")
     now = datetime.utcnow()
-    touched, wasted = set(), []
+    touched, wasted, gone = set(), [], []
     for item_id, quantity in lines:
         item = _find(order, item_id)
         if is_void(item):
@@ -186,6 +192,7 @@ async def void_items(db: AsyncSession, tenant_id: str, order_id, lines: list[tup
             removed.kitchen_status, removed.status_at, removed.voided_by = REMOVED, now, staff_id
             removed.void_reason = (reason or "").strip()[:200] or "Removed before sending to the kitchen"
             removed.subtotal, removed.tax_amount = ZERO, ZERO
+            gone.append(removed)
             continue
         if not can_void_sent:
             raise HTTPException(status_code=403, detail=f"{item.name} is already in the kitchen. Ask a manager to cancel it.")
@@ -198,18 +205,16 @@ async def void_items(db: AsyncSession, tenant_id: str, order_id, lines: list[tup
         cancelled.void_reason, cancelled.voided_by = reason.strip()[:200], staff_id
         cancelled.subtotal, cancelled.tax_amount = ZERO, ZERO
         touched.add(item.kot_id)
+        gone.append(cancelled)
         if waste:
             wasted.append(cancelled)
     await db.flush()
     await sync_kot_status(db, touched)
-    if wasted:
-        tracked = {p for (p,) in (await db.execute(select(Product.id).where(Product.id.in_({w.product_id for w in wasted}),
-                                                                             Product.tenant_id == tenant_id, Product.track_stock == True))).all()}
-        for w in wasted:
-            if w.product_id in tracked:
-                db.add(InventoryLog(id=uuid.uuid4(), tenant_id=tenant_id, product_id=w.product_id, location_id=order.location_id,
-                                    quantity_change=-w.quantity, reason="wastage", order_id=order.id,
-                                    note=f"Cancelled from bill {order.code}: {w.void_reason}", created_at=now))
+    # Cancelled / removed lines give their stock back; thrown-away food is then booked as wastage
+    await stock_service.give_back_lines(db, tenant_id, order, gone, reason="void", staff_id=staff_id)
+    for w in wasted:
+        await stock_service.waste_lines(db, tenant_id, order, [w], note=f"Cancelled from bill {order.code}: {w.void_reason}",
+                                        staff_id=staff_id)
     warning = await _reprice(db, tenant_id, order)
     await db.flush()
     return await load_order(db, tenant_id, order.id), warning

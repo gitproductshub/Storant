@@ -9,7 +9,11 @@ import { EmptyState, ErrorState, Loading, Sheet, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/format';
 import { t } from '@/i18n';
 
-interface StockLog { id: string; product_id: string; product_name: string; quantity_change: number; reason: string; note: string | null; created_at: string }
+interface StockLog {
+  id: string; product_id: string; product_name: string; quantity_change: number; reason: string; note: string | null; created_at: string;
+  /** Who changed it (null for older entries and system changes) */
+  by?: string | null;
+}
 
 const REASONS: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
   restock: { get label() { return t('catalog.inventory_StockHistorySheet.stock_added'); }, icon: 'arrow-down-circle-outline' },
@@ -17,6 +21,7 @@ const REASONS: Record<string, { label: string; icon: keyof typeof Ionicons.glyph
   adjustment: { get label() { return t('catalog.inventory_StockHistorySheet.adjustment'); }, icon: 'swap-vertical-outline' },
   return: { get label() { return t('catalog.inventory_StockHistorySheet.returned'); }, icon: 'return-down-back-outline' },
   sale: { get label() { return t('catalog.inventory_StockHistorySheet.sold'); }, icon: 'receipt-outline' },
+  void: { get label() { return t('inventory.reason_void'); }, icon: 'arrow-undo-outline' },
 };
 
 export function StockHistorySheet({ row, onClose }: { row: StockRow; onClose: () => void }) {
@@ -58,7 +63,7 @@ export function StockHistorySheet({ row, onClose }: { row: StockRow; onClose: ()
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text variant="bodyStrong">{r.label}</Text>
                   {l.note ? <Text variant="small" tone="muted" numberOfLines={2}>{l.note}</Text> : null}
-                  <Text variant="caption" tone="subtle">{formatDateTime(l.created_at)}</Text>
+                  <Text variant="caption" tone="subtle">{[formatDateTime(l.created_at), l.by].filter(Boolean).join(' · ')}</Text>
                 </View>
                 <Text variant="money" tone={plus ? 'success' : 'danger'}>{plus ? '+' : ''}{l.quantity_change} {unit}</Text>
               </View>

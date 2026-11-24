@@ -4556,7 +4556,8 @@
       "longest_v": "Longest: {{v}}",
       "token_v": "Token {{v}}",
       "kot_v": "KOT {{v}}",
-      "cooking": "cooking"
+      "cooking": "cooking",
+      "short_orders": "Orders accepted short on stock: {{count}}"
     },
     "alerts": {
       "kitchen_late": "Kitchen tickets late: {{count}}",
@@ -4566,7 +4567,37 @@
       "online_waiting": "Online orders waiting: {{count}}",
       "out_of_stock": "Out of stock: {{count}}",
       "plan_grace": "Your plan has ended: renew to keep billing",
-      "plan_ends": "Days left on your plan: {{count}}"
+      "plan_ends": "Days left on your plan: {{count}}",
+      "short_orders": "Orders accepted short on stock: {{count}}"
     }
+  },
+  "stock": {
+    "sold_out_generic": "An item is sold out.",
+    "name_sold_out": "{{name}} is sold out.",
+    "name_only_left": "{{name}}: only {{left}} left.",
+    "more_short": "{{count}} more item(s) short.",
+    "sold_out": "Sold out",
+    "n_left": "{{count}} left",
+    "sheet_title": "Not enough stock",
+    "sheet_subtitle": "Someone may have just sold the last ones.",
+    "left_of_asked": "{{left}} left (you asked for {{asked}})",
+    "fix_bill": "Fix the bill",
+    "fix_removes": "Fix the bill removes sold-out items and lowers the others to what is left.",
+    "fix_sets": "Fix the bill lowers each item to what is left.",
+    "sell_anyway": "Sell anyway",
+    "sell_anyway_title": "Sell anyway?",
+    "sell_anyway_message": "Stock will go below zero. The reason is saved for the owner.",
+    "reason": "Reason",
+    "bill_fixed": "Bill changed to what is in stock.",
+    "allow_sell_at_zero": "Sell items at or below zero",
+    "allow_sell_at_zero_hint": "Off: tracked items that run out show as Sold out and can't be billed (owners and managers can still sell anyway with a reason)."
+  },
+  "inventory": {
+    "not_counted": "Not counted",
+    "zero_title": "Items at or below zero: {{count}}",
+    "zero_body": "These show as Sold out on the POS until you fix the number with Set count: {{names}}",
+    "got_it": "Got it",
+    "uncounted_note": "Tracked but never counted: {{count}}. They always sell until you use Set count.",
+    "reason_void": "Back from a bill"
   }
 }

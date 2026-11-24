@@ -57,7 +57,7 @@ export function ProductRow({ product, symbol, qty, canOrder, onAdd, onChangeQty 
   const minPrice = hasVariants ? Math.min(...product.variants.map((v) => v.price)) : product.price;
   return (
     <View style={styles.product}>
-      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+      <View style={{ flex: 1, minWidth: 0, gap: 4, opacity: product.sold_out ? 0.55 : 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <VegMark veg={product.is_veg} />
           <Text variant="h3" style={{ flexShrink: 1 }}>{product.name}</Text>
@@ -71,7 +71,13 @@ export function ProductRow({ product, symbol, qty, canOrder, onAdd, onChangeQty 
           <Text variant="caption" tone="subtle" numberOfLines={1}>{product.variants.map((v) => v.name).join(' · ')}</Text>
         ) : null}
       </View>
-      {canOrder ? (
+      {canOrder && product.sold_out ? (
+        <View style={{ alignItems: 'flex-end', paddingTop: 2 }}>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: colors.dangerSoft }}>
+            <Text variant="smallStrong" color={colors.dangerText}>{t('stock.sold_out')}</Text>
+          </View>
+        </View>
+      ) : canOrder ? (
         <View style={{ alignItems: 'flex-end', gap: 4, paddingTop: 2 }}>
           {hasVariants || qty === 0 ? (
             <AddButton onPress={onAdd} label={product.name} count={hasVariants ? qty : 0} />

@@ -30,7 +30,9 @@ export interface KitchenWidget {
   pending: number; preparing: number; ready: number; oldest_at: string | null;
   to_prepare: { name: string; variant: string | null; quantity: number }[];
 }
-export interface LowStock { count: number; out: number }
+/** From the stock counter: low and sold-out items, tracked items never counted, and today's orders accepted short on
+ * stock (delivery apps, offline bills) */
+export interface LowStock { count: number; out: number; uncounted?: number; short_orders?: number }
 export interface MyDay {
   orders: number; tables_served: number; covers: number; items: number; bills_settled: number; cancelled: number;
   sales?: number; collected?: number; average_bill?: number;

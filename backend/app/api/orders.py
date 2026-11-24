@@ -10,6 +10,7 @@ from app.models import Order, OrderItem, TableEntity, TenantUser
 from app.schemas.billing import (OrderCreate, OrderAddItems, OrderPay, OrderCancel, OrderTransfer, OrderCustomer, OrderOffer,
                                  ItemsStatus, ItemsVoid, ItemsComp, ItemsMove, BillMerge, BillDetails)
 from app.services import floor_service, order_service, audit
+from app.services.stock_service import STRICT, StockCheck
 from app.services import offers as offer_engine
 from app.services.access import Access, get_access, require
 from app.services.pricing import PricedLine, price_order
@@ -153,6 +154,18 @@ def _pay_check(access: Access, override_reason: str | None) -> order_service.Pay
     return order_service.PayCheck(kitchen_on=access.has("kitchen"), can_override=access.can("orders.pay_override"),
                                   override_reason=override_reason)
 
+def _stock_check(access: Access, override_reason: str | None) -> StockCheck:
+    """Sold-out items at the till are refused; owners / managers (inventory.manage) may sell anyway with a reason."""
+    return StockCheck(policy=STRICT, can_override=access.can("inventory.manage"), override_reason=override_reason)
+
+def _audit_stock(db, access: Access, order: Order, stock: StockCheck) -> None:
+    if not stock.overridden:
+        return
+    items = ", ".join(f"{s['requested']} × {s['name']} ({s['available']} left)" for s in stock.short)
+    audit.record(db, access, "stock.override", entity_type="order", entity_id=order.id,
+                 summary=f"Sold past stock on bill {order.code}: {items} — {stock.override_reason}",
+                 details={"items": stock.short, "reason": stock.override_reason})
+
 def _audit_override(db, access: Access, order: Order, check: order_service.PayCheck | None) -> None:
     if not check or not check.overridden:
         return
@@ -173,9 +186,11 @@ async def create_order(data: OrderCreate, access: Access = Depends(require("orde
     if not access.has("offers"):
         data.auto_offers = False
     check = _pay_check(access, data.override_reason) if data.payments else None
+    stock = _stock_check(access, data.stock_override_reason)
     order, created = await order_service.create_order(db, access.tenant_id, data, user_id=access.user_id, staff_id=access.staff_id,
-                                                      check=check)
+                                                      check=check, stock=stock)
     _audit_override(db, access, order, check)
+    _audit_stock(db, access, order, stock)
     if created and data.discount:
         audit.record(db, access, "order.discount", entity_type="order", entity_id=order.id,
                      summary=f"{data.discount.value}{'%' if data.discount.type == 'percent' else ' ₹'} off bill {order.code}")
@@ -188,7 +203,10 @@ async def create_order(data: OrderCreate, access: Access = Depends(require("orde
 @router.post("/{order_id}/items")
 async def add_items(order_id: uuid.UUID, data: OrderAddItems, access: Access = Depends(require("orders.create")), db=Depends(get_tenant_db)):
     await _visible_order(db, access, order_id)
-    order = await order_service.add_items(db, access.tenant_id, order_id, data.items, data.send_to_kitchen)
+    stock = _stock_check(access, data.stock_override_reason)
+    order = await order_service.add_items(db, access.tenant_id, order_id, data.items, data.send_to_kitchen, stock=stock,
+                                          staff_id=access.staff_id)
+    _audit_stock(db, access, order, stock)
     await db.commit()
     tables, staff = await _names(db, access.tenant_id, [order])
     return _serialize(order, tables, staff)

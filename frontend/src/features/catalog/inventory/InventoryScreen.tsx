@@ -24,7 +24,9 @@ import { plural } from '../utils';
 import { BarcodeScanSheet } from '../BarcodeScanSheet';
 import { StockActionSheet, type StockAction } from './StockActionSheet';
 import { StockHistorySheet } from './StockHistorySheet';
-import { applyStockChange, clampQty, createScanBuffer, filterStock, stockCounts, type StockFilter } from './stockLogic';
+import { applyStockChange, atOrBelowZero, clampQty, createScanBuffer, filterStock, isOut, stockCounts, withStock, type StockFilter } from './stockLogic';
+import { Callout } from '@/features/settings/components';
+import { useDevicePref } from '@/hooks/live';
 import { t as tr } from '@/i18n';
 
 type Reason = 'restock' | 'wastage' | 'adjustment' | 'return';
@@ -66,6 +68,12 @@ function Inventory() {
   const value = useMemo(() => rows.reduce((s, r) => s + (r.stock_value || 0), 0), [rows]);
   const missingCost = useMemo(() => rows.filter((r) => r.cost_price === null && r.stock > 0).length, [rows]);
   const visible = useMemo(() => filterStock(rows, filter, query, nameOf), [rows, filter, query, nameOf]);
+  // Owner, once per set of items (per device): counted items at or below zero show as Sold out on the POS
+  const isOwner = useRole() === 'owner';
+  const zero = useMemo(() => atOrBelowZero(rows), [rows]);
+  const zeroKey = zero.map((r) => r.id).sort().join(',');
+  const [zeroSeen, setZeroSeen] = useDevicePref<string>('inventory.zeroBannerSeen', '');
+  const uncounted = useMemo(() => rows.filter((r) => r.counted === false).length, [rows]);
 
   const replaceRow = (next: StockRow) => setData((prev) => (prev ?? []).map((r) => (r.id === next.id ? next : r)));
   const qtyOf = (id: string) => qty[id] ?? 1;
@@ -82,9 +90,12 @@ function Inventory() {
     const after = applyStockChange(row, change);
     replaceRow(after);
     try {
-      await inventoryApi.adjust({ product_id: row.id, quantity: change, reason, note });
-      const message = `${row.name}: ${row.stock} → ${row.stock + change} ${unit}${reason === 'wastage' ? ` (${note})` : ''}`;
-      if (undoable) toast.undo(message, () => void quickRef.current(after, -change, 'adjustment', `Undo: ${note}`, false));
+      const res = await inventoryApi.adjust({ product_id: row.id, quantity: change, reason, note });
+      // The server's counter (another till may have sold meanwhile; a never-counted item starts counting here)
+      const fresh = typeof res.stock === 'number' ? withStock(row, res.stock) : after;
+      replaceRow(fresh);
+      const message = `${row.name}: ${row.counted === false ? '—' : row.stock} → ${fresh.stock} ${unit}${reason === 'wastage' ? ` (${note})` : ''}`;
+      if (undoable) toast.undo(message, () => void quickRef.current(fresh, -change, 'adjustment', `Undo: ${note}`, false));
       else toast.success(message);
     } catch (e) {
       replaceRow(row);
@@ -152,11 +163,15 @@ function Inventory() {
     const unit = r.unit || 'pcs';
     return (
       <View style={styles.stockCell}>
-        <Text variant="money" tone={r.stock < 0 ? 'danger' : r.stock === 0 ? 'danger' : r.is_low ? 'warning' : 'default'} numberOfLines={1}>{r.stock} {unit}</Text>
+        {r.counted === false
+          ? <Text variant="small" tone="subtle" numberOfLines={1}>{tr('inventory.not_counted')}</Text>
+          : <Text variant="money" tone={r.stock < 0 ? 'danger' : r.stock === 0 ? 'danger' : r.is_low ? 'warning' : 'default'} numberOfLines={1}>{r.stock} {unit}</Text>}
       </View>
     );
   };
-  const statusOf = (r: StockRow) => (r.stock <= 0
+  const statusOf = (r: StockRow) => (r.counted === false
+    ? <StatusPill status="pending" label={tr('inventory.not_counted')} showIcon={false} />
+    : isOut(r)
     ? <StatusPill status="lapsed" label={tr('catalog.inventory_InventoryScreen.out_of_stock')} />
     : r.is_low ? <StatusPill status="pending" label={tr('catalog.inventory_InventoryScreen.low')} /> : <StatusPill status="active" label="OK" showIcon={false} />);
 
@@ -245,6 +260,13 @@ function Inventory() {
       contentStyle={{ flex: 1, paddingBottom: 16, gap: 10 }}
       maxWidth={isDesktop ? 1680 : 1280}
     >
+      {isOwner && zero.length > 0 && zeroSeen !== zeroKey ? (
+        <Callout tone="warning" icon="alert-circle-outline" title={tr('inventory.zero_title', { count: zero.length })}
+          action={<Button title={tr('inventory.got_it')} size="sm" variant="ghost" onPress={() => setZeroSeen(zeroKey)} />}>
+          {tr('inventory.zero_body', { names: zero.slice(0, 6).map((r) => `${r.name} (${r.stock})`).join(', ') + (zero.length > 6 ? ' …' : '') })}
+        </Callout>
+      ) : null}
+      {uncounted ? <Text variant="small" tone="muted">{tr('inventory.uncounted_note', { count: uncounted })}</Text> : null}
       {isPhone ? null : summary}
       <View style={[styles.list, !isPhone && { borderWidth: 1, borderRadius: 14, borderColor: colors.border, backgroundColor: colors.surface }]}>
         <DataList<StockRow>

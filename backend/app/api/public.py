@@ -18,8 +18,9 @@ from app.core.rate_limit import client_ip, rate_limit
 from app.core.tenant import get_public_tenant_db
 from app.models import Product, ProductCategory, TableEntity
 from app.schemas.billing import OrderCreate, OrderItemIn, PHONE_PATTERN
-from app.services import order_service
+from app.services import order_service, stock_service
 from app.services.settings_service import get_settings, get_channel
+from app.services.stock_service import STRICT, StockCheck
 from app.services import channel_menu
 from decimal import Decimal
 
@@ -63,6 +64,7 @@ async def public_menu(tenant_id: uuid.UUID, request: Request, channel: str = Que
                                  .where(Product.tenant_id == tenant_id, Product.is_active == True)
                                  .order_by(Product.sort_order, Product.name))).scalars().all()
     products = [p for p in products if channel_menu.available_on(p, channel)]
+    block = await stock_service.blocking(db, str(tenant_id))  # only a sold-out flag for guests (never how many are left)
     await db.commit()
     return {
         "business": {"name": settings.business_name, "address": settings.address, "phone": settings.phone,
@@ -73,6 +75,7 @@ async def public_menu(tenant_id: uuid.UUID, request: Request, channel: str = Que
         "products": [{
             "id": str(p.id), "name": p.name, "description": p.description, "price": float(channel_menu.unit_price(p, channel, adjust)),
             "category_id": str(p.category_id) if p.category_id else None, "is_veg": p.is_veg,
+            "sold_out": block and stock_service.sold_out(p),
             "variants": [{"id": str(v.id), "name": v.variant_name, "price": float(channel_menu.unit_price(p, channel, adjust, v.price_modifier))}
                          for v in p.variants if v.is_active],
         } for p in products],
@@ -123,7 +126,8 @@ async def place_order(tenant_id: uuid.UUID, data: PublicOrder, request: Request,
             # The request id makes "Add to my bill" safe to retry after a lost response (no doubled items)
             if data.id and not await _first_time(f"public-add:{tenant_id}:{data.id}"):
                 return _public_order(await order_service.load_order(db, str(tenant_id), mine.id), settings, data.payment, table)
-            order = await order_service.add_items(db, str(tenant_id), mine.id, data.items, send_to_kitchen=mine.status == "open")
+            order = await order_service.add_items(db, str(tenant_id), mine.id, data.items, send_to_kitchen=mine.status == "open",
+                                                  stock=StockCheck(policy=STRICT, guest=True))
             order.notes = _with_payment_note(order.notes, data.payment)
             await db.commit()
             return _public_order(order, settings, data.payment, table)
@@ -131,7 +135,7 @@ async def place_order(tenant_id: uuid.UUID, data: PublicOrder, request: Request,
         order_in.new_bill = True
         order_in.bill_label = data.customer_name.strip().split(" ")[0][:20]
         order_in.notes = _with_payment_note(data.notes, data.payment)
-    order, _ = await order_service.create_order(db, str(tenant_id), order_in, public=True)
+    order, _ = await order_service.create_order(db, str(tenant_id), order_in, public=True, stock=StockCheck(policy=STRICT, guest=True))
     await db.commit()
     return _public_order(order, settings, data.payment, table if data.source == "QR" else None)
 

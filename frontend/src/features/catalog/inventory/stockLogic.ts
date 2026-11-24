@@ -4,14 +4,32 @@ import { normName } from '../utils';
 
 export type StockFilter = 'all' | 'low' | 'out';
 
+/** Counted and at or below zero (an item that was never counted is never out; see backend stock_service). */
+export function isOut(r: Pick<StockRow, 'stock' | 'counted' | 'sold_out'>): boolean {
+  return r.sold_out ?? (r.counted !== false && r.stock <= 0);
+}
+
 export function stockCounts(rows: readonly StockRow[]): { all: number; low: number; out: number } {
   let low = 0;
   let out = 0;
   for (const r of rows) {
-    if (r.stock <= 0) out += 1;
+    if (isOut(r)) out += 1;
     if (r.is_low) low += 1;
   }
   return { all: rows.length, low, out };
+}
+
+/** Counted items at or below zero (they show as Sold out on the POS), for the owner's banner. */
+export function atOrBelowZero(rows: readonly StockRow[]): StockRow[] {
+  return rows.filter((r) => r.counted !== false && r.stock <= 0).sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name));
+}
+
+/** The row with the counter the server answered (an item becomes counted with its first stock entry). */
+export function withStock(row: StockRow, stock: number): StockRow {
+  return {
+    ...row, stock, counted: true, is_low: stock <= row.low_stock_threshold, sold_out: stock <= 0,
+    stock_value: Math.max(stock, 0) * (row.cost_price ?? 0),
+  };
 }
 
 /** Search matches name, barcode or category name; low = at/below alert level (includes out of stock). */
@@ -19,7 +37,7 @@ export function filterStock(rows: readonly StockRow[], filter: StockFilter, quer
   const q = normName(query);
   const list = rows.filter((r) => {
     if (filter === 'low' && !r.is_low) return false;
-    if (filter === 'out' && r.stock > 0) return false;
+    if (filter === 'out' && !isOut(r)) return false;
     if (!q) return true;
     return normName(r.name).includes(q) || (r.barcode ?? '').toLowerCase().includes(q) || normName(categoryName?.(r.category_id) ?? '').includes(q);
   });
@@ -31,11 +49,13 @@ export function filterStock(rows: readonly StockRow[], filter: StockFilter, quer
 /** The row after a stock change (optimistic UI before the server answers). */
 export function applyStockChange(row: StockRow, change: number): StockRow {
   const stock = row.stock + change;
+  const counted = row.counted !== false;
   return {
     ...row,
     stock,
-    is_low: stock <= row.low_stock_threshold,
-    stock_value: Math.max(stock, 0) * (row.cost_price ?? 0),
+    is_low: counted && stock <= row.low_stock_threshold,
+    sold_out: counted && stock <= 0,
+    stock_value: counted ? Math.max(stock, 0) * (row.cost_price ?? 0) : 0,
   };
 }
 

@@ -29,19 +29,29 @@ ACTION_LABELS = {
     "offer.create": "Created an offer",
     "offer.update": "Changed an offer",
     "inventory.adjust": "Adjusted stock",
+    "inventory.count": "Counted stock",
+    "stock.override": "Sold an item past its stock",
+    "stock.short": "Order accepted with items short on stock",
     "customer.points": "Adjusted loyalty points",
 }
 
 # Only the owner sees these (Owner → Watch). Managers' and staff's activity log never lists them, and no one in the business
 # can edit or delete them (the database role can only insert into audit_logs).
 OWNER_ONLY_ACTIONS = frozenset({"order.cancel", "order.void_item", "order.remove_item", "order.comp", "order.discount",
-                                "order.split", "order.merge", "order.reprint", "order.archive", "menu.change", "order.pay_override"})
+                                "order.split", "order.merge", "order.reprint", "order.archive", "menu.change", "order.pay_override",
+                                "stock.override"})
 
 def record(db: AsyncSession, access, action: str, *, entity_type: str | None = None, entity_id=None,
            summary: str | None = None, details: dict | None = None) -> None:
     db.add(AuditLog(tenant_id=access.tenant_id, actor_staff_id=access.staff_id, actor_name=access.staff_name or access.role,
                     action=action, entity_type=entity_type, entity_id=str(entity_id) if entity_id else None,
                     summary=summary, details=details))
+
+def record_system(db: AsyncSession, tenant_id, action: str, *, actor_name: str, entity_type: str | None = None, entity_id=None,
+                  summary: str | None = None, details: dict | None = None) -> None:
+    """An action with no signed-in person (a delivery-app webhook, an offline bill replay done for the business)."""
+    db.add(AuditLog(tenant_id=tenant_id, actor_staff_id=None, actor_name=actor_name, action=action, entity_type=entity_type,
+                    entity_id=str(entity_id) if entity_id else None, summary=summary, details=details))
 
 def record_platform(db: AsyncSession, user, action: str, *, tenant_id=None, details: dict | None = None) -> None:
     db.add(PlatformAuditLog(actor_user_id=user.user_id, actor_email=user.email, action=action,

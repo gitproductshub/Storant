@@ -142,6 +142,9 @@ class OrderItem(Base):
     voided_by = Column(UUID(as_uuid=True), nullable=True)
     comp_reason = Column(String, nullable=True)  # complimentary ("on the house"): unit price set to 0
     comp_value = Column(Numeric(10, 2), nullable=True)  # what it would have cost, for reports
+    # Stock taken when the line was saved on the bill (app.services.stock_service); given back if it's cancelled.
+    # Lines saved before that existed are false and cut stock at payment, as they always did.
+    stock_held = Column(Boolean, default=False, server_default="false", nullable=False)
     created_at = created_at_column()
 
     order = relationship("Order", back_populates="items")

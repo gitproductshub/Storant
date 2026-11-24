@@ -16,7 +16,7 @@ import { catalogApi, ordersApi, tablesApi } from '@/api/endpoints';
 import { floorApi } from '@/api/floor';
 import { offersApi } from '@/api/offers';
 import { errorMessage, ApiError } from '@/api/client';
-import { Button, EmptyState, IconButton, Loading, Sheet, Text, confirm, toast, useHotkeys, type ActionMenuItem } from '@/components/ui';
+import { Button, EmptyState, IconButton, Loading, Sheet, Text, confirm, prompt, toast, useHotkeys, type ActionMenuItem } from '@/components/ui';
 import { isTypingTarget } from '@/hooks/useHotkeys';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
@@ -31,6 +31,7 @@ import { useNet } from '@/lib/sync';
 import { availableOn, kotFromOrder, printBill, printErrorMessage, printKitchenTicket } from '@/lib/billing';
 import { money, round2, uuid } from '@/lib/format';
 import { CHANNEL_UI, ORDER_TYPE_UI } from '@/lib/uiLabels';
+import { roomFor, stockBlocking, stockLeft, stockShortFromError, type StockShortItem } from '@/lib/stock';
 import { getDraft, useCart, useDraft, type AttachedCustomer } from './cart';
 import { CartPanel, type CartOfferInfo } from './CartPanel';
 import { OfferSheet } from './OfferSheet';
@@ -39,6 +40,9 @@ import { ProductBrowser } from './ProductBrowser';
 import { PaymentSheet, type LoyaltyOption } from './PaymentSheet';
 import { LastBillCard, ReceiptSheet, type ReceiptState } from './ReceiptSheet';
 import { ScannerSheet } from './ScannerSheet';
+import { StockShortSheet } from './StockShortSheet';
+import { fitToStock } from './stockCart';
+import { useLiveStock } from './useLiveStock';
 import { ChannelSheet, CustomerSheet, DiscountSheet, PayAnywaySheet, RunningOrdersSheet, TableSheet, VariantSheet, posChannels } from './sheets';
 import { BillDetailsSheet, MergeBillsSheet, TableBillsSheet, type BillSummary } from './BillSheets';
 import { billName, itemsLocked } from './runningBill';
@@ -211,6 +215,17 @@ function Pos() {
   const accessInfo = useAccessInfo();
   const kitchenOn = accessInfo ? accessInfo.features.includes('kitchen') : true;
   const canPayAnyway = useCan('orders.pay_override');
+  // Stock (lib/stock.ts): sold-out tiles, "N left", the server's STOCK_SHORT refusal; owners / managers may sell anyway
+  const stockBlocks = stockBlocking(accessInfo?.features ?? null, settings?.allow_sell_at_zero);
+  const canSellAnyway = useCan('inventory.manage', 'inventory');
+  const liveStock = useLiveStock(!!accessInfo?.features.includes('inventory') && online);
+  const [stockShort, setStockShort] = useState<{ items: StockShortItem[]; retry: 'kot' | 'pay' } | null>(null);
+  /** "Sell anyway" reason for the bill being sent now (sent as `stock_override_reason`, cleared afterwards). */
+  const stockReason = useRef<string | null>(null);
+  const retryPay = useRef<{ payments: PaymentInput[]; change: number } | null>(null);
+  const stockRef = useRef({ blocks: stockBlocks, canSellAnyway });
+  stockRef.current = { blocks: stockBlocks, canSellAnyway };
+  const stockOverride = () => (stockReason.current ? { stock_override_reason: stockReason.current } : {});
   /** Reason given in "Pay anyway" for the payment being taken now (sent as `override_reason`). */
   const [overrideReason, setOverrideReason] = useState<string | null>(null);
   const gateOf = useCallback((d: ReturnType<typeof getDraft>, isOnline: boolean): PayGateInfo => payGate({
@@ -253,13 +268,25 @@ function Pos() {
 
   // ------------------------------------------------------------------ adding items
 
+  /** Room on this bill for `qty` more of `p`? Sold-out / short items stop here with a message (tap, barcode, camera);
+   * owners / managers see it too but may go on (the server then asks them for a reason). */
+  const stockAllows = useCallback((p: Product, qty = 1): boolean => {
+    const inCart = getDraft().lines.filter((l) => l.productId === p.id).reduce((n, l) => n + l.quantity, 0);
+    const room = roomFor(p, inCart, stockRef.current.blocks);
+    if (room === null || room >= qty) return true;
+    const left = stockLeft(p) ?? 0;
+    toast.warning(left <= 0 ? tr('stock.name_sold_out', { name: p.name }) : tr('stock.name_only_left', { name: p.name, left }));
+    return stockRef.current.canSellAnyway;
+  }, []);
+
   const pick = useCallback((p: Product) => {
     const channel = getDraft().channel;
     if (!availableOn(p, channel)) { toast.warning(tr('pos.PosScreen.name_isn_t_on_the_v_menu', { name: p.name, v: CHANNEL_UI[channel] ?? channel })); return; }
+    if (!stockAllows(p)) return;
     tap();
     if (p.variants.length > 0) setVariantProduct(p);
     else addToCart(p, null, 1);
-  }, [addToCart]);
+  }, [addToCart, stockAllows]);
 
   const lookupCode = useCallback(async (code: string): Promise<Product | null> => {
     const local = findByCode(useData.getState().products, code);
@@ -314,11 +341,12 @@ function Pos() {
     const p = await lookupCode(code);
     if (!p) { toast.warning(tr('pos.PosScreen.no_item_with_barcode_code', { code })); return; }
     if (!availableOn(p, getDraft().channel)) { toast.warning(tr('pos.PosScreen.name_isn_t_on_this_channel_s_menu', { name: p.name })); return; }
+    if (!stockAllows(p)) return;
     if (p.variants.length) { setVariantProduct(p); return; }
     addToCart(p, null, 1);
     tap();
     setLastScanned(`${p.name} · ${money(p.base_price, currency)}`);
-  }, [lookupCode, addToCart, currency]);
+  }, [lookupCode, addToCart, currency, stockAllows]);
 
   const onVariant = useCallback((variantId: string) => {
     if (!variantProduct) return;
@@ -578,6 +606,7 @@ function Pos() {
 
   /** Ready for the next customer: empty bill, same order type, cursor in search. */
   const afterBill = (keepType: OrderType | null) => {
+    liveStock.refresh(); // this sale changed stock: the tiles follow at once
     resetCart({ orderType: keepType ?? defaultType });
     setCartOpen(false);
     setQuery('');
@@ -617,7 +646,7 @@ function Pos() {
       if (d.resume) {
         if (!online) { toast.error(tr('pos.PosScreen.adding_items_to_a_running_bill_needs_an')); return; }
         const before = new Set(d.resume.items.map((i) => i.id));
-        const order = await ordersApi.addItems(d.resume.id, itemsInput(), true);
+        const order = await ordersApi.addItems(d.resume.id, itemsInput(), true, stockReason.current);
         const added = order.items.filter((i) => !before.has(i.id));
         void printKotSafe({ ...order, table_label: order.table_label ?? d.resume.table_label }, added); // printing never holds the till
         toast.success(tr('pos.PosScreen.reduce_item_s_added_v', { reduce: added.reduce((s, i) => s + i.quantity, 0), v: d.resume.table_label ? tr('pos.PosScreen.to_table_table_label', { table_label: d.resume.table_label }) : '' }));
@@ -628,7 +657,7 @@ function Pos() {
       const id = ensureId();
       const createdAt = new Date().toISOString();
       try {
-        const order = await ordersApi.create(buildCreatePayload(d, { id, createdAt, sendToKitchen: true, offerId: offerForNewBill() }));
+        const order = await ordersApi.create({ ...buildCreatePayload(d, { id, createdAt, sendToKitchen: true, offerId: offerForNewBill() }), ...stockOverride() });
         void printKotSafe({ ...order, table_label: order.table_label ?? d.tableLabel });
         const where = d.tableLabel && d.orderType === 'DINE_IN' ? `Table ${d.tableLabel}` : order.token_no ? `Token #${order.token_no}` : order.code;
         toast.success(isRetail ? tr('pos.PosScreen.bill_held_where', { where }) : tr('pos.PosScreen.kot_sent_where', { where }));
@@ -653,10 +682,13 @@ function Pos() {
         afterBill(d.orderType);
       }
     } catch (e) {
-      toast.error(errorMessage(e));
+      const short = stockShortFromError(e);
+      if (short) { setStockShort({ items: short, retry: 'kot' }); liveStock.refresh(); }
+      else toast.error(errorMessage(e));
       if (offerError(e)) offers.refresh();
     } finally {
       lock.current = false;
+      stockReason.current = null;
       setSubmitting(null);
     }
   };
@@ -748,7 +780,7 @@ function Pos() {
         let order = d.resume;
         if (d.lines.length) {
           const before = new Set(order.items.map((i) => i.id));
-          order = { ...(await ordersApi.addItems(order.id, itemsInput(), true)), table_label: order.table_label };
+          order = { ...(await ordersApi.addItems(order.id, itemsInput(), true, stockReason.current)), table_label: order.table_label };
           patch({ resume: order, lines: [] }); // items are saved even if the payment below fails
           void printKotSafe(order, order.items.filter((i) => !before.has(i.id)));
         }
@@ -789,6 +821,7 @@ function Pos() {
         const order = await ordersApi.create({
           ...buildCreatePayload(d, { id, createdAt, payments, sendToKitchen: true, offerId: offerForNewBill() }),
           ...(overrideReason ? { override_reason: overrideReason } : {}),
+          ...stockOverride(),
         });
         void printKotSafe({ ...order, table_label: order.table_label ?? d.tableLabel });
         const result = { ...order, table_label: order.table_label ?? (d.orderType === 'DINE_IN' ? d.tableLabel : null) };
@@ -827,7 +860,13 @@ function Pos() {
         showReceipt(local, true, change, d.orderType);
       }
     } catch (e) {
-      toast.error(errorMessage(e));
+      const short = stockShortFromError(e);
+      if (short) {
+        retryPay.current = { payments, change };
+        setSheet(null);
+        setStockShort({ items: short, retry: 'pay' });
+        liveStock.refresh();
+      } else toast.error(errorMessage(e));
       if (offerError(e)) { offers.refresh(); setSheet(null); }
       if (payGateFromError(e)) {
         // The server says the food isn't served yet (someone added items, or this screen was behind): show the bill as it is
@@ -838,8 +877,38 @@ function Pos() {
       }
     } finally {
       lock.current = false;
+      stockReason.current = null;
       setSubmitting(null);
     }
+  };
+
+  /** "Fix the bill": every short item brought down to what is left (sold-out ones removed). */
+  const fixStockShort = () => {
+    const short = stockShort;
+    setStockShort(null);
+    if (!short) return;
+    const cart = useCart.getState();
+    for (const item of short.items) {
+      const left = typeof item.available === 'number' ? item.available : 0;
+      for (const [lineId, qty] of fitToStock(getDraft().lines, item.product_id, left)) {
+        if (qty > 0) cart.setQty(lineId, qty);
+        else cart.remove(lineId);
+      }
+    }
+    toast.success(tr('stock.bill_fixed'));
+  };
+
+  /** Owner / manager: sell the short items anyway with a reason (the server checks the permission and audits it). */
+  const sellAnyway = async () => {
+    const short = stockShort;
+    if (!short) return;
+    const reason = await prompt({ title: tr('stock.sell_anyway_title'), message: tr('stock.sell_anyway_message'), label: tr('stock.reason'),
+      minLength: 3, confirmLabel: tr('stock.sell_anyway') });
+    if (!reason?.trim()) return;
+    setStockShort(null);
+    stockReason.current = reason.trim();
+    if (short.retry === 'kot') await sendKot();
+    else if (retryPay.current) await confirmPay(retryPay.current.payments, retryPay.current.change);
   };
 
   // Loyalty redemption (online, loyalty on, a saved customer with points)
@@ -972,6 +1041,7 @@ function Pos() {
           products={products} categories={categories} query={query} onQueryChange={setQuery}
           onSubmitSearch={(t, h) => void submitSearch(t, h)}
           onPick={pick} onDecrement={decrement} inCart={inCart} currency={currency} adjustPct={adjustPct} channel={draft.channel} searchRef={searchRef}
+          stockBlocking={stockBlocks} lowStockDefault={settings?.low_stock_default ?? 10}
           onScan={() => { setLastScanned(null); setSheet('scan'); }}
           autoFocusSearch={Platform.OS === 'web' && !isPhone} compact={isPhone} actions={headerActions} emptyMenu={emptyMenu}
           view={view} onViewChange={(v) => setPosPrefs({ view: v })} keyboard={keysOn && !cartOpen}
@@ -1033,6 +1103,8 @@ function Pos() {
       ) : null}
 
       <VariantSheet product={variantProduct} onClose={() => setVariantProduct(null)} onPick={onVariant} currency={currency} adjustPct={adjustPct} channel={draft.channel} />
+      <StockShortSheet items={stockShort?.items ?? null} canSellAnyway={canSellAnyway} onFix={fixStockShort} onSellAnyway={() => void sellAnyway()}
+        onClose={() => setStockShort(null)} />
       <TableSheet visible={sheet === 'table'} onClose={() => setSheet(null)} selectedId={draft.tableId} online={online} currency={currency}
         onPick={(t) => { patch({ orderType: 'DINE_IN', tableId: t.id, tableLabel: t.table_number, newBill: false, billLabel: '', guests: null }); setSheet(null); }}
         onOpenRunning={(t) => {

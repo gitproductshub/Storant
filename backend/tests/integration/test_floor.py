@@ -116,7 +116,7 @@ async def test_cancelling_part_of_a_line_the_kitchen_has(client, fresh_tenant):
                                json={"items": [{"item_id": lassi_line["id"]}]})).json()
     assert all(i["name"] != "Lassi" for i in order["items"]) and order["total_amount"] == 60.0
 
-    # The cancelled roti is booked as wastage; the sold ones leave stock at payment (after they are served)
+    # The cancelled roti is booked as wastage; the sold ones left stock when they were saved on the bill
     await serve_all(client, owner, order["id"])
     resp = await client.post(f"/api/v1/orders/{order['id']}/pay", headers=owner, json={"payments": [{"method": "CASH", "amount": 60}]})
     assert resp.status_code == 200, resp.text

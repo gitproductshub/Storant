@@ -31,6 +31,8 @@ interface DataState {
   pull: (tenantId: string, force?: boolean) => Promise<void>;
   upsertProduct: (p: Product) => void;
   removeProduct: (id: string) => void;
+  /** Live stock numbers (GET /catalog/stock): only `stock` / `sold_out` of the products named change */
+  applyStock: (items: { id: string; stock: number | null; sold_out: boolean }[]) => void;
   upsertCustomer: (c: Customer) => void;
   setSettings: (s: BusinessSettings) => void;
   reset: () => void;
@@ -75,6 +77,16 @@ export const useData = create<DataState>()(
       },
       upsertProduct: (p) => set((s) => ({ products: mergeById(s.products, [p], false) })),
       removeProduct: (id) => set((s) => ({ products: s.products.map((p) => (p.id === id ? { ...p, is_active: false } : p)) })),
+      applyStock: (items) => {
+        if (!items.length) return;
+        const byId = new Map(items.map((i) => [i.id, i]));
+        set((s) => ({
+          products: s.products.map((p) => {
+            const next = byId.get(p.id);
+            return next && (next.stock !== p.stock || next.sold_out !== p.sold_out) ? { ...p, stock: next.stock, sold_out: next.sold_out } : p;
+          }),
+        }));
+      },
       upsertCustomer: (c) => set((s) => ({ customers: mergeById(s.customers, [c], false) })),
       setSettings: (settings) => set({ settings }),
       reset: () => set({ ...empty }),

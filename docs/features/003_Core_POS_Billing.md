@@ -95,7 +95,7 @@ flowchart TB
 *Diagram source: [`05_pricing_pipeline.mmd`](../diagrams/mermaid/05_pricing_pipeline.mmd) · [SVG](../diagrams/rendered/05_pricing_pipeline.svg) · draw.io: [`Tallyko_Order_Flow.drawio`](../diagrams/Tallyko_Order_Flow.drawio)*
 <!-- /diagram -->
 
-When the bill is fully paid it becomes `completed`: invoice number for the financial year, stock deduction, loyalty points, offer redemption and customer emails. Lifecycle: [06_order_lifecycle](../diagrams/mermaid/06_order_lifecycle.mmd).
+When the bill is fully paid it becomes `completed`: invoice number for the financial year, loyalty points, offer redemption and customer emails. Stock is taken earlier, when each line is saved on the bill (only lines that don't hold stock yet — saved before Nov 2026, and free offer items — are cut at payment); sold-out items are refused on every channel ([007 §5](./007_Inventory_Management.md)). Lifecycle: [06_order_lifecycle](../diagrams/mermaid/06_order_lifecycle.mmd).
 
 ### Validation rules
 *   1–200 items, quantity 1–9999; percent discount ≤ 100; up to 10 payments.
