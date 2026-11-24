@@ -69,7 +69,11 @@ export interface SubscriptionCheckRun {
 export interface FeatureInfo {
   key: string;
   name: string;
+  /** Editor section: plan modules, or Home dashboard extras */
+  group?: FeatureGroup;
 }
+
+export type FeatureGroup = 'modules' | 'dashboard';
 
 export interface BusinessSummary {
   id: string;

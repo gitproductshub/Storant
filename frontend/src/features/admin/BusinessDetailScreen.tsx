@@ -18,6 +18,7 @@ import { Callout, ChoiceChips, KeyValue, SaveBar, copyText } from '@/features/se
 import { AccessCard, DevicesCard, PaymentsCard, RecordPaymentSheet } from './BusinessAccess';
 import { RecordsCard } from './BusinessRecords';
 import { CredentialsSheet } from './OnboardBusinessSheet';
+import { featureGroupHeading } from './featureGroups';
 import {
   AccessBadge, AdminPage, BUSINESS_TYPE_LABEL, LIMIT_LABEL, PlanBadge, ReadOnlyNote, StatusBadge,
   accessDaysText, actionLabel, limitText, shortDate, useCanEdit, useOnline,
@@ -447,9 +448,11 @@ function PlanFeaturesCard({ business: b, form, plans, plansError, selectedPlan, 
               {enabled && hidden.has(f.key) ? <Badge label={t('admin.BusinessDetailScreen.hidden_by_owner')} tone="info" icon="eye-off-outline" /> : null}
             </View>
           );
+          const heading = featureGroupHeading(b.features_catalog, i);
           return (
             <View key={f.key}>
-              {i > 0 ? <Divider /> : null}
+              {heading ? <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase', paddingTop: i ? 14 : 4, paddingBottom: 4 }}>{heading}</Text> : null}
+              {i > 0 && !heading ? <Divider /> : null}
               <View style={{ flexDirection: isPhone ? 'column' : 'row', alignItems: isPhone ? 'stretch' : 'center', gap: isPhone ? 8 : 12, paddingVertical: 10 }}>
                 <View style={{ flex: isPhone ? undefined : 1, minWidth: 0, gap: 3 }}>
                   <Text variant="bodyStrong" numberOfLines={2}>{f.name}</Text>

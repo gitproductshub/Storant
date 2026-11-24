@@ -12,7 +12,7 @@
  * - Optional keyboard: 1–9 select a ticket, Space bumps it, Esc clears.
  * Refreshes every 5 s while visible.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
@@ -28,13 +28,11 @@ import { kotFromTicket, printErrorMessage, printKitchenTicket } from '@/lib/bill
 import { ORDER_TYPE_UI } from '@/lib/uiLabels';
 import { channelLabel } from './common';
 import {
-  ageTone, bumpTarget, formatAge, freshIds, kindCounts, minutesBetween, nextItemStep, prevItemStep, pruneMarks, ticketKind,
+  ageTone, bumpTarget, formatAge, kindCounts, minutesBetween, nextItemStep, prevItemStep, pruneMarks, ticketKind,
   ticketStatusFrom, type KitchenKindFilter, type TicketAction, type TicketStatus,
 } from './floorLogic';
 import { playAlert, useDevicePref, useLivePoll, useNow } from '@/hooks/live';
-import { say, sayNow, useWakeLock, voiceAvailable, voiceNeedsTap } from '@/lib/voice';
-import { VOICE_ON_LINE, newKotLine } from '@/lib/voiceLines';
-import { useVoicePrefs } from '@/store/voicePrefs';
+import { useKitchenVoice, useNewTicketAlerts } from './useKitchenAlerts';
 import { AgeChip, LiveStatus, ageColors } from './parts';
 import { useFloorAges } from './useFloorAges';
 import type { AgeThresholds } from './floorLogic';
@@ -84,34 +82,15 @@ export default function KitchenScreen() {
   const [bumped, setBumped] = useState<{ ticket: FloorTicket; at: number }[]>([]);
   const [recallServer, setRecallServer] = useState<FloorTicket[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const seen = useRef<Set<string> | null>(null);
-  // Voice (Hindi): "नया ऑर्डर आया है। टेबल 5।" — per device, Settings → Account → Voice alerts
-  const kitchenVoice = useVoicePrefs((s) => s.kitchenVoice);
-  const kitchenItems = useVoicePrefs((s) => s.kitchenItems);
-  const setVoicePrefs = useVoicePrefs((s) => s.set);
-  const canSpeak = voiceAvailable();
-  const [voiceTapped, setVoiceTapped] = useState(false);
-  useWakeLock(canSpeak && kitchenVoice); // the screen stays on while it listens for orders
+  // Voice (Hindi): "नया ऑर्डर आया है। टेबल 5।" — per device, Settings → Account → Voice alerts (shared with the kitchen's Home)
+  const voice = useKitchenVoice();
+  const { canSpeak, enabled: kitchenVoice } = voice;
 
   // New tickets: glow + one beep and one spoken line per refresh (never for what was already there when the screen opened)
-  useEffect(() => {
-    if (!data) return;
-    const ids = data.filter((t) => t.status === 'pending').map((t) => t.id);
-    const fresh = freshIds(seen.current, ids);
-    if (fresh.length) {
-      const at = Date.now();
-      setGlow((g) => ({ ...pruneMarks(g, at, NEW_GLOW_MS), ...Object.fromEntries(fresh.map((id) => [id, at])) }));
-      if (sound) playAlert('kitchen');
-      if (kitchenVoice) {
-        const fresher = new Set(fresh);
-        say(newKotLine(data.filter((t) => fresher.has(t.id)).map((t) => ({
-          table_label: t.table_label, bill_label: t.bill_label, token_no: t.token_no, channel: t.channel, items: t.items,
-        })), { items: kitchenItems }));
-      }
-      void useBadges.getState().refresh();
-    }
-    seen.current = new Set([...(seen.current ?? []), ...data.map((t) => t.id)]);
-  }, [data, sound, kitchenVoice, kitchenItems]);
+  useNewTicketAlerts(data, {
+    sound,
+    onFresh: (fresh, at) => setGlow((g) => ({ ...pruneMarks(g, at, NEW_GLOW_MS), ...Object.fromEntries(fresh.map((id) => [id, at])) })),
+  });
 
   // Server list + local optimistic changes (kept briefly so a slow poll can't flip a bumped ticket back)
   const tickets = useMemo(() => {
@@ -368,9 +347,9 @@ export default function KitchenScreen() {
       phoneActions={isPhone ? (
         // Phones: the title gets row 1; these share row 2 as equal-size buttons (they always fit: 4 × 44 px at 320 px)
         <View style={{ flex: 1, gap: 8 }}>
-          {canSpeak && kitchenVoice && !voiceTapped && voiceNeedsTap() ? (
+          {voice.needsTap ? (
             <Button title={tr('ops.KitchenScreen.tap_to_turn_on_voice')} icon="mic-outline" variant="primary" full
-              onPress={() => { setVoiceTapped(true); sayNow(VOICE_ON_LINE); }} />
+              onPress={voice.turnOn} />
           ) : null}
           <View style={styles.phoneActionRow}>
             <View style={styles.phoneAction}>
@@ -382,7 +361,7 @@ export default function KitchenScreen() {
               <View style={styles.phoneAction}>
                 <IconButton icon={kitchenVoice ? 'mic-outline' : 'mic-off-outline'} variant={kitchenVoice ? 'secondary' : 'tonal'} style={styles.phoneActionButton}
                   accessibilityLabel={kitchenVoice ? tr('ops.KitchenScreen.turn_off_voice') : tr('ops.KitchenScreen.turn_on_voice')}
-                  onPress={() => { setVoicePrefs({ kitchenVoice: !kitchenVoice }); if (!kitchenVoice) { setVoiceTapped(true); sayNow(VOICE_ON_LINE); } }} />
+                  onPress={voice.toggle} />
               </View>
             ) : null}
             <View style={styles.phoneAction}>
@@ -401,14 +380,14 @@ export default function KitchenScreen() {
           <ActionMenu align="end" title={tr('ops.KitchenScreen.recall_a_bumped_ticket')} items={recallItems} width={320}
             trigger={(open) => <Button title={isPhone ? undefined : tr('ops.KitchenScreen.recall')} icon="arrow-undo-outline" variant="outline" accessibilityLabel={tr('ops.KitchenScreen.recall_a_bumped_ticket')}
               onPress={() => { void loadRecall(); open(); }} />} />
-          {canSpeak && kitchenVoice && !voiceTapped && voiceNeedsTap() ? (
+          {voice.needsTap ? (
             <Button title={tr('ops.KitchenScreen.tap_to_turn_on_voice')} icon="mic-outline" variant="primary"
-              onPress={() => { setVoiceTapped(true); sayNow(VOICE_ON_LINE); }} />
+              onPress={voice.turnOn} />
           ) : null}
           {canSpeak ? (
             <IconButton icon={kitchenVoice ? 'mic-outline' : 'mic-off-outline'} variant={kitchenVoice ? 'secondary' : 'tonal'}
               accessibilityLabel={kitchenVoice ? tr('ops.KitchenScreen.turn_off_voice') : tr('ops.KitchenScreen.turn_on_voice')}
-              onPress={() => { setVoicePrefs({ kitchenVoice: !kitchenVoice }); if (!kitchenVoice) { setVoiceTapped(true); sayNow(VOICE_ON_LINE); } }} />
+              onPress={voice.toggle} />
           ) : null}
           <IconButton icon={sound ? 'volume-high-outline' : 'volume-mute-outline'} variant={sound ? 'secondary' : 'tonal'}
             accessibilityLabel={sound ? tr('ops.KitchenScreen.mute_new_ticket_sound') : tr('ops.KitchenScreen.turn_on_new_ticket_sound')} onPress={() => { setSound(!sound); if (!sound) playAlert('kitchen'); }} />

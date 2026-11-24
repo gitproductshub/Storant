@@ -94,7 +94,7 @@ async def lifespan(app: FastAPI):
     if tasks:
         await asyncio.wait(tasks, timeout=10)
 
-from app.api import auth, catalog, orders, reports, kitchen, inventory, tables, crm, ai, sync, admin, public, integrations, access, platform, offers, email, taxes, subscription, owner
+from app.api import auth, catalog, orders, reports, kitchen, inventory, tables, crm, ai, sync, admin, public, integrations, access, platform, offers, email, taxes, subscription, owner, dashboard
 
 app = FastAPI(
     title="Storant POS API",
@@ -145,7 +145,8 @@ app.add_middleware(
 )
 app.add_middleware(TracingMiddleware)
 
-for module in (auth, catalog, orders, reports, kitchen, inventory, tables, crm, ai, sync, admin, public, integrations, access, platform, offers, email, taxes, subscription, owner):
+for module in (auth, catalog, orders, reports, kitchen, inventory, tables, crm, ai, sync, admin, public, integrations, access, platform, offers, email, taxes, subscription, owner,
+               dashboard):
     app.include_router(module.router, prefix="/api/v1")
 
 if settings.ENVIRONMENT != "production":

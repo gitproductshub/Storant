@@ -40,8 +40,8 @@ export default function SettingsHome() {
 
   const sections = useSettingsSections();
   const access = useAccessInfo();
-  // A role that can only open Kitchen and Settings (the kitchen role, or a custom one like it)
-  const kitchenOnly = !!role && visibleNavItems(role, settings?.business_type, access).every((i) => i.route === 'kitchen' || i.route === 'settings');
+  // A role that can only open Kitchen and Settings (plus Home, which everyone has): the kitchen role, or a custom one like it
+  const kitchenOnly = !!role && visibleNavItems(role, settings?.business_type, access).every((i) => ['home', 'kitchen', 'settings'].includes(i.route));
   const [query, setQuery] = useState('');
   const accessLine = useAccessLine();
   const has = (key: string) => sections.some((x) => x.key === key);

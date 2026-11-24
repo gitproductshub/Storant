@@ -291,7 +291,8 @@
       "a11y_count_new": "{{a11y}}, {{count}} नए"
     },
     "navItems": {
-      "billing": "बिलिंग"
+      "billing": "बिलिंग",
+      "home": "होम"
     },
     "shellStatus": {
       "free_demo_daystext": "मुफ़्त डेमो · {{daysText}}",
@@ -2112,7 +2113,10 @@
       "missing_module_v_not_in_your_plan": "{{missing}} मॉड्यूल आपके प्लान में नहीं",
       "contact_brand_to_upgrade": "अपग्रेड के लिए {{brand}} से संपर्क करें।",
       "use_name": "{{name}} इस्तेमाल करें",
-      "name_not_in_your_plan": "{{name}}, आपके प्लान में नहीं"
+      "name_not_in_your_plan": "{{name}}, आपके प्लान में नहीं",
+      "home_dashboard": "होम डैशबोर्ड",
+      "dashboard_insights_blurb": "होम पर पेमेंट का बँटवारा, हर घंटे की बिक्री, टॉप आइटम और रद्द व मुफ़्त आइटम।",
+      "dashboard_live_blurb": "होम पर टेबल का इंतज़ार और किचन की देरी, लाइव।"
     },
     "SettingsFrame": {
       "you_changed_some_settings_but_did_not": "आपने कुछ सेटिंग्स बदलीं पर सेव नहीं कीं।",
@@ -4371,6 +4375,104 @@
       "placed": "रखा गया",
       "you_re_offline_the_console_shows_the_last": "आप ऑफ़लाइन हैं। कंसोल आख़िरी लोड किया डेटा दिखाता है; ऑनलाइन लौटने तक बदलाव सेव नहीं हो सकते।",
       "read_only_access_only_a_super_admin_can": "केवल पढ़ने की पहुँच। केवल सुपर एडमिन {{what}} कर सकता है।"
+    },
+    "featureGroups": {
+      "modules": "मॉड्यूल",
+      "dashboard": "होम डैशबोर्ड"
+    }
+  },
+  "home": {
+    "HomeScreen": {
+      "title": "होम",
+      "greeting": "नमस्ते, {{name}}",
+      "offline_showing": "ऑफ़लाइन · {{time}} का हाल दिख रहा है",
+      "new_bill": "नया बिल",
+      "new_order": "नया ऑर्डर",
+      "kitchen_display": "किचन डिस्प्ले",
+      "open_kitchen_display": "किचन डिस्प्ले खोलें",
+      "voice_on": "आवाज़ चालू",
+      "voice_off": "आवाज़ बंद",
+      "start_on_kitchen_display": "किचन डिस्प्ले से शुरू करें",
+      "start_on_kitchen_display_hint": "साइन इन के बाद यह डिवाइस सीधे किचन डिस्प्ले खोलेगा।",
+      "welcome": "स्वागत है",
+      "welcome_name": "स्वागत है, {{name}}",
+      "welcome_body": "आपका रोल ये स्क्रीन खोल सकता है।",
+      "your_plan": "आपका Storant प्लान",
+      "plan_no_end": "कोई आख़िरी तारीख़ नहीं",
+      "plan_days_left": "बचे दिन: {{count}}",
+      "renew": "रिन्यू करें",
+      "locked_title": "बड़े प्लान में होम पर और भी",
+      "locked_body": "आपके प्लान में नहीं: {{list}}",
+      "see_plans": "प्लान देखें"
+    },
+    "widgets": {
+      "today_sales": "आज की बिक्री",
+      "open_bills": "चालू बिल",
+      "payment_claims": "पक्के करने वाले UPI पेमेंट",
+      "ready_to_pay": "पेमेंट के लिए तैयार",
+      "ready_to_serve": "परोसने के लिए तैयार",
+      "my_tables": "मेरी टेबल",
+      "low_stock": "कम स्टॉक",
+      "my_day": "मेरा दिन",
+      "my_collection": "आज मेरी वसूली",
+      "could_not_load": "अभी यह लोड नहीं हो सका।",
+      "table_v": "टेबल {{v}}",
+      "bills_average": "बिल {{count}} · औसत {{average}}",
+      "running": "चालू",
+      "worth_v": "कुल {{v}}",
+      "tables_busy": "भरी टेबल: {{total}} में से {{busy}}",
+      "online_waiting": "ऑनलाइन ऑर्डर इंतज़ार में: {{count}}",
+      "all_clear": "सब ठीक है",
+      "to_confirm": "पक्के करने हैं",
+      "ready_now": "अभी तैयार",
+      "nothing_to_collect": "अभी कोई बिल पेमेंट के लिए तैयार नहीं",
+      "waiting": "इंतज़ार में",
+      "for_you": "आपकी: {{count}}",
+      "items_count": "मात्रा {{count}}",
+      "cooking_count": "बन रहा {{count}}",
+      "ready_count": "तैयार {{count}}",
+      "free": "खाली",
+      "no_tables_yet": "अभी कोई टेबल आपकी नहीं है",
+      "oldest_v": "सबसे पुराना टिकट: {{v}}",
+      "items_low": "आइटम कम",
+      "out_of_stock": "स्टॉक ख़त्म: {{count}}",
+      "bills_today": "आज के बिल",
+      "tables_items": "टेबल {{tables}} · आइटम {{items}}",
+      "settled_count": "चुकाए गए बिल: {{count}}",
+      "sales_v": "बिक्री {{v}}",
+      "collected_v": "वसूली {{v}}",
+      "bills_count": "बिल: {{count}}",
+      "nothing_collected": "आज अभी कुछ वसूली नहीं हुई",
+      "payment_split": "आज के पेमेंट",
+      "hourly_sales": "घंटे के हिसाब से बिक्री",
+      "top_items": "आज के टॉप आइटम",
+      "voids_comps": "रद्द और मुफ़्त",
+      "floor_live": "अभी फ़्लोर",
+      "kitchen_delays": "किचन में देरी",
+      "open_reports": "रिपोर्ट खोलें",
+      "no_sales_yet": "आज अभी कोई बिक्री नहीं",
+      "peak_v": "सबसे व्यस्त घंटा: {{v}}",
+      "cancelled_bills": "रद्द बिल: {{count}}",
+      "items_cancelled": "किचन के बाद रद्द आइटम: {{count}}",
+      "items_removed": "किचन से पहले हटाए आइटम: {{count}}",
+      "on_the_house": "मुफ़्त दिए: {{count}}",
+      "manual_discounts": "हाथ से छूट वाले बिल: {{count}}",
+      "tables_in_use": "टेबल भरी",
+      "over_min": "{{min}} मिनट से ज़्यादा: {{count}}",
+      "longest_v": "सबसे लंबा: {{v}}",
+      "token_v": "टोकन {{v}}",
+      "kot_v": "KOT {{v}}",
+      "cooking": "बन रहे"
+    },
+    "alerts": {
+      "kitchen_late": "किचन टिकट लेट: {{count}}",
+      "tables_late": "बहुत देर से इंतज़ार कर रही टेबल: {{count}}",
+      "ready_for_you": "आपकी टेबल का खाना तैयार: {{count}}",
+      "claims": "पक्के करने वाले UPI पेमेंट: {{count}}",
+      "online_waiting": "इंतज़ार में ऑनलाइन ऑर्डर: {{count}}",
+      "out_of_stock": "स्टॉक ख़त्म: {{count}}",
+      "plan_grace": "आपका प्लान ख़त्म हो गया: बिलिंग चालू रखने के लिए रिन्यू करें",
+      "plan_ends": "प्लान के बचे दिन: {{count}}"
     }
   }
 }

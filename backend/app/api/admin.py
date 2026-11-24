@@ -8,7 +8,7 @@ from sqlalchemy import or_, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.core.catalog import FEATURES, ORDER_TYPES_BY_BUSINESS, PAY_RULE_DEFAULTS, PAY_RULE_LEVELS
+from app.core.catalog import FEATURES, ORDER_TYPES_BY_BUSINESS, PAY_RULE_DEFAULTS, PAY_RULE_LEVELS, feature_group
 from app.core.security import get_password_hash, hash_password_async
 from app.core.tenant import get_tenant_db, get_shared_session_maker
 from app.models import BusinessSettings, SalesChannel, Brand, GlobalUser, TenantUser, Role, TaxClass, Location
@@ -168,7 +168,7 @@ async def read_modules(access: Access = Depends(get_access)):
     ent = await entitlements(access.tenant_id)
     return {
         "plan_key": ent["plan_key"], "plan_name": ent["plan_name"], "limits": ent["limits"],
-        "modules": [{"key": k, "name": label, "in_plan": k in ent["plan_features"], "hidden": k in ent["hidden"],
+        "modules": [{"key": k, "name": label, "group": feature_group(k), "in_plan": k in ent["plan_features"], "hidden": k in ent["hidden"],
                      "enabled": k in ent["features"]} for k, label in FEATURES.items()],
     }
 

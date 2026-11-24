@@ -16,7 +16,7 @@ Tallyko is a multi-tenant SaaS **point of sale** for Indian restaurants, cafés,
 ## How the docs are organised
 
 - **Part 1 — Architecture and operations** (`docs/00`–`20`): how the system is built, run, secured, tested and deployed.
-- **Part 2 — Feature specifications** (`docs/features/001`–`019`, `Printing.md`): one file per module, numbered in build order. Each has a plain-language part for the business owner and a technical part for developers (data, endpoints, rules, tests).
+- **Part 2 — Feature specifications** (`docs/features/001`–`020`, `Printing.md`): one file per module, numbered in build order. Each has a plain-language part for the business owner and a technical part for developers (data, endpoints, rules, tests).
 - **Diagrams** (`docs/diagrams/`): Mermaid sources (`.mmd`, embedded in the docs and rendered by GitHub) and draw.io overviews. See [diagrams/README.md](./diagrams/README.md).
 - **Versions** (`docs/versions/`): what each release contained and what comes next.
 
@@ -28,7 +28,7 @@ When behaviour changes, the spec and its diagram change in the same commit.
 2. [03 Multi-tenancy](./03_Multi_Vendor_Architecture.md) → [04 Data model](./04_Data_Model.md) → [10 Security & auth](./10_Security_And_Auth.md) → [05 API](./05_API_Design.md)
 3. [06 App architecture](./06_Mobile_App_Architecture.md) → [07 Offline sync](./07_Offline_Sync_Strategy.md) → [20 High-volume UX](./20_High_Volume_UX.md)
 4. [15 Onboarding](./15_Developer_Onboarding.md) → [19 Migrations](./19_Database_Migrations.md) → [08 Docker](./08_Docker_And_Deployment.md)
-5. Feature specs [001](./features/001_Auth_And_Tenant_Setup.md) to [019](./features/019_Owner_Watch_No_Deletes_And_Menu_History.md) in order
+5. Feature specs [001](./features/001_Auth_And_Tenant_Setup.md) to [020](./features/020_Role_Dashboards.md) in order
 
 ## Part 1: Architecture and operations
 
@@ -80,6 +80,7 @@ When behaviour changes, the spec and its diagram change in the same commit.
 | [017_Running_Bills_And_Floor.md](./features/017_Running_Bills_And_Floor.md) | Re-orders, cancels, on the house, split/merge/transfer bills |
 | [018_Subscriptions_Demo_And_Sessions.md](./features/018_Subscriptions_Demo_And_Sessions.md) | Demo, paid and development access, lock and renewal, daily check, devices |
 | [019_Owner_Watch_No_Deletes_And_Menu_History.md](./features/019_Owner_Watch_No_Deletes_And_Menu_History.md) | Owner's watch, nothing deleted, Tallyko-only corrections, menu versions, GSTIN rule |
+| [020_Role_Dashboards.md](./features/020_Role_Dashboards.md) | Home for every role: widgets by permission, plan dashboard features, landing, kitchen voice on Home |
 | [Printing.md](./features/Printing.md) | Bluetooth / BLE / Web Bluetooth / print-dialog printing on every platform |
 
 ## Diagrams

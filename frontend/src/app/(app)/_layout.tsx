@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import { Redirect, Tabs, type Href } from 'expo-router';
+import { Platform, View } from 'react-native';
+import { Redirect, Tabs, usePathname, type Href } from 'expo-router';
 import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/store/auth';
 import { useData } from '@/store/data';
@@ -11,7 +11,14 @@ import { AppNav } from '@/components/nav/AppNav';
 import { SubscriptionBanner } from '@/components/SubscriptionBanner';
 import { FloorAnnouncer } from '@/features/ops/FloorAnnouncer';
 import { useSubscription } from '@/store/subscription';
+import { rememberReturnPath } from '@/lib/returnTo';
 import { t } from '@/i18n';
+
+/** The page being opened, with its query (?table=…), to come back to after signing in. */
+function currentPath(pathname: string): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') return `${window.location.pathname}${window.location.search}`;
+  return pathname;
+}
 
 export default function AppLayout() {
   const { colors } = useTheme();
@@ -20,6 +27,7 @@ export default function AppLayout() {
   const tenantId = useAuth((s) => s.session?.tenantId);
   const isPlatform = useAuth((s) => s.session?.accountType === 'platform');
   const locked = useSubscription((s) => s.locked);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (status !== 'signedIn' || !tenantId || isPlatform) return undefined;
@@ -43,7 +51,10 @@ export default function AppLayout() {
     };
   }, [status, tenantId, isPlatform]);
 
-  if (status !== 'signedIn') return <Redirect href="/login" />;
+  if (status !== 'signedIn') {
+    rememberReturnPath(currentPath(pathname)); // a deep link opened while signed out (ignored after a sign-out)
+    return <Redirect href="/login" />;
+  }
   if (isPlatform) return <Redirect href="/admin" />;
   // Subscription ended: only the renewal page. Offline bills stay in the outbox and sync after renewal.
   if (locked) return <Redirect href={'/subscription' as Href} />;
@@ -61,6 +72,7 @@ export default function AppLayout() {
           lazy: true,
         }}
       >
+        <Tabs.Screen name="home" options={{ title: t('nav.navItems.home') }} />
         <Tabs.Screen name="pos" options={{ title: t('routes.layout.billing') }} />
         <Tabs.Screen name="orders" options={{ title: t('common.orders') }} />
         <Tabs.Screen name="tables" options={{ title: t('common.tables') }} />

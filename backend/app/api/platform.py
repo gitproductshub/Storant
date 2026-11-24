@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, or_
 from sqlalchemy.future import select
-from app.core.catalog import ALL_FEATURES, DEFAULT_PLAN_KEY, DEFAULT_PLANS, FEATURES, split_gst
+from app.core.catalog import ALL_FEATURES, DEFAULT_PLAN_KEY, DEFAULT_PLANS, FEATURES, feature_group, split_gst
 from app.core.security import PlatformUser, get_password_hash, get_platform_user, require_super_admin, hash_password_async
 from app.core.tenant import drop_tenant_cache, get_shared_session_maker
 from app.models import (BusinessSettings, GlobalUser, GlobalVendor, Plan, PlatformAuditLog, Product, Subscription, SubscriptionOffer,
@@ -33,6 +33,10 @@ router = APIRouter(prefix="/platform", tags=["Platform (super admin)"])
 def _temp_password() -> str:
     alphabet = string.ascii_letters + string.digits
     return "Tk-" + "".join(secrets.choice(alphabet) for _ in range(10))
+
+def _features_catalog() -> list[dict]:
+    """Every feature with its name and editor section ("modules" or "dashboard")."""
+    return [{"key": k, "name": v, "group": feature_group(k)} for k, v in FEATURES.items()]
 
 async def _ensure_plans(db) -> None:
     """Default plans exist in the database so they can be edited."""
@@ -253,7 +257,7 @@ async def business_detail(business_id: uuid.UUID, user: PlatformUser = Depends(g
         "staff": [{"id": str(s.id), "name": s.full_name, "email": s.username, "role": s.role, "is_active": s.is_active} for s in staff],
         "subscriptions": [{"id": str(s.id), "start_date": s.start_date.isoformat() + "Z", "end_date": s.end_date.isoformat() + "Z",
                            **(s.snap_entitlements or {})} for s in subscriptions],
-        "features_catalog": [{"key": k, "name": v} for k, v in FEATURES.items()],
+        "features_catalog": _features_catalog(),
     })
     return row
 
@@ -433,7 +437,7 @@ async def list_plans(user: PlatformUser = Depends(get_platform_user)):
         await db.commit()
         plans = (await db.execute(select(Plan).order_by(Plan.sort_order, Plan.name))).scalars().all()
         counts = dict(await _count_by_plan(db, TenantConfig.status != "deleted"))
-    return {"plans": [_serialize_plan(p, counts) for p in plans], "features": [{"key": k, "name": v} for k, v in FEATURES.items()]}
+    return {"plans": [_serialize_plan(p, counts) for p in plans], "features": _features_catalog()}
 
 @router.post("/plans")
 async def save_plan(data: PlanIn, user: PlatformUser = Depends(require_super_admin)):

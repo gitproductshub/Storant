@@ -4,6 +4,8 @@ import { sessionsApi } from '@/api/subscription';
 import { useAuth } from '@/store/auth';
 import { useOutbox } from '@/store/outbox';
 import { useAccess } from '@/store/access';
+import { forgetReturnPath } from '@/lib/returnTo';
+import { useHomeSnapshot } from '@/store/homeSnapshot';
 import { t } from '@/i18n';
 
 /**
@@ -11,6 +13,7 @@ import { t } from '@/i18n';
  * never block signing out), then clear it locally. Offline bills stay in the outbox for the next sign-in.
  */
 export async function endSession(): Promise<void> {
+  forgetReturnPath(); // the next person to sign in here starts on their own Home
   const session = useAuth.getState().session;
   // /auth/logout is a business-login route; platform consoles only sign out locally
   if (session && session.accountType === 'business') {
@@ -22,6 +25,7 @@ export async function endSession(): Promise<void> {
   }
   await useAuth.getState().logout();
   useAccess.getState().reset();
+  useHomeSnapshot.getState().reset(); // the business's numbers don't stay on a shared device
 }
 
 /** Confirm, warn about bills that haven't synced yet, then sign out and return to the login screen. */

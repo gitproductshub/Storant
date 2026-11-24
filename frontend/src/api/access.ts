@@ -122,6 +122,8 @@ export interface AuditQuery {
 export interface ModuleInfo {
   key: string;
   name: string;
+  /** "dashboard" for the Home dashboard extras; everything else is a module */
+  group?: 'modules' | 'dashboard';
   in_plan: boolean;
   hidden: boolean;
   enabled: boolean;

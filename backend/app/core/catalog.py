@@ -84,8 +84,18 @@ FEATURES: dict[str, str] = {
     "menu_ocr": "Menu from a photo",
     "integrations": "Webhooks & integrations",
     "audit_log": "Audit log",
+    # Home dashboard extras (the basic dashboard is on every plan and has no key; see app.services.dashboard)
+    "dashboard_insights": "Dashboard insights: payment split, hourly sales, top items, voids & comps",
+    "dashboard_live": "Dashboard live monitor: table waiting times and kitchen delays",
 }
 ALL_FEATURES = frozenset(FEATURES)
+
+# Where a feature is listed in the plan editor, the per-business overrides and the owner's Modules screen.
+# Anything not listed here is a "modules" feature.
+FEATURE_GROUPS: dict[str, str] = {"dashboard_insights": "dashboard", "dashboard_live": "dashboard"}
+
+def feature_group(key: str) -> str:
+    return FEATURE_GROUPS.get(key, "modules")
 
 # Which module a permission belongs to: if the module is off, the permission is off too.
 PERMISSION_FEATURE: dict[str, str] = {
@@ -124,7 +134,7 @@ DEFAULT_PLANS: list[dict] = [
     {"key": "standard", "name": "Standard", "description": "Restaurants & cafés: tables, kitchen display, QR ordering, staff.",
      "price_monthly": 0, "sort_order": 2,
      "features": ["tables", "kitchen", "qr_ordering", "online_store", "inventory", "customers", "loyalty", "offers",
-                  "email", "staff", "reports", "menu_ocr"],
+                  "email", "staff", "reports", "menu_ocr", "dashboard_live"],
      "limits": {"max_staff": 15, "max_products": 3000, "max_locations": 1}},
     {"key": "pro", "name": "Pro", "description": "Large restaurants, chains and cloud kitchens: everything.",
      "price_monthly": 0, "sort_order": 3,

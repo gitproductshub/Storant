@@ -9,12 +9,19 @@ import { SETTINGS_SECTIONS } from '@/features/settings/sections';
 import { addRecent } from '@/features/auth/recentLogins';
 
 describe('bottom bar', () => {
-  it('shows four items plus More for an owner', () => {
+  it('shows Home and three more items plus More for an owner', () => {
     const items = visibleNavItems('owner', 'restaurant');
     const { bar, more } = splitBottomBar(items);
-    expect(bar.map((i) => i.route)).toEqual(['pos', 'orders', 'tables', 'kitchen']);
-    expect(more.map((i) => i.route)).toContain('settings');
+    expect(bar.map((i) => i.route)).toEqual(['home', 'pos', 'orders', 'tables']);
+    expect(more.map((i) => i.route)).toEqual(expect.arrayContaining(['kitchen', 'settings']));
     expect(bar.length + more.length).toBe(items.length);
+  });
+
+  it('gives every role Home first, the kitchen too', () => {
+    for (const role of ['owner', 'manager', 'cashier', 'waiter', 'kitchen'] as const) {
+      expect(visibleNavItems(role, 'restaurant')[0].route).toBe('home');
+    }
+    expect(visibleNavItems('kitchen', 'restaurant').map((i) => i.route)).toEqual(['home', 'kitchen', 'settings']);
   });
 
   it('fills the bar for retail, which has no tables or kitchen', () => {
@@ -32,6 +39,7 @@ describe('bottom bar', () => {
 describe('go shortcuts', () => {
   it('maps g then a letter to a section', () => {
     expect(itemForGoKey(NAV_ITEMS, 'b')?.route).toBe('pos');
+    expect(itemForGoKey(NAV_ITEMS, 'h')?.route).toBe('home');
     expect(itemForGoKey(NAV_ITEMS, 'O')?.route).toBe('orders');
     expect(itemForGoKey(NAV_ITEMS, 'z')).toBeUndefined();
   });

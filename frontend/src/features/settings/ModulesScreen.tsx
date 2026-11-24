@@ -39,6 +39,8 @@ const META: Record<string, { icon: IconName; blurb: string }> = {
   menu_ocr: { icon: 'camera-outline', blurb: 'Build your menu from a photo of the menu card.' },
   integrations: { icon: 'git-network-outline', blurb: 'Webhooks and connections to other apps.' },
   audit_log: { icon: 'time-outline', blurb: 'Who cancelled bills, gave discounts or changed settings.' },
+  dashboard_insights: { icon: 'analytics-outline', get blurb() { return t('settings.ModulesScreen.dashboard_insights_blurb'); } },
+  dashboard_live: { icon: 'pulse-outline', get blurb() { return t('settings.ModulesScreen.dashboard_live_blurb'); } },
 };
 
 const GROUPS: { title: string; keys: string[] }[] = [
@@ -46,6 +48,7 @@ const GROUPS: { title: string; keys: string[] }[] = [
   { get title() { return t('settings.ModulesScreen.customers_marketing'); }, keys: ['customers', 'loyalty', 'offers', 'email'] },
   { get title() { return t('settings.ModulesScreen.back_office'); }, keys: ['inventory', 'reports', 'advanced_reports', 'menu_ocr', 'integrations'] },
   { get title() { return t('settings.ModulesScreen.team_control'); }, keys: ['staff', 'custom_roles', 'audit_log'] },
+  { get title() { return t('settings.ModulesScreen.home_dashboard'); }, keys: ['dashboard_insights', 'dashboard_live'] },
 ];
 
 const LIMITS: { key: string; label: string; icon: IconName }[] = [

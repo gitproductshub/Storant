@@ -31,6 +31,9 @@ const STAFF: Role[] = ['owner', 'manager', 'cashier', 'waiter'];
 const MANAGERS: Role[] = ['owner', 'manager'];
 
 export const NAV_ITEMS: NavItem[] = [
+  // Everyone's landing page; what it shows follows their permissions (features/home)
+  { route: 'home', href: '/home', get label() { return t('nav.navItems.home'); }, icon: 'home-outline', iconActive: 'home', roles: ALL, primary: true, group: 'sell',
+    goKey: 'h' },
   { route: 'pos', href: '/pos', get label() { return t('nav.navItems.billing'); }, icon: 'receipt-outline', iconActive: 'receipt', roles: STAFF, primary: true, group: 'sell',
     permissions: ['orders.create'], goKey: 'b' },
   { route: 'orders', href: '/orders', get label() { return t('common.orders'); }, icon: 'document-text-outline', iconActive: 'document-text', roles: STAFF, primary: true, group: 'sell',

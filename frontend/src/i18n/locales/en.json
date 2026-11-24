@@ -293,7 +293,8 @@
       "a11y_count_new": "{{a11y}}, {{count}} new"
     },
     "navItems": {
-      "billing": "Billing"
+      "billing": "Billing",
+      "home": "Home"
     },
     "shellStatus": {
       "free_demo_daystext": "Free demo · {{daysText}}",
@@ -1094,6 +1095,10 @@
       "placed": "Placed",
       "you_re_offline_the_console_shows_the_last": "You're offline. The console shows the last loaded data; changes can't be saved until you're back online.",
       "read_only_access_only_a_super_admin_can": "Read-only access. Only a super admin can {{what}}."
+    },
+    "featureGroups": {
+      "modules": "Modules",
+      "dashboard": "Home dashboard"
     }
   },
   "auth": {
@@ -3588,7 +3593,10 @@
       "missing_module_v_not_in_your_plan": "{{missing}} module{{v}} not in your plan",
       "contact_brand_to_upgrade": "Contact {{brand}} to upgrade.",
       "use_name": "Use {{name}}",
-      "name_not_in_your_plan": "{{name}}, not in your plan"
+      "name_not_in_your_plan": "{{name}}, not in your plan",
+      "home_dashboard": "Home dashboard",
+      "dashboard_insights_blurb": "Payment split, hourly sales, top items and voids & comps on Home.",
+      "dashboard_live_blurb": "Table waiting times and kitchen delays, live on Home."
     },
     "PrintersScreen": {
       "bluetooth": "Bluetooth",
@@ -4465,6 +4473,100 @@
       "AGGREGATOR": "Paid online",
       "CREDIT": "Credit (Udhaar)",
       "OTHER": "Other"
+    }
+  },
+  "home": {
+    "HomeScreen": {
+      "title": "Home",
+      "greeting": "Hi, {{name}}",
+      "offline_showing": "Offline · showing {{time}}",
+      "new_bill": "New bill",
+      "new_order": "New order",
+      "kitchen_display": "Kitchen display",
+      "open_kitchen_display": "Open kitchen display",
+      "voice_on": "Voice on",
+      "voice_off": "Voice off",
+      "start_on_kitchen_display": "Start on kitchen display",
+      "start_on_kitchen_display_hint": "This device opens the kitchen display after sign-in.",
+      "welcome": "Welcome",
+      "welcome_name": "Welcome, {{name}}",
+      "welcome_body": "These are the screens your role can open.",
+      "your_plan": "Your Storant plan",
+      "plan_no_end": "No end date",
+      "plan_days_left": "Days left: {{count}}",
+      "renew": "Renew",
+      "locked_title": "More on your Home with a higher plan",
+      "locked_body": "Not in your plan: {{list}}",
+      "see_plans": "See plans"
+    },
+    "widgets": {
+      "today_sales": "Today's sales",
+      "open_bills": "Running bills",
+      "payment_claims": "UPI payments to confirm",
+      "ready_to_pay": "Ready to pay",
+      "ready_to_serve": "Ready to serve",
+      "my_tables": "My tables",
+      "low_stock": "Low stock",
+      "my_day": "My day",
+      "my_collection": "My collection today",
+      "could_not_load": "Couldn't load this right now.",
+      "table_v": "Table {{v}}",
+      "bills_average": "Bills {{count}} · average {{average}}",
+      "running": "running",
+      "worth_v": "Worth {{v}}",
+      "tables_busy": "Tables in use: {{busy}} of {{total}}",
+      "online_waiting": "Online orders waiting: {{count}}",
+      "all_clear": "All clear",
+      "to_confirm": "to confirm",
+      "ready_now": "ready now",
+      "nothing_to_collect": "No bill is ready to pay yet",
+      "waiting": "waiting",
+      "for_you": "Yours: {{count}}",
+      "items_count": "Qty {{count}}",
+      "cooking_count": "Cooking {{count}}",
+      "ready_count": "Ready {{count}}",
+      "free": "Free",
+      "no_tables_yet": "No tables are yours yet",
+      "oldest_v": "Oldest ticket: {{v}}",
+      "items_low": "items low",
+      "out_of_stock": "Out of stock: {{count}}",
+      "bills_today": "bills today",
+      "tables_items": "Tables {{tables}} · Items {{items}}",
+      "settled_count": "Bills settled: {{count}}",
+      "sales_v": "Sales {{v}}",
+      "collected_v": "Collected {{v}}",
+      "bills_count": "Bills: {{count}}",
+      "nothing_collected": "Nothing collected yet today",
+      "payment_split": "Payments today",
+      "hourly_sales": "Sales by hour",
+      "top_items": "Top items today",
+      "voids_comps": "Cancellations & on the house",
+      "floor_live": "Floor now",
+      "kitchen_delays": "Kitchen delays",
+      "open_reports": "Open reports",
+      "no_sales_yet": "No sales yet today",
+      "peak_v": "Busiest hour: {{v}}",
+      "cancelled_bills": "Bills cancelled: {{count}}",
+      "items_cancelled": "Items cancelled after the kitchen: {{count}}",
+      "items_removed": "Items removed before the kitchen: {{count}}",
+      "on_the_house": "On the house: {{count}}",
+      "manual_discounts": "Bills with a manual discount: {{count}}",
+      "tables_in_use": "tables in use",
+      "over_min": "Over {{min}} min: {{count}}",
+      "longest_v": "Longest: {{v}}",
+      "token_v": "Token {{v}}",
+      "kot_v": "KOT {{v}}",
+      "cooking": "cooking"
+    },
+    "alerts": {
+      "kitchen_late": "Kitchen tickets late: {{count}}",
+      "tables_late": "Tables waiting too long: {{count}}",
+      "ready_for_you": "Food ready for your tables: {{count}}",
+      "claims": "UPI payments to confirm: {{count}}",
+      "online_waiting": "Online orders waiting: {{count}}",
+      "out_of_stock": "Out of stock: {{count}}",
+      "plan_grace": "Your plan has ended: renew to keep billing",
+      "plan_ends": "Days left on your plan: {{count}}"
     }
   }
 }

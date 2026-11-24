@@ -44,6 +44,8 @@ interface PrefsState {
   printQrOnBill: boolean;
   openCashDrawer: boolean;
   defaultOrderType: 'TAKEAWAY' | 'DINE_IN' | 'RETAIL_WALKIN';
+  /** This device opens the kitchen display after sign-in instead of Home (kitchen tablets). */
+  startOnKitchenDisplay: boolean;
   set: (patch: Partial<Omit<PrefsState, 'set'>>) => void;
 }
 
@@ -62,6 +64,7 @@ export const usePrefs = create<PrefsState>()(
       printQrOnBill: true,
       openCashDrawer: false,
       defaultOrderType: 'TAKEAWAY',
+      startOnKitchenDisplay: false,
       set: (patch) => set(patch),
     }),
     { name: 'tallyko.prefs', storage: persistStorage, version: 1 },

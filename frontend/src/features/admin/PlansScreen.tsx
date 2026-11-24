@@ -11,6 +11,7 @@ import { useLayout, useTheme } from '@/theme/ThemeProvider';
 import { Callout, FieldRow, SettingSwitch, monoFont } from '@/features/settings/components';
 import { fieldErrorsFrom } from '@/features/settings/validation';
 import { AdminPage, LIMIT_LABEL, ReadOnlyNote, goTo, limitText, useCanEdit, useOnline } from './shared';
+import { featureGroupHeading } from './featureGroups';
 import { t, currentLocale } from '@/i18n';
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -122,13 +123,17 @@ function PlanCard({ plan: p, catalog, canEdit, onEdit }: { plan: PlanInfo; catal
       <Divider />
       <Text variant="smallStrong" tone="muted">{p.features.length} {t('admin.PlansScreen.of_length_features', { length: catalog.length })}</Text>
       <View style={{ gap: 6 }}>
-        {catalog.map((f) => {
+        {catalog.map((f, i) => {
           const on = included.has(f.key);
+          const heading = featureGroupHeading(catalog, i);
           return (
-            <View key={f.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name={on ? 'checkmark-circle' : 'remove-circle-outline'} size={16} color={on ? colors.success : colors.textSubtle} />
-              <Text variant="small" tone={on ? 'default' : 'subtle'} style={{ flex: 1 }} numberOfLines={1}>{f.name}</Text>
-            </View>
+            <React.Fragment key={f.key}>
+              {heading ? <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase', marginTop: i ? 6 : 0 }}>{heading}</Text> : null}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name={on ? 'checkmark-circle' : 'remove-circle-outline'} size={16} color={on ? colors.success : colors.textSubtle} />
+                <Text variant="small" tone={on ? 'default' : 'subtle'} style={{ flex: 1 }} numberOfLines={1}>{f.name}</Text>
+              </View>
+            </React.Fragment>
           );
         })}
       </View>
@@ -248,11 +253,21 @@ function PlanSheet({ plan, data, onClose, onSaved }: { plan: PlanInfo | null; da
         </View>
         <Card padded={false} style={{ paddingVertical: 4 }}>
           <View style={{ flexDirection: isPhone ? 'column' : 'row', flexWrap: 'wrap' }}>
-            {data.features.map((f) => (
-              <View key={f.key} style={{ width: isPhone ? '100%' : '50%' }}>
-                <Checkbox label={f.name} checked={features.has(f.key)} onToggle={() => toggle(f.key)} />
-              </View>
-            ))}
+            {data.features.map((f, i) => {
+              const heading = featureGroupHeading(data.features, i);
+              return (
+                <React.Fragment key={f.key}>
+                  {heading ? (
+                    <View style={{ width: '100%', paddingHorizontal: 12, paddingTop: i ? 10 : 6, paddingBottom: 2 }}>
+                      <Text variant="caption" tone="subtle" style={{ textTransform: 'uppercase' }}>{heading}</Text>
+                    </View>
+                  ) : null}
+                  <View style={{ width: isPhone ? '100%' : '50%' }}>
+                    <Checkbox label={f.name} checked={features.has(f.key)} onToggle={() => toggle(f.key)} />
+                  </View>
+                </React.Fragment>
+              );
+            })}
           </View>
         </Card>
         {removed.length && plan?.businesses ? (

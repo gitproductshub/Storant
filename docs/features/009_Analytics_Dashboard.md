@@ -32,6 +32,8 @@ The Analytics module transforms raw transaction data into actionable business in
 
 Reports are SQL aggregations over the tenant's own rows (RLS), run on request. Cancelled bills, void and removed lines, and archived bills are excluded. There is no separate analytics database, queue or PDF generator.
 
+"Today", what counts as sold, the payments split, sales by hour, top items and the staff numbers live in `app/services/sales_window.py` and are shared with the Home dashboard ([020](./020_Role_Dashboards.md)), so Home and Reports always show the same figures.
+
 ```mermaid
 flowchart LR
     subgraph DB["PostgreSQL (tenant session, RLS)"]
